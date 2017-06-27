@@ -10,14 +10,14 @@ using static RucheHome.Util.ArgumentValidater;
 namespace RucheHome.Talker
 {
     /// <summary>
-    /// <see cref="IUpdatableTalker"/> インスタンス群の非同期な状態更新処理を提供するクラス。
+    /// <see cref="IProcessTalker"/> インスタンス群の非同期な状態更新処理を提供するクラス。
     /// </summary>
-    public class TalkerUpdater : IDisposable
+    public class ProcessTalkerUpdater : IDisposable
     {
         /// <summary>
         /// コンストラクタ。
         /// </summary>
-        public TalkerUpdater()
+        public ProcessTalkerUpdater()
         {
             // スレッドプールの設定値からタスク数を決定
             ThreadPool.GetMinThreads(out var count, out _);
@@ -28,7 +28,7 @@ namespace RucheHome.Talker
         /// コンストラクタ。
         /// </summary>
         /// <param name="taskCountLimit">並走させるタスクの最大数。 1 以上 1024 以下。</param>
-        public TalkerUpdater(int taskCountLimit)
+        public ProcessTalkerUpdater(int taskCountLimit)
         {
             ValidateArgumentOutOfRange(taskCountLimit, 1, 1024, nameof(taskCountLimit));
 
@@ -38,7 +38,7 @@ namespace RucheHome.Talker
         /// <summary>
         /// デストラクタ。
         /// </summary>
-        ~TalkerUpdater()
+        ~ProcessTalkerUpdater()
         {
             this.Dispose(false);
         }
@@ -59,11 +59,11 @@ namespace RucheHome.Talker
         public int ProcessListUpdateIntervalMilliseconds { get; set; } = 100;
 
         /// <summary>
-        /// <see cref="IUpdatableTalker"/> インスタンスを登録する。
+        /// <see cref="IProcessTalker"/> インスタンスを登録する。
         /// </summary>
-        /// <param name="talker"><see cref="IUpdatableTalker"/> インスタンス。</param>
+        /// <param name="talker"><see cref="IProcessTalker"/> インスタンス。</param>
         /// <returns>登録できたならば true 。既に登録済みならば false 。</returns>
-        public bool Register(IUpdatableTalker talker)
+        public bool Register(IProcessTalker talker)
         {
             ValidateArgumentNull(talker, nameof(talker));
 
@@ -93,11 +93,11 @@ namespace RucheHome.Talker
         }
 
         /// <summary>
-        /// <see cref="IUpdatableTalker"/> インスタンスの登録を破棄する。
+        /// <see cref="IProcessTalker"/> インスタンスの登録を破棄する。
         /// </summary>
-        /// <param name="talker"><see cref="IUpdatableTalker"/> インスタンス。</param>
+        /// <param name="talker"><see cref="IProcessTalker"/> インスタンス。</param>
         /// <returns>破棄できたならば true 。登録されていないならば false 。</returns>
-        public bool Remove(IUpdatableTalker talker)
+        public bool Remove(IProcessTalker talker)
         {
             ValidateArgumentNull(talker, nameof(talker));
 
@@ -147,9 +147,9 @@ namespace RucheHome.Talker
         }
 
         /// <summary>
-        /// 登録済み <see cref="IUpdatableTalker"/> インスタンスリストを取得する。
+        /// 登録済み <see cref="IProcessTalker"/> インスタンスリストを取得する。
         /// </summary>
-        private List<IUpdatableTalker> Talkers { get; } = new List<IUpdatableTalker>();
+        private List<IProcessTalker> Talkers { get; } = new List<IProcessTalker>();
 
         /// <summary>
         /// 次回処理対象の Talkers インデックスを取得または設定する。
@@ -254,7 +254,7 @@ namespace RucheHome.Talker
                 !cancelToken.IsCancellationRequested;
                 Thread.Sleep(this.TalkerUpdateIntervalMilliseconds))
             {
-                IUpdatableTalker talker = null;
+                IProcessTalker talker = null;
                 Process[] processes = null;
 
                 lock (this.lockObject)

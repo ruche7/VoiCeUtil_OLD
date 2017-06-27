@@ -3,12 +3,12 @@
 namespace RucheHome.Talker
 {
     /// <summary>
-    /// 文章読み上げソフトの状態を表す列挙。
+    /// <see cref="ITalker"/> の状態を表す列挙。
     /// </summary>
     public enum TalkerState
     {
         /// <summary>
-        /// 状態なし。起動していない。
+        /// 状態なし。動作していない。
         /// </summary>
         None,
 
@@ -18,7 +18,7 @@ namespace RucheHome.Talker
         Fail,
 
         /// <summary>
-        /// 起動途中。
+        /// 動作準備中。
         /// </summary>
         Startup,
 
@@ -28,12 +28,12 @@ namespace RucheHome.Talker
         Idle,
 
         /// <summary>
-        /// 文章読み上げ中。
+        /// 文章読み上げ処理中。
         /// </summary>
         Speaking,
 
         /// <summary>
-        /// モーダルダイアログ表示等により処理を受け付けない状態。
+        /// 処理を受け付けない状態。
         /// </summary>
         /// <remarks>
         /// 音声ファイル保存処理中の場合は <see cref="Saving"/> が優先される。

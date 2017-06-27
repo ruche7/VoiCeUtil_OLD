@@ -3,7 +3,7 @@
 namespace RucheHome.Talker
 {
     /// <summary>
-    /// 文章読み上げソフトパラメータ情報インタフェース。
+    /// 文章読み上げパラメータ情報インタフェース。
     /// </summary>
     public interface IParameterInfo
     {

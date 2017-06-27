@@ -5,7 +5,7 @@ using static RucheHome.Util.ArgumentValidater;
 namespace RucheHome.Talker
 {
     /// <summary>
-    /// 文章読み上げソフトパラメータ情報クラス。
+    /// 文章読み上げパラメータ情報クラス。
     /// </summary>
     /// <typeparam name="TId">パラメータID型。</typeparam>
     public class ParameterInfo<TId> : IParameterInfo

@@ -6,20 +6,17 @@ using System.ComponentModel;
 namespace RucheHome.Talker
 {
     /// <summary>
-    /// 文章読み上げソフトの自動操作機能を提供するインタフェース。
+    /// 文章の読み上げや音声ファイル保存の機能を提供するインタフェース。
     /// </summary>
     public interface ITalker : INotifyPropertyChanged
     {
         /// <summary>
-        /// 製品名を取得する。
+        /// 名前を取得する。
         /// </summary>
         /// <remarks>
-        /// <para>
-        /// 表示用の名前であり、実行ファイルの製品名情報とは異なる場合がある。
-        /// </para>
-        /// <para>インスタンス生成後に値が変化することはない。</para>
+        /// インスタンス生成後に値が変化することはない。
         /// </remarks>
-        string Product { get; }
+        string TalkerName { get; }
 
         /// <summary>
         /// 空白文を音声ファイル保存させることが可能か否かを取得する。
@@ -38,12 +35,12 @@ namespace RucheHome.Talker
         bool HasCharacters { get; }
 
         /// <summary>
-        /// プロセス状態を取得する。
+        /// 状態を取得する。
         /// </summary>
         TalkerState State { get; }
 
         /// <summary>
-        /// 起動済み状態であるか否かを取得する。
+        /// 動作中の状態であるか否かを取得する。
         /// </summary>
         /// <remarks>
         /// <see cref="State"/> が
@@ -167,40 +164,5 @@ namespace RucheHome.Talker
         /// 音声ファイル保存の成否を確認するまでブロッキングする。
         /// </remarks>
         Result<string> SaveFile(string filePath);
-
-        /// <summary>
-        /// 実行ファイルパスを取得する。
-        /// </summary>
-        /// <returns>実行ファイルパス。取得できなかった場合は null 。</returns>
-        /// <remarks>
-        /// <see cref="State"/> が <see cref="TalkerState.None"/> または
-        /// <see cref="TalkerState.Fail"/> の場合は取得できない。
-        /// </remarks>
-        Result<string> GetProcessFilePath();
-
-        /// <summary>
-        /// プロセスを起動させる。
-        /// </summary>
-        /// <param name="processFilePath">実行ファイルパス。</param>
-        /// <returns>成功したならば true 。そうでなければ false 。</returns>
-        /// <remarks>
-        /// 起動開始の成否を確認するまでブロッキングする。起動完了は待たない。
-        /// 既に起動している場合は何もせず true を返す。
-        /// </remarks>
-        Result<bool> RunProcess(string processFilePath);
-
-        /// <summary>
-        /// プロセスを終了させる。
-        /// </summary>
-        /// <returns>
-        /// 成功したならば true 。
-        /// 終了通知には成功したがプロセス側で終了が抑止されたならば null 。
-        /// 失敗したならば false 。
-        /// </returns>
-        /// <remarks>
-        /// 終了の成否を確認するまでブロッキングする。
-        /// 既に終了している場合は何もせず true を返す。
-        /// </remarks>
-        Result<bool?> ExitProcess();
     }
 }
