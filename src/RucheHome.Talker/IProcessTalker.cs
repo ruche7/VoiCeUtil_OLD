@@ -13,8 +13,11 @@ namespace RucheHome.Talker
         /// 操作対象プロセスの実行ファイル名(拡張子なし)を取得する。
         /// </summary>
         /// <remarks>
+        /// <para>
         /// <see cref="Process.GetProcessesByName(string)">Process.GetProcessesByName</see>
         /// メソッドの引数として利用できる。
+        /// </para>
+        /// <para>インスタンス生成後に値が変化することはない。</para>
         /// </remarks>
         string ProcessFileName { get; }
 

@@ -52,7 +52,8 @@ namespace RucheHome.Talker
         /// 操作対象プロセスの製品名情報を取得する。
         /// </summary>
         /// <remarks>
-        /// 操作対象プロセスか否かの判別に利用される。
+        /// <para>操作対象プロセスか否かの判別に利用される。</para>
+        /// <para>インスタンス生成後に値が変化することはない。</para>
         /// </remarks>
         public string ProcessProduct { get; }
 
@@ -143,12 +144,25 @@ namespace RucheHome.Talker
         protected const int StandardTimeoutMilliseconds = 1500;
 
         /// <summary>
-        /// Result{T} 値を作成する。
+        /// 操作対象プロセスを取得する。
+        /// </summary>
+        /// <remarks>
+        /// <para>起動していないならば null となる。</para>
+        /// <para>
+        /// <see cref="Process.GetProcessesByName(string)">Process.GetProcessesByName</see>
+        /// から取得したインスタンスを設定するため、プロパティ値変更時に以前の値に対して
+        /// <see cref="Process.Dispose"/> 呼び出しを行うことはない。
+        /// </para>
+        /// </remarks>
+        protected Process TargetProcess { get; private set; } = null;
+
+        /// <summary>
+        /// <see cref="Result{T}"/> 値を作成する。
         /// </summary>
         /// <typeparam name="T">戻り値の型。</typeparam>
         /// <param name="value">メソッドの戻り値。既定では default(T) 。</param>
         /// <param name="message">付随メッセージ。既定では null 。</param>
-        /// <returns>Result{T} 値。</returns>
+        /// <returns><see cref="Result{T}"/> 値。</returns>
         protected static Result<T> MakeResult<T>(
             T value = default(T),
             string message = null)
@@ -193,11 +207,11 @@ namespace RucheHome.Talker
         }
 
         /// <summary>
-        /// 状態エラーメッセージを付随メッセージとする Result{T} 値を作成する。
+        /// 状態エラーメッセージを付随メッセージとする <see cref="Result{T}"/> 値を作成する。
         /// </summary>
         /// <typeparam name="T">戻り値の型。</typeparam>
         /// <param name="value">メソッドの戻り値。既定では default(T) 。</param>
-        /// <returns>Result{T} 値。</returns>
+        /// <returns><see cref="Result{T}"/> 値。</returns>
         protected Result<T> MakeStateErrorResult<T>(T value = default(T))
         {
             return MakeResult(value, this.MakeStateErrorMessage());
@@ -214,19 +228,6 @@ namespace RucheHome.Talker
             process.MainModule.FileVersionInfo.ProductName == this.ProcessProduct;
 
         /// <summary>
-        /// 操作対象プロセスを取得または設定する。
-        /// </summary>
-        /// <remarks>
-        /// <para>起動していないならば null となる。プロパティ変更通知は行わない。</para>
-        /// <para>
-        /// <see cref="Process.GetProcessesByName(string)">Process.GetProcessesByName</see>
-        /// から取得したインスタンスを設定するため、プロパティ値変更時に以前の値に対して
-        /// <see cref="Process.Dispose"/> 呼び出しを行うことはない。
-        /// </para>
-        /// </remarks>
-        private Process TargetProcess { get; set; } = null;
-
-        /// <summary>
         /// 排他制御用オブジェクト。
         /// </summary>
         private object lockObject = new object();
@@ -241,7 +242,7 @@ namespace RucheHome.Talker
         {
             var apps = processes ?? Process.GetProcessesByName(this.ProcessFileName);
 
-            var app =
+            var targetApp =
                 apps.FirstOrDefault(
                     p =>
                     {
@@ -252,39 +253,44 @@ namespace RucheHome.Talker
                         catch { }
                         return false;
                     });
-            var r = (app == null) ? MakeResult(TalkerState.None) : this.CheckState(app);
+            var r =
+                (targetApp == null) ?
+                    MakeResult(TalkerState.None) : this.CheckState(targetApp);
 
-            this.TargetProcess = (r.Value == TalkerState.None) ? null : app;
-            this.UpdateStateProperties(r.Value, r.Message);
+            this.UpdateProperties(r.Value, r.Message, targetApp);
         }
 
         /// <summary>
-        /// <see cref="State"/> および <see cref="FailStateMessage"/> を更新する。
+        /// プロパティ群を更新し、その後まとめて PropertyChanged イベントを発生させる。
         /// </summary>
         /// <param name="state">状態値。</param>
         /// <param name="failStateMessage">
         /// 不正状態の理由を示すメッセージ。
         /// state が <see cref="TalkerState.Fail"/> 以外の場合は無視される。
         /// </param>
-        private void UpdateStateProperties(TalkerState state, string failStateMessage)
+        /// <param name="targetProcess">
+        /// 操作対象プロセス。 state が <see cref="TalkerState.None"/> の場合は無視される。
+        /// </param>
+        private void UpdateProperties(
+            TalkerState state,
+            string failStateMessage,
+            Process targetProcess)
         {
             var stateOld = this.State;
-            var messageOld = this.FailStateMessage;
             var aliveOld = this.IsAlive;
             var canOperateOld = this.CanOperate;
+            var messageOld = this.FailStateMessage;
+            var processOld = this.TargetProcess;
 
             // まず値変更
             this.State = state;
             this.FailStateMessage = (state == TalkerState.Fail) ? failStateMessage : null;
+            this.TargetProcess = (state == TalkerState.None) ? null : targetProcess;
 
             // まとめてプロパティ変更通知
             if (this.State != stateOld)
             {
                 this.RaisePropertyChanged(nameof(State));
-            }
-            if (this.FailStateMessage != messageOld)
-            {
-                this.RaisePropertyChanged(nameof(FailStateMessage));
             }
             if (this.IsAlive != aliveOld)
             {
@@ -293,6 +299,20 @@ namespace RucheHome.Talker
             if (this.CanOperate != canOperateOld)
             {
                 this.RaisePropertyChanged(nameof(CanOperate));
+            }
+            if (this.FailStateMessage != messageOld)
+            {
+                this.RaisePropertyChanged(nameof(FailStateMessage));
+            }
+            if (this.TargetProcess != processOld)
+            {
+                this.RaisePropertyChanged(nameof(TargetProcess));
+            }
+
+            // OnStateChanged は例外送出される可能性があるので最後に呼ぶ
+            if (this.State != stateOld)
+            {
+                this.OnStateChanged(stateOld);
             }
         }
 
@@ -314,7 +334,8 @@ namespace RucheHome.Talker
         /// <param name="process">操作対象プロセス。</param>
         /// <returns>状態値。</returns>
         /// <remarks>
-        /// 状態値が TalkerState.Fail の場合は付随メッセージも利用される。
+        /// このメソッドの戻り値によって <see cref="State"/> プロパティ等が更新される。
+        /// 状態値が <see cref="TalkerState.Fail"/> の場合は付随メッセージも利用される。
         /// </remarks>
         protected abstract Result<TalkerState> CheckState(Process process);
 
@@ -438,8 +459,11 @@ namespace RucheHome.Talker
         /// 操作対象プロセスの実行ファイル名(拡張子なし)を取得する。
         /// </summary>
         /// <remarks>
+        /// <para>
         /// <see cref="Process.GetProcessesByName(string)">Process.GetProcessesByName</see>
         /// メソッドの引数として利用できる。
+        /// </para>
+        /// <para>インスタンス生成後に値が変化することはない。</para>
         /// </remarks>
         public string ProcessFileName { get; }
 

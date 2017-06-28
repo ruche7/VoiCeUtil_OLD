@@ -17,6 +17,11 @@ namespace RucheHome.Talker
         /// <summary>
         /// コンストラクタ。
         /// </summary>
+        /// <remarks>
+        /// 並走させるタスクの最大数は
+        /// <see cref="ThreadPool.GetMinThreads">ThreadPool.GetMinThreads</see>
+        /// メソッドから取得する。
+        /// </remarks>
         public ProcessTalkerUpdater()
         {
             // スレッドプールの設定値からタスク数を決定
