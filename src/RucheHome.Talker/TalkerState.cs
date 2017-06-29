@@ -36,7 +36,7 @@ namespace RucheHome.Talker
         /// 処理を受け付けない状態。
         /// </summary>
         /// <remarks>
-        /// 音声ファイル保存処理中の場合は <see cref="Saving"/> が優先される。
+        /// 音声ファイル保存処理中の場合は <see cref="FileSaving"/> が優先される。
         /// </remarks>
         Blocking,
 

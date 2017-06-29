@@ -34,7 +34,7 @@ namespace RucheHome.Talker
         /// </summary>
         /// <returns>実行ファイルパス。取得できなかった場合は null 。</returns>
         /// <remarks>
-        /// <see cref="State"/> が <see cref="TalkerState.None"/> または
+        /// <see cref="ITalker.State"/> が <see cref="TalkerState.None"/> または
         /// <see cref="TalkerState.Fail"/> の場合は取得できない。
         /// </remarks>
         Result<string> GetProcessFilePath();

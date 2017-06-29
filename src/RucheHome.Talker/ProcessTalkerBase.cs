@@ -65,7 +65,13 @@ namespace RucheHome.Talker
         /// </returns>
         public Result<Dictionary<TParameterId, decimal>> GetParameters()
         {
-            lock (this.lockObject)
+            // SaveFile 処理中のデッドロック回避
+            if (this.IsPropertyChangedOnSaveFile)
+            {
+                return MakeStateErrorResult<Dictionary<TParameterId, decimal>>();
+            }
+
+            lock (this.LockObject)
             {
                 if (!this.CanOperate)
                 {
@@ -90,17 +96,26 @@ namespace RucheHome.Talker
         public Result<Dictionary<TParameterId, Result<bool>>> SetParameters(
             IEnumerable<KeyValuePair<TParameterId, decimal>> parameters)
         {
-            lock (this.lockObject)
+            // SaveFile 処理中のデッドロック回避
+            if (this.IsPropertyChangedOnSaveFile)
+            {
+                return MakeStateErrorResult<Dictionary<TParameterId, Result<bool>>>();
+            }
+
+            lock (this.LockObject)
             {
                 if (!this.CanOperate)
                 {
                     return MakeStateErrorResult<Dictionary<TParameterId, Result<bool>>>();
                 }
 
-                return
-                    this.SetParametersImpl(
-                        parameters ??
-                        Enumerable.Empty<KeyValuePair<TParameterId, decimal>>());
+                // 引数が null なら空の結果を返す
+                if (parameters == null)
+                {
+                    return MakeResult(new Dictionary<TParameterId, Result<bool>>());
+                }
+
+                return this.SetParametersImpl(parameters);
             }
         }
 
@@ -230,7 +245,25 @@ namespace RucheHome.Talker
         /// <summary>
         /// 排他制御用オブジェクト。
         /// </summary>
-        private object lockObject = new object();
+        private object LockObject = new object();
+
+        /// <summary>
+        /// <see cref="SaveFile"/> メソッドの lock 内で
+        /// PropertyChanged イベントを処理中であるか否かを取得する。
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <see cref="SaveFile"/> メソッドは処理の関係上
+        /// lock 内で PropertyChanged イベントを発生させる必要があるため、
+        /// イベント内で他のメソッドが呼び出されてデッドロックになることを防ぐ必要がある。
+        /// </para>
+        /// <para>
+        /// このプロパティ値を lock より手前で確認することでデッドロックを防ぐ。
+        /// このプロパティ値が true の場合、プロパティ値変更は発生せず、
+        /// <see cref="State"/> は <see cref="TalkerState.FileSaving"/> である前提でよい。
+        /// </para>
+        /// </remarks>
+        private bool IsPropertyChangedOnSaveFile { get; set; } = false;
 
         /// <summary>
         /// 状態を更新する。
@@ -238,7 +271,8 @@ namespace RucheHome.Talker
         /// <param name="processes">
         /// 対象プロセス検索先列挙。メソッド内でプロセスリストを取得させるならば null 。
         /// </param>
-        private void UpdateImpl(IEnumerable<Process> processes = null)
+        /// <returns>プロパティ値変更通知を行うデリゲート。</returns>
+        private Action UpdateImpl(IEnumerable<Process> processes = null)
         {
             var apps = processes ?? Process.GetProcessesByName(this.ProcessFileName);
 
@@ -250,18 +284,21 @@ namespace RucheHome.Talker
                         {
                             return this.IsOwnProcess(p);
                         }
-                        catch { }
+                        catch (Exception ex)
+                        {
+                            ThreadDebug.WriteException(ex);
+                        }
                         return false;
                     });
             var r =
                 (targetApp == null) ?
                     MakeResult(TalkerState.None) : this.CheckState(targetApp);
 
-            this.UpdateProperties(r.Value, r.Message, targetApp);
+            return this.UpdateProperties(r.Value, r.Message, targetApp);
         }
 
         /// <summary>
-        /// プロパティ群を更新し、その後まとめて PropertyChanged イベントを発生させる。
+        /// プロパティ群を更新し、変更通知を行うデリゲートを返す。
         /// </summary>
         /// <param name="state">状態値。</param>
         /// <param name="failStateMessage">
@@ -271,7 +308,8 @@ namespace RucheHome.Talker
         /// <param name="targetProcess">
         /// 操作対象プロセス。 state が <see cref="TalkerState.None"/> の場合は無視される。
         /// </param>
-        private void UpdateProperties(
+        /// <returns>プロパティ値変更通知を行うデリゲート。</returns>
+        private Action UpdateProperties(
             TalkerState state,
             string failStateMessage,
             Process targetProcess)
@@ -287,51 +325,94 @@ namespace RucheHome.Talker
             this.FailStateMessage = (state == TalkerState.Fail) ? failStateMessage : null;
             this.TargetProcess = (state == TalkerState.None) ? null : targetProcess;
 
-            // まとめてプロパティ変更通知
+            // 変更通知対象をリストアップ
+            var changedProps = new List<(string name, object newValue, object oldValue)>();
             if (this.State != stateOld)
             {
-                this.RaisePropertyChanged(nameof(State));
+                changedProps.Add((nameof(State), this.State, stateOld));
             }
             if (this.IsAlive != aliveOld)
             {
-                this.RaisePropertyChanged(nameof(IsAlive));
+                changedProps.Add((nameof(IsAlive), this.IsAlive, aliveOld));
             }
             if (this.CanOperate != canOperateOld)
             {
-                this.RaisePropertyChanged(nameof(CanOperate));
+                changedProps.Add((nameof(CanOperate), this.CanOperate, canOperateOld));
             }
             if (this.FailStateMessage != messageOld)
             {
-                this.RaisePropertyChanged(nameof(FailStateMessage));
+                changedProps.Add(
+                    (nameof(FailStateMessage), this.FailStateMessage, messageOld));
             }
             if (this.TargetProcess != processOld)
             {
-                this.RaisePropertyChanged(nameof(TargetProcess));
+                changedProps.Add((nameof(TargetProcess), this.TargetProcess, processOld));
             }
 
-            // OnStateChanged は例外送出される可能性があるので最後に呼ぶ
-            if (this.State != stateOld)
-            {
-                this.OnStateChanged(stateOld);
-            }
+            // デリゲート作成
+            return
+                () =>
+                {
+                    // まず PropertyChanged イベントを処理
+                    foreach (var prop in changedProps)
+                    {
+                        this.RaisePropertyChanged(prop.name);
+                    }
+
+                    Exception exception = null;
+
+                    // OnPropertyChanged メソッドを処理
+                    // 例外が発生してもひとまず一通り走らせる
+                    foreach (var prop in changedProps)
+                    {
+                        try
+                        {
+                            this.OnPropertyChanged(prop.name, prop.newValue, prop.oldValue);
+                        }
+                        catch (Exception ex)
+                        {
+                            if (exception != null)
+                            {
+                                exception = ex;
+                            }
+                        }
+                    }
+
+                    // 最初に発生した例外を投げる
+                    if (exception != null)
+                    {
+                        throw exception;
+                    }
+                };
         }
 
         #region 要オーバライド
 
         /// <summary>
-        /// 状態変更時に呼び出される。
+        /// プロパティ値変更時に呼び出される。
         /// </summary>
-        /// <param name="oldState">以前の状態。</param>
+        /// <param name="name">プロパティ名。</param>
+        /// <param name="newValue">変更後の値。</param>
+        /// <param name="oldValue">変更前の値。</param>
         /// <remarks>
         /// 既定では何も行わない。
-        /// 状態変化に応じて初期化処理や解放処理を行うならばオーバライドする。
         /// </remarks>
-        protected virtual void OnStateChanged(TalkerState oldState) { }
+        protected virtual void OnPropertyChanged(
+            string name,
+            object newValue,
+            object oldValue)
+        {
+            // 何もしない
+        }
 
         /// <summary>
         /// 操作対象プロセスの状態を調べる。
         /// </summary>
-        /// <param name="process">操作対象プロセス。</param>
+        /// <param name="process">
+        /// 操作対象プロセス。
+        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装から
+        /// null や操作対象外プロセスが渡されることはない。
+        /// </param>
         /// <returns>状態値。</returns>
         /// <remarks>
         /// このメソッドの戻り値によって <see cref="State"/> プロパティ等が更新される。
@@ -344,37 +425,77 @@ namespace RucheHome.Talker
         /// </summary>
         /// <returns>有効キャラクター配列。取得できなかった場合は null 。</returns>
         /// <remarks>
+        /// <para>
+        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装からは、
         /// <see cref="HasCharacters"/> が true かつ
         /// <see cref="CanOperate"/> が true の時のみ呼び出される。
+        /// </para>
+        /// <para>
+        /// 既定では、 <see cref="HasCharacters"/> が true ならば
+        /// <see cref="NotImplementedException"/> 例外を、そうでなければ
+        /// <see cref="NotSupportedException"/> 例外を送出する。
+        /// </para>
+        /// <para>
+        /// <see cref="HasCharacters"/> が true の場合は必ずオーバライドすること。
+        /// </para>
         /// </remarks>
-        protected abstract Result<ReadOnlyCollection<string>> GetAvailableCharactersImpl();
+        protected virtual Result<ReadOnlyCollection<string>> GetAvailableCharactersImpl() =>
+            throw (this.HasCharacters ?
+                (Exception)new NotImplementedException() : new NotSupportedException());
 
         /// <summary>
         /// 現在選択されているキャラクターを取得する。
         /// </summary>
         /// <returns>キャラクター。取得できなかった場合は null 。</returns>
         /// <remarks>
+        /// <para>
+        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装からは、
         /// <see cref="HasCharacters"/> が true かつ
         /// <see cref="CanOperate"/> が true の時のみ呼び出される。
+        /// </para>
+        /// <para>
+        /// 既定では、 <see cref="HasCharacters"/> が true ならば
+        /// <see cref="NotImplementedException"/> 例外を、そうでなければ
+        /// <see cref="NotSupportedException"/> 例外を送出する。
+        /// </para>
+        /// <para>
+        /// <see cref="HasCharacters"/> が true の場合は必ずオーバライドすること。
+        /// </para>
         /// </remarks>
-        protected abstract Result<string> GetCharacterImpl();
+        protected virtual Result<string> GetCharacterImpl() =>
+            throw (this.HasCharacters ?
+                (Exception)new NotImplementedException() : new NotSupportedException());
 
         /// <summary>
         /// キャラクターを選択させる。
         /// </summary>
-        /// <param name="character">キャラクター。</param>
+        /// <param name="character">キャラクター。 null も渡されうる。</param>
         /// <returns>成功したならば true 。そうでなければ false 。</returns>
         /// <remarks>
+        /// <para>
+        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装からは、
         /// <see cref="HasCharacters"/> が true かつ
         /// <see cref="CanOperate"/> が true の時のみ呼び出される。
+        /// </para>
+        /// <para>
+        /// 既定では、 <see cref="HasCharacters"/> が true ならば
+        /// <see cref="NotImplementedException"/> 例外を、そうでなければ
+        /// <see cref="NotSupportedException"/> 例外を送出する。
+        /// </para>
+        /// <para>
+        /// <see cref="HasCharacters"/> が true の場合は必ずオーバライドすること。
+        /// </para>
         /// </remarks>
-        protected abstract Result<bool> SetCharacterImpl(string character);
+        protected virtual Result<bool> SetCharacterImpl(string character) =>
+            throw (this.HasCharacters ?
+                (Exception)new NotImplementedException() : new NotSupportedException());
 
         /// <summary>
         /// 現在設定されている文章を取得する。
         /// </summary>
         /// <returns>文章。取得できなかった場合は null 。</returns>
         /// <remarks>
+        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装からは、
         /// <see cref="CanOperate"/> が true の時のみ呼び出される。
         /// </remarks>
         protected abstract Result<string> GetTextImpl();
@@ -382,9 +503,13 @@ namespace RucheHome.Talker
         /// <summary>
         /// 文章を設定する。
         /// </summary>
-        /// <param name="text">文章。</param>
+        /// <param name="text">
+        /// 文章。
+        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装から null が渡されることはない。
+        /// </param>
         /// <returns>成功したならば true 。そうでなければ false 。</returns>
         /// <remarks>
+        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装からは、
         /// <see cref="CanOperate"/> が true の時のみ呼び出される。
         /// </remarks>
         protected abstract Result<bool> SetTextImpl(string text);
@@ -396,6 +521,7 @@ namespace RucheHome.Talker
         /// パラメータIDとその値のディクショナリ。取得できなかった場合は null 。
         /// </returns>
         /// <remarks>
+        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装からは、
         /// <see cref="CanOperate"/> が true の時のみ呼び出される。
         /// </remarks>
         protected abstract Result<Dictionary<TParameterId, decimal>> GetParametersImpl();
@@ -403,13 +529,19 @@ namespace RucheHome.Talker
         /// <summary>
         /// パラメータ群を設定する。
         /// </summary>
-        /// <param name="parameters">設定するパラメータIDとその値の列挙。</param>
+        /// <param name="parameters">
+        /// 設定するパラメータIDとその値の列挙。
+        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装から null が渡されることはない。
+        /// </param>
         /// <returns>
         /// 個々のパラメータIDとその設定成否を保持するディクショナリ。
         /// 処理を行えない状態ならば null 。
         /// </returns>
         /// <remarks>
-        /// <para><see cref="CanOperate"/> が true の時のみ呼び出される。</para>
+        /// <para>
+        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装からは、
+        /// <see cref="CanOperate"/> が true の時のみ呼び出される。
+        /// </para>
         /// <para>設定処理自体行わなかったパラメータIDは戻り値のキーに含めないこと。</para>
         /// </remarks>
         protected abstract Result<Dictionary<TParameterId, Result<bool>>> SetParametersImpl(
@@ -420,7 +552,10 @@ namespace RucheHome.Talker
         /// </summary>
         /// <returns>成功したならば true 。そうでなければ false 。</returns>
         /// <remarks>
-        /// <para><see cref="CanOperate"/> が true の時のみ呼び出される。</para>
+        /// <para>
+        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装からは、
+        /// <see cref="CanOperate"/> が true の時のみ呼び出される。
+        /// </para>
         /// <para>
         /// 読み上げ開始の成否を確認するまでブロッキングする。読み上げ完了は待たない。
         /// </para>
@@ -432,7 +567,10 @@ namespace RucheHome.Talker
         /// </summary>
         /// <returns>成功したか既に停止中ならば true 。そうでなければ false 。</returns>
         /// <remarks>
-        /// <para><see cref="CanOperate"/> が true の時のみ呼び出される。</para>
+        /// <para>
+        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装からは、
+        /// <see cref="CanOperate"/> が true の時のみ呼び出される。
+        /// </para>
         /// <para>読み上げ停止の成否を確認するまでブロッキングする。</para>
         /// </remarks>
         protected abstract Result<bool> StopImpl();
@@ -440,13 +578,16 @@ namespace RucheHome.Talker
         /// <summary>
         /// 現在の文章の音声ファイル保存を行わせる。
         /// </summary>
-        /// <param name="filePath">音声ファイルの保存先希望パス。</param>
+        /// <param name="filePath">音声ファイルの保存先希望パス。 null も渡されうる。</param>
         /// <returns>
         /// 実際に保存された音声ファイルのパス。分割されている場合はそのうちの1ファイル。
         /// 保存に失敗した場合は null 。
         /// </returns>
         /// <remarks>
-        /// <para><see cref="CanOperate"/> が true の時のみ呼び出される。</para>
+        /// <para>
+        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装からは、
+        /// <see cref="CanOperate"/> が true の時のみ呼び出される。
+        /// </para>
         /// <para>音声ファイル保存の成否を確認するまでブロッキングする。</para>
         /// </remarks>
         protected abstract Result<string> SaveFileImpl(string filePath);
@@ -475,9 +616,24 @@ namespace RucheHome.Talker
         /// </param>
         public void Update(IEnumerable<Process> processes = null)
         {
-            lock (this.lockObject)
+            // SaveFile 処理中のデッドロック回避
+            if (this.IsPropertyChangedOnSaveFile)
             {
-                this.UpdateImpl(processes);
+                return;
+            }
+
+            Action raisePropChanged = null;
+
+            try
+            {
+                lock (this.LockObject)
+                {
+                    raisePropChanged = this.UpdateImpl(processes);
+                }
+            }
+            finally
+            {
+                raisePropChanged?.Invoke();
             }
         }
 
@@ -491,9 +647,16 @@ namespace RucheHome.Talker
         /// </remarks>
         public Result<string> GetProcessFilePath()
         {
-            lock (this.lockObject)
+            // SaveFile 処理中のデッドロック回避
+            // ダミーのロックオブジェクトを使わせる
+            bool propChangedOnSaveFile = this.IsPropertyChangedOnSaveFile;
+            object lockObj = propChangedOnSaveFile ? (new object()) : this.LockObject;
+
+            lock (lockObj)
             {
-                if (this.State == TalkerState.None || this.State == TalkerState.Fail)
+                if (
+                    !propChangedOnSaveFile &&
+                    (this.State == TalkerState.None || this.State == TalkerState.Fail))
                 {
                     return MakeStateErrorResult<string>();
                 }
@@ -522,86 +685,99 @@ namespace RucheHome.Talker
         /// </remarks>
         public Result<bool> RunProcess(string processFilePath)
         {
-            lock (this.lockObject)
+            // SaveFile 処理中のデッドロック回避
+            // ダミーのロックオブジェクトを使わせる
+            bool propChangedOnSaveFile = this.IsPropertyChangedOnSaveFile;
+            object lockObj = propChangedOnSaveFile ? (new object()) : this.LockObject;
+
+            Action raisePropChanged = null;
+
+            try
             {
-                switch (this.State)
+                lock (lockObj)
                 {
-                case TalkerState.None:
-                    break;
-
-                case TalkerState.Fail:
-                    return MakeStateErrorResult(false);
-
-                default:
-                    // 既に起動しているので何もしない
-                    return MakeResult(true, @"既に起動しています。");
-                }
-
-                if (string.IsNullOrWhiteSpace(processFilePath))
-                {
-                    return MakeResult(false, @"実行ファイルパスが不正です。");
-                }
-                if (!File.Exists(processFilePath))
-                {
-                    return MakeResult(false, @"実行ファイルが存在しません。");
-                }
-
-                Process app = null;
-                try
-                {
-                    // 起動
-                    app = Process.Start(processFilePath);
-                    if (app == null)
+                    if (
+                        propChangedOnSaveFile ||
+                        (this.State != TalkerState.None && this.State != TalkerState.Fail))
                     {
-                        ThreadTrace.WriteLine(@"Process.Start returns null.");
-                        return MakeResult(false, @"起動処理に失敗しました。");
+                        // 既に起動しているので何もしない
+                        return MakeResult(true, @"既に起動しています。");
+                    }
+                    if (this.State == TalkerState.Fail)
+                    {
+                        return MakeStateErrorResult(false);
                     }
 
-                    // 入力待機
-                    if (!app.WaitForInputIdle(StandardTimeoutMilliseconds))
+                    if (string.IsNullOrWhiteSpace(processFilePath))
                     {
-                        ThreadTrace.WriteLine(@"WaitForInputIdle is failed.");
-                        return MakeResult(false, @"起動待機に失敗しました。");
+                        return MakeResult(false, @"実行ファイルパスが不正です。");
+                    }
+                    if (!File.Exists(processFilePath))
+                    {
+                        return MakeResult(false, @"実行ファイルが存在しません。");
                     }
 
-                    // 操作対象プロセスか？
-                    if (!this.IsOwnProcess(app))
+                    Process app = null;
+                    try
                     {
-                        if (!app.CloseMainWindow())
+                        // 起動
+                        app = Process.Start(processFilePath);
+                        if (app == null)
                         {
-                            app.Kill();
+                            ThreadTrace.WriteLine(@"Process.Start returns null.");
+                            return MakeResult(false, @"起動処理に失敗しました。");
                         }
-                        return MakeResult(false, @"操作対象ではありませんでした。");
+
+                        // 入力待機
+                        if (!app.WaitForInputIdle(StandardTimeoutMilliseconds))
+                        {
+                            ThreadTrace.WriteLine(@"WaitForInputIdle is failed.");
+                            return MakeResult(false, @"起動待機に失敗しました。");
+                        }
+
+                        // 操作対象プロセスか？
+                        if (!this.IsOwnProcess(app))
+                        {
+                            if (!app.CloseMainWindow())
+                            {
+                                app.Kill();
+                            }
+                            return MakeResult(false, @"操作対象ではありませんでした。");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        ThreadTrace.WriteException(ex);
+                        return MakeResult(
+                            false,
+                            ex.Message ?? (ex.GetType().Name + @" 例外が発生しました。"));
+                    }
+                    finally
+                    {
+                        // Process インスタンスのリソースを破棄
+                        // プロセス自体は起動し続けているはず
+                        app?.Dispose();
+                    }
+
+                    // 状態更新
+                    raisePropChanged = this.UpdateImpl(null);
+
+                    switch (this.State)
+                    {
+                    case TalkerState.None:
+                        return MakeResult(false, @"起動状態にできませんでした。");
+
+                    case TalkerState.Fail:
+                        return MakeStateErrorResult(false);
+
+                    default:
+                        break;
                     }
                 }
-                catch (Exception ex)
-                {
-                    ThreadTrace.WriteException(ex);
-                    return MakeResult(
-                        false,
-                        ex.Message ?? (ex.GetType().Name + @" 例外が発生しました。"));
-                }
-                finally
-                {
-                    // Process インスタンスのリソースを破棄
-                    // プロセス自体は起動し続けているはず
-                    app?.Dispose();
-                }
-
-                // 状態更新
-                this.UpdateImpl(null);
-
-                switch (this.State)
-                {
-                case TalkerState.None:
-                    return MakeResult(false, @"起動状態にできませんでした。");
-
-                case TalkerState.Fail:
-                    return MakeStateErrorResult(false);
-
-                default:
-                    break;
-                }
+            }
+            finally
+            {
+                raisePropChanged?.Invoke();
             }
 
             return MakeResult(true);
@@ -621,86 +797,101 @@ namespace RucheHome.Talker
         /// </remarks>
         public Result<bool?> ExitProcess()
         {
-            lock (this.lockObject)
+            // SaveFile 処理中のデッドロック回避
+            if (this.IsPropertyChangedOnSaveFile)
             {
-                switch (this.State)
+                return MakeStateErrorResult<bool?>(false);
+            }
+
+            Action raisePropChanged = null;
+
+            try
+            {
+                lock (this.LockObject)
                 {
-                case TalkerState.None:
-                    // 既に終了しているので何もしない
-                    return MakeResult<bool?>(true, @"終了済みです。");
-
-                case TalkerState.Startup:
-                case TalkerState.Idle:
-                case TalkerState.Speaking:
-                    break;
-
-                default:
-                    return MakeStateErrorResult<bool?>(false);
-                }
-
-                try
-                {
-                    var app = this.TargetProcess;
-
-                    if (app?.HasExited == false)
+                    switch (this.State)
                     {
-                        // 終了通知
-                        if (!app.CloseMainWindow())
-                        {
-                            return MakeResult<bool?>(false, @"終了通知に失敗しました。");
-                        }
+                    case TalkerState.None:
+                        // 既に終了しているので何もしない
+                        return MakeResult<bool?>(true, @"終了済みです。");
 
-                        // 終了orブロッキング状態まで待つ
-                        for (var sw = Stopwatch.StartNew(); ; Thread.Sleep(1))
+                    case TalkerState.Startup:
+                    case TalkerState.Idle:
+                    case TalkerState.Speaking:
+                        break;
+
+                    default:
+                        return MakeStateErrorResult<bool?>(false);
+                    }
+
+                    try
+                    {
+                        var app = this.TargetProcess;
+
+                        if (app?.HasExited == false)
                         {
-                            if (app.WaitForExit(0))
+                            // 終了通知
+                            if (!app.CloseMainWindow())
                             {
-                                break;
+                                return MakeResult<bool?>(false, @"終了通知に失敗しました。");
                             }
 
-                            var state = this.CheckState(app).Value;
-                            if (
-                                state != TalkerState.Startup &&
-                                state != TalkerState.Idle &&
-                                state != TalkerState.Speaking)
+                            // 終了orブロッキング状態まで待つ
+                            for (var sw = Stopwatch.StartNew(); ; Thread.Sleep(1))
                             {
-                                break;
-                            }
+                                if (app.WaitForExit(0))
+                                {
+                                    break;
+                                }
 
-                            if (sw.ElapsedMilliseconds >= StandardTimeoutMilliseconds)
-                            {
-                                return
-                                    MakeResult<bool?>(
-                                        false,
-                                        @"終了状態へ遷移しませんでした。");
+                                var state = this.CheckState(app).Value;
+                                if (
+                                    state != TalkerState.Startup &&
+                                    state != TalkerState.Idle &&
+                                    state != TalkerState.Speaking)
+                                {
+                                    break;
+                                }
+
+                                if (sw.ElapsedMilliseconds >= StandardTimeoutMilliseconds)
+                                {
+                                    return
+                                        MakeResult<bool?>(
+                                            false,
+                                            @"終了状態へ遷移しませんでした。");
+                                }
                             }
                         }
                     }
+                    catch (Exception ex)
+                    {
+                        ThreadTrace.WriteException(ex);
+                        return MakeResult<bool?>(
+                            false,
+                            ex.Message ?? (ex.GetType().Name + @" 例外が発生しました。"));
+                    }
+
+                    // 状態更新
+                    raisePropChanged = this.UpdateImpl(null);
+
+                    switch (this.State)
+                    {
+                    case TalkerState.Fail:
+                        return MakeStateErrorResult<bool?>(false);
+
+                    case TalkerState.Blocking:
+                    case TalkerState.FileSaving:
+                        return MakeResult<bool?>(null, @"本体側で終了が保留されました。");
+
+                    default:
+                        // TalkerState.Startup 等は終了後即再起動したものと判断
+                        break;
+                    }
                 }
-                catch (Exception ex)
-                {
-                    ThreadTrace.WriteException(ex);
-                    return MakeResult<bool?>(
-                        false,
-                        ex.Message ?? (ex.GetType().Name + @" 例外が発生しました。"));
-                }
-
-                // 状態更新
-                this.UpdateImpl(null);
-
-                switch (this.State)
-                {
-                case TalkerState.Fail:
-                    return MakeStateErrorResult<bool?>(false);
-
-                case TalkerState.Blocking:
-                case TalkerState.FileSaving:
-                    return MakeResult<bool?>(null, @"本体側で終了が保留されました。");
-
-                default:
-                    // TalkerState.Startup 等は終了後即再起動したものと判断
-                    break;
-                }
+            }
+            finally
+            {
+                raisePropChanged?.Invoke();
             }
 
             return MakeResult<bool?>(true);
@@ -754,10 +945,18 @@ namespace RucheHome.Talker
         /// <see cref="TalkerState.Startup"/> のいずれでもなければ true を返す。
         /// </para>
         /// </remarks>
-        public bool IsAlive =>
-            this.State != TalkerState.None &&
-            this.State != TalkerState.Fail &&
-            this.State != TalkerState.Startup;
+        public bool IsAlive
+        {
+            get
+            {
+                // State の評価を1回にするために一旦変数に入れる
+                var state = this.State;
+                return (
+                    state != TalkerState.None &&
+                    state != TalkerState.Fail &&
+                    state != TalkerState.Startup);
+            }
+        }
 
         /// <summary>
         /// 各種操作可能な状態であるか否かを取得する。
@@ -770,9 +969,15 @@ namespace RucheHome.Talker
         /// <see cref="TalkerState.Speaking"/> ならば true を返す。
         /// </para>
         /// </remarks>
-        public bool CanOperate =>
-            this.State == TalkerState.Idle ||
-            this.State == TalkerState.Speaking;
+        public bool CanOperate
+        {
+            get
+            {
+                // State の評価を1回にするために一旦変数に入れる
+                var state = this.State;
+                return (state == TalkerState.Idle || state == TalkerState.Speaking);
+            }
+        }
 
         /// <summary>
         /// 不正状態の理由を示すメッセージを取得する。
@@ -802,7 +1007,13 @@ namespace RucheHome.Talker
                         message: @"サポートしていません。");
             }
 
-            lock (this.lockObject)
+            // SaveFile 処理中のデッドロック回避
+            if (this.IsPropertyChangedOnSaveFile)
+            {
+                return MakeStateErrorResult<ReadOnlyCollection<string>>();
+            }
+
+            lock (this.LockObject)
             {
                 if (!this.CanOperate)
                 {
@@ -827,7 +1038,13 @@ namespace RucheHome.Talker
                 return MakeResult<string>(message: @"サポートしていません。");
             }
 
-            lock (this.lockObject)
+            // SaveFile 処理中のデッドロック回避
+            if (this.IsPropertyChangedOnSaveFile)
+            {
+                return MakeStateErrorResult<string>();
+            }
+
+            lock (this.LockObject)
             {
                 if (!this.CanOperate)
                 {
@@ -853,7 +1070,13 @@ namespace RucheHome.Talker
                 return MakeResult(false, @"サポートしていません。");
             }
 
-            lock (this.lockObject)
+            // SaveFile 処理中のデッドロック回避
+            if (this.IsPropertyChangedOnSaveFile)
+            {
+                return MakeStateErrorResult(false);
+            }
+
+            lock (this.LockObject)
             {
                 if (!this.CanOperate)
                 {
@@ -870,7 +1093,13 @@ namespace RucheHome.Talker
         /// <returns>文章。取得できなかった場合は null 。</returns>
         public Result<string> GetText()
         {
-            lock (this.lockObject)
+            // SaveFile 処理中のデッドロック回避
+            if (this.IsPropertyChangedOnSaveFile)
+            {
+                return MakeStateErrorResult<string>();
+            }
+
+            lock (this.LockObject)
             {
                 if (!this.CanOperate)
                 {
@@ -888,7 +1117,13 @@ namespace RucheHome.Talker
         /// <returns>成功したならば true 。そうでなければ false 。</returns>
         public Result<bool> SetText(string text)
         {
-            lock (this.lockObject)
+            // SaveFile 処理中のデッドロック回避
+            if (this.IsPropertyChangedOnSaveFile)
+            {
+                return MakeStateErrorResult(false);
+            }
+
+            lock (this.LockObject)
             {
                 if (!this.CanOperate)
                 {
@@ -909,24 +1144,51 @@ namespace RucheHome.Talker
         /// </remarks>
         public Result<bool> Speak()
         {
-            lock (this.lockObject)
+            // SaveFile 処理中のデッドロック回避
+            if (this.IsPropertyChangedOnSaveFile)
             {
-                if (!this.CanOperate)
-                {
-                    return MakeStateErrorResult(false);
-                }
+                return MakeStateErrorResult(false);
+            }
 
-                // 読み上げ中ならまず停止させる
-                if (this.State == TalkerState.Speaking)
+            Action raisePropChanged = null;
+
+            try
+            {
+                lock (this.LockObject)
                 {
-                    var r = this.StopImpl();
-                    if (!r.Value)
+                    if (!this.CanOperate)
                     {
-                        return r;
+                        return MakeStateErrorResult(false);
                     }
-                }
 
-                return this.SpeakImpl();
+                    // 読み上げ中ならまず停止させる
+                    if (this.State == TalkerState.Speaking)
+                    {
+                        var r = this.StopImpl();
+                        if (!r.Value)
+                        {
+                            return r;
+                        }
+                    }
+
+                    var result = this.SpeakImpl();
+
+                    // 成功したならば読み上げ中状態に変更
+                    if (result.Value)
+                    {
+                        raisePropChanged =
+                            this.UpdateProperties(
+                                TalkerState.Speaking,
+                                null,
+                                this.TargetProcess);
+                    }
+
+                    return result;
+                }
+            }
+            finally
+            {
+                raisePropChanged?.Invoke();
             }
         }
 
@@ -940,19 +1202,46 @@ namespace RucheHome.Talker
         /// </remarks>
         public Result<bool> Stop()
         {
-            lock (this.lockObject)
+            // SaveFile 処理中のデッドロック回避
+            if (this.IsPropertyChangedOnSaveFile)
             {
-                if (!this.CanOperate)
-                {
-                    return MakeStateErrorResult(false);
-                }
-                if (this.State == TalkerState.Idle)
-                {
-                    // 既に停止しているので何もしない
-                    return MakeResult(true, @"停止済みです。");
-                }
+                return MakeStateErrorResult(false);
+            }
 
-                return this.StopImpl();
+            Action raisePropChanged = null;
+
+            try
+            {
+                lock (this.LockObject)
+                {
+                    if (!this.CanOperate)
+                    {
+                        return MakeStateErrorResult(false);
+                    }
+                    if (this.State == TalkerState.Idle)
+                    {
+                        // 既に停止しているので何もしない
+                        return MakeResult(true, @"停止済みです。");
+                    }
+
+                    var result = this.StopImpl();
+
+                    // 成功したならばアイドル状態に変更
+                    if (result.Value)
+                    {
+                        raisePropChanged =
+                            this.UpdateProperties(
+                                TalkerState.Idle,
+                                null,
+                                this.TargetProcess);
+                    }
+
+                    return result;
+                }
+            }
+            finally
+            {
+                raisePropChanged?.Invoke();
             }
         }
 
@@ -969,7 +1258,13 @@ namespace RucheHome.Talker
         /// </remarks>
         public Result<string> SaveFile(string filePath)
         {
-            lock (this.lockObject)
+            // SaveFile 処理中のデッドロック回避
+            if (this.IsPropertyChangedOnSaveFile)
+            {
+                return MakeStateErrorResult<string>();
+            }
+
+            lock (this.LockObject)
             {
                 if (!this.CanOperate)
                 {
@@ -986,6 +1281,26 @@ namespace RucheHome.Talker
                     }
                 }
 
+                // 音声ファイル保存中状態に変更
+                var raisePropChanged =
+                    this.UpdateProperties(TalkerState.FileSaving, null, this.TargetProcess);
+
+                try
+                {
+                    // PropertyChanged イベント処理中フラグを立てる
+                    this.IsPropertyChangedOnSaveFile = true;
+
+                    // プロパティ値変更通知
+                    // lock 内だが IsSaveFileRunning によりデッドロック回避する
+                    raisePropChanged?.Invoke();
+                }
+                finally
+                {
+                    // PropertyChanged イベント処理中フラグを下ろす
+                    this.IsPropertyChangedOnSaveFile = false;
+                }
+
+                // 実処理
                 return this.SaveFileImpl(filePath);
             }
         }
