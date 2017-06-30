@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHomeLib", "lib\RucheHo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Talker.AITalkEx", "src\RucheHome.Talker.AITalkEx\RucheHome.Talker.AITalkEx.csproj", "{7B3AD7E7-FC97-422B-9B3B-DD5471EAFF83}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Talker.Tests", "test\RucheHome.Talker.Tests\RucheHome.Talker.Tests.csproj", "{A5F01152-B185-454A-B9B1-10E0E60B5C6D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
@@ -33,6 +35,10 @@ Global
 		{7B3AD7E7-FC97-422B-9B3B-DD5471EAFF83}.Debug|x86.Build.0 = Debug|x86
 		{7B3AD7E7-FC97-422B-9B3B-DD5471EAFF83}.Release|x86.ActiveCfg = Release|x86
 		{7B3AD7E7-FC97-422B-9B3B-DD5471EAFF83}.Release|x86.Build.0 = Release|x86
+		{A5F01152-B185-454A-B9B1-10E0E60B5C6D}.Debug|x86.ActiveCfg = Debug|x86
+		{A5F01152-B185-454A-B9B1-10E0E60B5C6D}.Debug|x86.Build.0 = Debug|x86
+		{A5F01152-B185-454A-B9B1-10E0E60B5C6D}.Release|x86.ActiveCfg = Release|x86
+		{A5F01152-B185-454A-B9B1-10E0E60B5C6D}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -41,5 +47,6 @@ Global
 		{44F2FF62-F248-4B1A-9F9E-1CEEFDE5E6E6} = {87905CE9-795C-44B6-86AA-1DA5A1D2F3B9}
 		{DF1B25FE-0FDF-4C86-A779-AFF5217A7C6B} = {6222A11A-73C4-45E3-A902-8B48580E0847}
 		{7B3AD7E7-FC97-422B-9B3B-DD5471EAFF83} = {87905CE9-795C-44B6-86AA-1DA5A1D2F3B9}
+		{A5F01152-B185-454A-B9B1-10E0E60B5C6D} = {2EBE5B3F-BD10-4056-B386-B251471D02E8}
 	EndGlobalSection
 EndGlobal

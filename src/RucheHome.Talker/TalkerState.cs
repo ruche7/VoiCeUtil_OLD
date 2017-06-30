@@ -23,6 +23,11 @@ namespace RucheHome.Talker
         Startup,
 
         /// <summary>
+        /// 動作終了処理中。
+        /// </summary>
+        Cleanup,
+
+        /// <summary>
         /// アイドル状態。
         /// </summary>
         Idle,

@@ -1,17 +1,15 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Codeer.Friendly;
 using Codeer.Friendly.Windows;
 using Codeer.Friendly.Windows.Grasp;
 using Ong.Friendly.FormsStandardControls;
 using RucheHome.Util;
+
 using static RucheHome.Util.ArgumentValidater;
 
 namespace RucheHome.Talker.AITalkEx
@@ -72,14 +70,33 @@ namespace RucheHome.Talker.AITalkEx
             new ConcurrentDictionary<Product, Talker>();
 
         /// <summary>
-        /// 音声ファイル保存ダイアログのウィンドウタイトル。
+        /// 非同期アクションを開始し、その完了を待機する。
         /// </summary>
-        private const string SaveFileDialogTitle = @"音声ファイルの保存";
+        /// <param name="action">非同期アクション。</param>
+        /// <param name="timeoutMilliseconds">
+        /// タイムアウトミリ秒数。既定値は
+        /// <see cref="ProcessTalkerBase{TParameterId}.StandardTimeoutMilliseconds"/> 。
+        /// 負数ならば無制限。
+        /// </param>
+        /// <returns>完了したならば true 。タイムアウトしたならば false 。</returns>
+        private static bool WaitAsyncAction(
+            Action<Async> action,
+            int timeoutMilliseconds = StandardTimeoutMilliseconds)
+        {
+            var async = new Async();
 
-        /// <summary>
-        /// 音声保存進捗ウィンドウのウィンドウタイトル。
-        /// </summary>
-        private const string SaveProgressWindowTitle = @"音声保存";
+            action(async);
+
+            for (
+                var sw = Stopwatch.StartNew();
+                !async.IsCompleted &&
+                (timeoutMilliseconds < 0 || sw.ElapsedMilliseconds < timeoutMilliseconds); )
+            {
+                Thread.Sleep(1);
+            }
+
+            return async.IsCompleted;
+        }
 
         /// <summary>
         /// 操作対象プロセスからアプリインスタンスを生成する。
@@ -93,16 +110,93 @@ namespace RucheHome.Talker.AITalkEx
         /// <summary>
         /// 文章入力欄下にあるボタン群の親コントロールを取得する。
         /// </summary>
-        /// <param name="app">操作対象アプリ。</param>
+        /// <param name="mainWindow">メインウィンドウ。</param>
         /// <returns>コントロール。取得できなかった場合は null 。</returns>
         /// <remarks>
         /// Zインデックスによって対象を特定する。
         /// </remarks>
-        private static WindowControl GetMainButtonsParent(WindowsAppFriend app)
+        private static WindowControl GetMainButtonsParent(WindowControl mainWindow)
         {
             try
             {
-                return WindowControl.FromZTop(app).IdentifyFromZIndex(2, 0, 0, 1, 0, 1, 0);
+                return mainWindow?.IdentifyFromZIndex(2, 0, 0, 1, 0, 1, 0);
+            }
+            catch (Exception ex)
+            {
+                ThreadTrace.WriteException(ex);
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// 文章入力欄下にあるボタンの種別列挙。
+        /// </summary>
+        /// <remarks>
+        /// 値がそのままZインデックスを表す。
+        /// </remarks>
+        private enum MainButton
+        {
+            /// <summary>
+            /// 再生時間
+            /// </summary>
+            Time = 0,
+
+            /// <summary>
+            /// 音声保存
+            /// </summary>
+            Save = 1,
+
+            /// <summary>
+            /// 停止
+            /// </summary>
+            Stop = 2,
+
+            /// <summary>
+            /// 再生/一時停止/再開
+            /// </summary>
+            Play = 3,
+        }
+
+        /// <summary>
+        /// 文章入力欄下にあるボタンコントロールを取得する。
+        /// </summary>
+        /// <param name="parent">ボタン群の親コントロール。</param>
+        /// <param name="button">ボタン種別。</param>
+        /// <returns>コントロール。取得できなかった場合は null 。</returns>
+        private static FormsButton GetMainButton(WindowControl parent, MainButton button)
+        {
+            if (parent != null)
+            {
+                try
+                {
+                    return new FormsButton(parent.IdentifyFromZIndex((int)button));
+                }
+                catch (Exception ex)
+                {
+                    ThreadTrace.WriteException(ex);
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// 文章入力欄コントロールを取得する。
+        /// </summary>
+        /// <param name="mainWindow">メインウィンドウ。</param>
+        /// <returns>コントロール。取得できなかった場合は null 。</returns>
+        private static FormsRichTextBox GetMainRichTextBox(WindowControl mainWindow)
+        {
+            if (mainWindow == null)
+            {
+                return null;
+            }
+
+            try
+            {
+                return
+                    new FormsRichTextBox(
+                        mainWindow.IdentifyFromZIndex(2, 0, 0, 1, 0, 1, 1, 1));
             }
             catch (Exception ex)
             {
@@ -117,12 +211,77 @@ namespace RucheHome.Talker.AITalkEx
         private WindowsAppFriend TargetApp { get; set; } = null;
 
         /// <summary>
-        /// 文章入力欄コントロールを取得する。
+        /// 音声ファイル保存ダイアログのウィンドウタイトル。
         /// </summary>
-        /// <returns>コントロール。取得できなかった場合は null 。</returns>
-        private FormsRichTextBox GetMainRichTextBox()
+        private const string SaveFileDialogTitle = @"音声ファイルの保存";
+
+        /// <summary>
+        /// 音声保存進捗ウィンドウのウィンドウタイトル。
+        /// </summary>
+        private const string SaveProgressWindowTitle = @"音声保存";
+
+        /// <summary>
+        /// ウィンドウタイトル種別列挙。
+        /// </summary>
+        enum WindowTitleKind
         {
-            if (this.TargetApp == null)
+            /// <summary>
+            /// メインウィンドウ。
+            /// </summary>
+            Main,
+
+            /// <summary>
+            /// 起動中もしくは終了中。
+            /// </summary>
+            StartupOrCleanup,
+
+            /// <summary>
+            /// ファイル保存処理関連。
+            /// </summary>
+            FileSaving,
+
+            /// <summary>
+            /// 他の定義以外。
+            /// </summary>
+            Others,
+        }
+
+        /// <summary>
+        /// ウィンドウタイトル種別を調べる。
+        /// </summary>
+        /// <param name="title">ウィンドウタイトル。</param>
+        /// <returns>ウィンドウタイトル種別。</returns>
+        private WindowTitleKind CheckWindowTitleKind(string title)
+        {
+            if (title == null)
+            {
+                return WindowTitleKind.Others;
+            }
+
+            if (title.Length == 0)
+            {
+                return WindowTitleKind.StartupOrCleanup;
+            }
+            if (title == SaveFileDialogTitle || title == SaveProgressWindowTitle)
+            {
+                return WindowTitleKind.FileSaving;
+            }
+            if (title.StartsWith(this.ProcessProduct) == true)
+            {
+                return WindowTitleKind.Main;
+            }
+
+            return WindowTitleKind.Others;
+        }
+
+        /// <summary>
+        /// メインウィンドウを取得する。
+        /// </summary>
+        /// <returns>メインウィンドウ。取得できなかった場合は null 。</returns>
+        private WindowControl GetMainWindow()
+        {
+            var app = this.TargetApp;
+            if (app == null)
             {
                 return null;
             }
@@ -130,9 +289,21 @@ namespace RucheHome.Talker.AITalkEx
             try
             {
                 return
-                    new FormsRichTextBox(
-                        WindowControl.FromZTop(this.TargetApp)
-                            .IdentifyFromZIndex(2, 0, 0, 1, 0, 1, 1, 1));
+                    WindowControl.GetTopLevelWindows(app)
+                        .FirstOrDefault(
+                            win =>
+                            {
+                                try
+                                {
+                                    var kind = this.CheckWindowTitleKind(win.GetWindowText());
+                                    return (kind == WindowTitleKind.Main);
+                                }
+                                catch (Exception ex)
+                                {
+                                    ThreadTrace.WriteException(ex);
+                                }
+                                return false;
+                            });
             }
             catch (Exception ex)
             {
@@ -186,27 +357,41 @@ namespace RucheHome.Talker.AITalkEx
         /// </remarks>
         protected override Result<TalkerState> CheckState(Process process)
         {
+            // ウィンドウタイトルから状態を決定するローカルメソッド
+            TalkerState? decideStateByWindowTitle(string title)
+            {
+                switch (this.CheckWindowTitleKind(title))
+                {
+                case WindowTitleKind.StartupOrCleanup:
+                    // 未起動or起動中なら起動中、そうでなければ終了中
+                    return
+                        (this.State == TalkerState.None ||
+                         this.State == TalkerState.Startup) ?
+                            TalkerState.Startup : TalkerState.Cleanup;
+
+                case WindowTitleKind.FileSaving:
+                    return TalkerState.FileSaving;
+
+                case WindowTitleKind.Others:
+                    // 未起動or起動中なら起動中、そうでなければブロッキング中
+                    return
+                        (this.State == TalkerState.None ||
+                         this.State == TalkerState.Startup) ?
+                            TalkerState.Startup : TalkerState.Blocking;
+                }
+
+                return null;
+            }
+
             WindowsAppFriend app = null;
 
             try
             {
-                var title = process.MainWindowTitle;
-
-                // メインウィンドウタイトルが音声保存関連なら音声保存中
-                if (title == SaveFileDialogTitle || title == SaveProgressWindowTitle)
+                // メインウィンドウタイトルから状態決定を試みる
+                var state = decideStateByWindowTitle(process.MainWindowTitle);
+                if (state.HasValue)
                 {
-                    return MakeResult(TalkerState.FileSaving);
-                }
-
-                // メインウィンドウタイトルがプロセス製品名で始まっていない？
-                if (!title.StartsWith(this.ProcessProduct))
-                {
-                    // 未起動or起動中なら起動中、そうでなければブロッキング中
-                    return
-                        MakeResult(
-                            (this.State == TalkerState.None ||
-                             this.State == TalkerState.Startup) ?
-                                TalkerState.Startup : TalkerState.Blocking);
+                    return MakeResult(state.Value);
                 }
 
                 // 操作対象アプリ取得or作成
@@ -215,16 +400,28 @@ namespace RucheHome.Talker.AITalkEx
                     (this.TargetApp?.ProcessId == process.Id) ?
                         this.TargetApp : CreateApp(process);
 
-                // 音声保存ボタンを探す
-                var saveButtonWin = GetMainButtonsParent(app)?.IdentifyFromZIndex(1);
-                if (saveButtonWin?.TypeFullName != @"System.Windows.Forms.Button")
+                // トップレベルウィンドウ取得
+                var topWin = WindowControl.FromZTop(app);
+
+                // トップレベルウィンドウタイトルから状態決定を試みる
+                state = decideStateByWindowTitle(topWin.GetWindowText());
+                if (state.HasValue)
                 {
+                    return MakeResult(state.Value);
+                }
+
+                // 音声保存ボタンを探す
+                var saveButton = GetMainButton(GetMainButtonsParent(topWin), MainButton.Save);
+                if (saveButton == null)
+                {
+                    // ウィンドウ構築途中or破棄途中であると判断
+                    // 即ち起動中or終了中
                     return
                         MakeResult(
-                            TalkerState.Fail,
-                            @"本体の音声保存ボタンが見つかりません。");
+                            (this.State == TalkerState.None ||
+                             this.State == TalkerState.Startup) ?
+                                TalkerState.Startup : TalkerState.Cleanup);
                 }
-                var saveButton = new FormsButton(saveButtonWin);
 
                 // 音声保存ボタンが無効ならば読み上げ中と判断する
                 return
@@ -259,7 +456,15 @@ namespace RucheHome.Talker.AITalkEx
         /// </remarks>
         protected override Result<string> GetTextImpl()
         {
-            var textBox = this.GetMainRichTextBox();
+            // メインウィンドウを取得
+            var mainWin = this.GetMainWindow();
+            if (mainWin == null)
+            {
+                return MakeResult<string>(message: @"本体のウィンドウが見つかりません。");
+            }
+
+            // 文章入力欄を取得
+            var textBox = GetMainRichTextBox(mainWin);
             if (textBox == null)
             {
                 return MakeResult<string>(message: @"本体の文章入力欄が見つかりません。");
@@ -293,7 +498,15 @@ namespace RucheHome.Talker.AITalkEx
         /// </remarks>
         protected override Result<bool> SetTextImpl(string text)
         {
-            var textBox = this.GetMainRichTextBox();
+            // メインウィンドウを取得
+            var mainWin = this.GetMainWindow();
+            if (mainWin == null)
+            {
+                return MakeResult(false, @"本体のウィンドウが見つかりません。");
+            }
+
+            // 文章入力欄を取得
+            var textBox = GetMainRichTextBox(mainWin);
             if (textBox == null)
             {
                 return MakeResult(false, @"本体の文章入力欄が見つかりません。");
@@ -304,24 +517,17 @@ namespace RucheHome.Talker.AITalkEx
 
             try
             {
-                // テキスト変更を非同期で開始
-                var async = new Async();
-                textBox.EmulateChangeText(text, async);
-
-                // 完了待機
-                for (
-                    var sw = Stopwatch.StartNew();
-                    !async.IsCompleted && sw.ElapsedMilliseconds < timeout; )
-                {
-                    Thread.Sleep(1);
-                }
+                bool done =
+                    WaitAsyncAction(
+                        async => textBox.EmulateChangeText(text, async),
+                        timeout);
 
                 return
-                    async.IsCompleted ?
-                        MakeResult(true) :
-                        MakeResult(
-                            false,
-                            @"本体の文章入力欄への文章設定処理がタイムアウトしました。");
+                    MakeResult(
+                        done,
+                        done ?
+                            null :
+                            @"文章設定処理がタイムアウトしました。");
             }
             catch (Exception ex)
             {
@@ -380,8 +586,14 @@ namespace RucheHome.Talker.AITalkEx
         /// <remarks>
         /// <para>
         /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装からは、
-        /// <see cref="ProcessTalkerBase{TParameterId}.CanOperate"/> が
-        /// true の時のみ呼び出される。
+        /// <see cref="ProcessTalkerBase{TParameterId}.State"/> が
+        /// <see cref="TalkerState.Idle"/> または
+        /// <see cref="TalkerState.Speaking"/> の時のみ呼び出される。
+        /// </para>
+        /// <para>
+        /// <see cref="ProcessTalkerBase{TParameterId}.State"/> が
+        /// <see cref="TalkerState.Speaking"/> の場合、事前に呼び出し元で
+        /// <see cref="StopImpl"/> を呼び出し、その成功を確認済みの状態で呼び出される。
         /// </para>
         /// <para>
         /// 読み上げ開始の成否を確認するまでブロッキングする。読み上げ完了は待たない。
@@ -389,8 +601,52 @@ namespace RucheHome.Talker.AITalkEx
         /// </remarks>
         protected override Result<bool> SpeakImpl()
         {
-            // TODO: 要実装
-            return MakeResult(false, @"未実装です。");
+            // メインウィンドウを取得
+            var mainWin = this.GetMainWindow();
+            if (mainWin == null)
+            {
+                return MakeResult(false, @"本体のウィンドウが見つかりません。");
+            }
+
+            // ボタン群の親を取得
+            var parent = GetMainButtonsParent(mainWin);
+            if (parent == null)
+            {
+                return MakeResult(false, @"本体のボタンが見つかりません。");
+            }
+
+            // 再生ボタン取得
+            var play = GetMainButton(parent, MainButton.Play);
+            if (play == null)
+            {
+                return MakeResult(false, @"本体の再生ボタンが見つかりません。");
+            }
+
+            try
+            {
+                if (!play.Enabled)
+                {
+                    return MakeResult(false, @"本体の再生ボタンが押せない状態です。");
+                }
+
+                // 再生ボタン押下
+                var async = new Async();
+                play.EmulateClick(async);
+
+                // フレーズ編集未保存の場合等はダイアログが出るためそれを待つ
+                // ダイアログが出ずに完了した場合は成功
+                if (mainWin.WaitForNextModal(async) != null)
+                {
+                    return MakeResult(false, @"本体側でダイアログが表示されました。。");
+                }
+            }
+            catch (Exception ex)
+            {
+                ThreadTrace.WriteException(ex);
+                return MakeResult(false, @"本体の再生ボタンを押下できませんでした。");
+            }
+
+            return MakeResult(true);
         }
 
         /// <summary>
@@ -400,15 +656,54 @@ namespace RucheHome.Talker.AITalkEx
         /// <remarks>
         /// <para>
         /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装からは、
-        /// <see cref="ProcessTalkerBase{TParameterId}.CanOperate"/> が
-        /// true の時のみ呼び出される。
+        /// <see cref="ProcessTalkerBase{TParameterId}.State"/> が
+        /// <see cref="TalkerState.Speaking"/> の時のみ呼び出される。
         /// </para>
         /// <para>読み上げ停止の成否を確認するまでブロッキングする。</para>
         /// </remarks>
         protected override Result<bool> StopImpl()
         {
-            // TODO: 要実装
-            return MakeResult(false, @"未実装です。");
+            // メインウィンドウを取得
+            var mainWin = this.GetMainWindow();
+            if (mainWin == null)
+            {
+                return MakeResult(false, @"本体のウィンドウが見つかりません。");
+            }
+
+            // ボタン群の親を取得
+            var parent = GetMainButtonsParent(mainWin);
+            if (parent == null)
+            {
+                return MakeResult(false, @"本体のボタンが見つかりません。");
+            }
+
+            // 停止ボタン取得
+            var stop = GetMainButton(parent, MainButton.Stop);
+            if (stop == null)
+            {
+                return MakeResult(false, @"本体の停止ボタンが見つかりません。");
+            }
+
+            try
+            {
+                if (!stop.Enabled)
+                {
+                    return MakeResult(false, @"本体の停止ボタンが押せない状態です。");
+                }
+
+                // 停止ボタン押下
+                if (!WaitAsyncAction(stop.EmulateClick))
+                {
+                    return MakeResult(false, @"停止処理がタイムアウトしました。");
+                }
+            }
+            catch (Exception ex)
+            {
+                ThreadTrace.WriteException(ex);
+                return MakeResult(false, @"本体の停止ボタンを押下できませんでした。");
+            }
+
+            return MakeResult(true);
         }
 
         /// <summary>

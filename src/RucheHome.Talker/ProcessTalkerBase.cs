@@ -201,6 +201,9 @@ namespace RucheHome.Talker
             case TalkerState.Startup:
                 return @"起動完了していません。";
 
+            case TalkerState.Cleanup:
+                return @"終了処理中です。";
+
             case TalkerState.Speaking:
                 return @"トーク中は処理できません。";
 
@@ -554,7 +557,13 @@ namespace RucheHome.Talker
         /// <remarks>
         /// <para>
         /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装からは、
-        /// <see cref="CanOperate"/> が true の時のみ呼び出される。
+        /// <see cref="State"/> が <see cref="TalkerState.Idle"/> または
+        /// <see cref="TalkerState.Speaking"/> の時のみ呼び出される。
+        /// </para>
+        /// <para>
+        /// <see cref="State"/> が <see cref="TalkerState.Speaking"/>
+        /// の場合、事前に呼び出し元で <see cref="StopImpl"/>
+        /// を呼び出し、その成功を確認済みの状態で呼び出される。
         /// </para>
         /// <para>
         /// 読み上げ開始の成否を確認するまでブロッキングする。読み上げ完了は待たない。
@@ -569,7 +578,7 @@ namespace RucheHome.Talker
         /// <remarks>
         /// <para>
         /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装からは、
-        /// <see cref="CanOperate"/> が true の時のみ呼び出される。
+        /// <see cref="State"/> が <see cref="TalkerState.Speaking"/> の時のみ呼び出される。
         /// </para>
         /// <para>読み上げ停止の成否を確認するまでブロッキングする。</para>
         /// </remarks>
@@ -816,6 +825,7 @@ namespace RucheHome.Talker
                         return MakeResult<bool?>(true, @"終了済みです。");
 
                     case TalkerState.Startup:
+                    case TalkerState.Cleanup:
                     case TalkerState.Idle:
                     case TalkerState.Speaking:
                         break;
@@ -830,8 +840,8 @@ namespace RucheHome.Talker
 
                         if (app?.HasExited == false)
                         {
-                            // 終了通知
-                            if (!app.CloseMainWindow())
+                            // Cleanup 状態以外ならば終了通知
+                            if (this.State != TalkerState.Cleanup && !app.CloseMainWindow())
                             {
                                 return MakeResult<bool?>(false, @"終了通知に失敗しました。");
                             }
@@ -844,11 +854,12 @@ namespace RucheHome.Talker
                                     break;
                                 }
 
+                                app.Refresh();
                                 var state = this.CheckState(app).Value;
                                 if (
-                                    state != TalkerState.Startup &&
-                                    state != TalkerState.Idle &&
-                                    state != TalkerState.Speaking)
+                                    state == TalkerState.None ||
+                                    state == TalkerState.Blocking ||
+                                    state == TalkerState.FileSaving)
                                 {
                                     break;
                                 }
@@ -884,7 +895,7 @@ namespace RucheHome.Talker
                         return MakeResult<bool?>(null, @"本体側で終了が保留されました。");
 
                     default:
-                        // TalkerState.Startup 等は終了後即再起動したものと判断
+                        // Startup, Idle は終了後即再起動したものと判断
                         break;
                     }
                 }
@@ -940,9 +951,9 @@ namespace RucheHome.Talker
         /// <para><see cref="Update"/> メソッド呼び出しによって更新される。</para>
         /// <para>
         /// <see cref="State"/> が
-        /// <see cref="TalkerState.None"/>,
-        /// <see cref="TalkerState.Fail"/>,
-        /// <see cref="TalkerState.Startup"/> のいずれでもなければ true を返す。
+        /// <see cref="TalkerState.None"/>, <see cref="TalkerState.Fail"/>,
+        /// <see cref="TalkerState.Startup"/>, <see cref="TalkerState.Cleanup"/>
+        /// のいずれでもなければ true を返す。
         /// </para>
         /// </remarks>
         public bool IsAlive
@@ -954,7 +965,8 @@ namespace RucheHome.Talker
                 return (
                     state != TalkerState.None &&
                     state != TalkerState.Fail &&
-                    state != TalkerState.Startup);
+                    state != TalkerState.Startup &&
+                    state != TalkerState.Cleanup);
             }
         }
 
