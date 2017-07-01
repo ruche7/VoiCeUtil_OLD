@@ -342,7 +342,7 @@ namespace RucheHome.Talker.Tests
                 Console.WriteLine(r.Message);
 
                 // ダイアログが出ている可能性があるので閉じる
-                CloseAllModalsIfProcessTalkerBase(talker);
+                CloseAllModalsIfProcessTalker(talker);
             }
         }
 
@@ -376,7 +376,7 @@ namespace RucheHome.Talker.Tests
                     Console.WriteLine(r.Message);
 
                     // ダイアログが出ている可能性があるので閉じる
-                    CloseAllModalsIfProcessTalkerBase(talker);
+                    CloseAllModalsIfProcessTalker(talker);
                 }
                 else
                 {
@@ -397,29 +397,31 @@ namespace RucheHome.Talker.Tests
         private const int WM_CLOSE = 0x0010;
 
         /// <summary>
-        /// もし <see cref="ProcessTalkerBase{TParameterId}"/>
-        /// 派生クラスならば、すべてのモーダルウィンドウに WM_CLOSE メッセージを送信する。
+        /// もし <see cref="IProcessTalker"/>
+        /// 実装クラスならば、すべてのモーダルウィンドウに WM_CLOSE メッセージを送信する。
         /// </summary>
-        protected static void CloseAllModalsIfProcessTalkerBase(ITalker talker)
+        protected static void CloseAllModalsIfProcessTalker(ITalker talker)
         {
             try
             {
-                // 操作対象プロセス取得
-                var obj = new PrivateObject(talker);
-                var process = obj.GetProperty(@"TargetProcess") as Process;
-                if (process == null)
+                var processTalker = talker as IProcessTalker;
+                if (processTalker == null)
                 {
                     return;
                 }
-
-                var app = new WindowsAppFriend(process);
+                var mainWinHandle = processTalker.MainWindowHandle;
+                if (mainWinHandle == IntPtr.Zero)
+                {
+                    return;
+                }
+                var app = new WindowsAppFriend(mainWinHandle);
 
                 while (true)
                 {
                     var topWin = WindowControl.FromZTop(app);
 
                     // メインウィンドウなら処理終了
-                    if (topWin == null || topWin.Handle == process.MainWindowHandle)
+                    if (topWin == null || topWin.Handle == mainWinHandle)
                     {
                         break;
                     }

@@ -452,6 +452,7 @@ namespace RucheHome.Talker
             var canOperateOld = this.CanOperate;
             var messageOld = this.FailStateMessage;
             var processOld = this.TargetProcess;
+            var mainWinHandleOld = this.MainWindowHandle;
 
             // まず値変更
             this.State = state;
@@ -481,6 +482,11 @@ namespace RucheHome.Talker
             {
                 changedProps.Add((nameof(TargetProcess), this.TargetProcess, processOld));
             }
+            if (this.MainWindowHandle != mainWinHandleOld)
+            {
+                changedProps.Add(
+                    (nameof(MainWindowHandle), this.MainWindowHandle, mainWinHandleOld));
+            }
 
             // デリゲート作成
             return
@@ -504,10 +510,7 @@ namespace RucheHome.Talker
                         }
                         catch (Exception ex)
                         {
-                            if (exception != null)
-                            {
-                                exception = ex;
-                            }
+                            exception = exception ?? ex;
                         }
                     }
 
@@ -763,6 +766,25 @@ namespace RucheHome.Talker
         /// <para>インスタンス生成後に値が変化することはない。</para>
         /// </remarks>
         public string ProcessFileName { get; }
+
+        /// <summary>
+        /// メインウィンドウハンドルを取得する。
+        /// </summary>
+        /// <remarks>
+        /// <see cref="ITalker.IsAlive"/> が false の場合は
+        /// <see cref="IntPtr.Zero"/> を返す。
+        /// </remarks>
+        public IntPtr MainWindowHandle
+        {
+            get
+            {
+                // TargetProcess の評価を1回にするために一旦変数に入れる
+                var process = this.TargetProcess;
+                return
+                    (process?.HasExited == false && this.IsAlive) ?
+                        process.MainWindowHandle : IntPtr.Zero;
+            }
+        }
 
         /// <summary>
         /// 状態を更新する。

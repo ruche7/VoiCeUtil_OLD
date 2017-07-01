@@ -22,6 +22,15 @@ namespace RucheHome.Talker
         string ProcessFileName { get; }
 
         /// <summary>
+        /// メインウィンドウハンドルを取得する。
+        /// </summary>
+        /// <remarks>
+        /// <see cref="ITalker.IsAlive"/> が false の場合は
+        /// <see cref="IntPtr.Zero"/> を返す。
+        /// </remarks>
+        IntPtr MainWindowHandle { get; }
+
+        /// <summary>
         /// 状態を更新する。
         /// </summary>
         /// <param name="processes">
