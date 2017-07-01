@@ -58,6 +58,16 @@ namespace RucheHome.Talker.Tests.AITalkEx
             TestTalkerProcessFilePathCache = r.Value;
         }
 
+        /// <summary>
+        /// テストクラスのクリーンアップを行う。
+        /// </summary>
+        [ClassCleanup]
+        public static void Cleanup()
+        {
+            // 全 Talker を破棄
+            AI.Talker.DisposeAll();
+        }
+
         #region オーバライド
 
         /// <summary>

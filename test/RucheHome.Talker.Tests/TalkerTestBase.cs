@@ -1,8 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
+using Codeer.Friendly.Windows;
+using Codeer.Friendly.Windows.Grasp;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace RucheHome.Talker.Tests
@@ -22,8 +26,8 @@ namespace RucheHome.Talker.Tests
             var talker = this.GetTalker();
 
             var talkerName = talker.TalkerName;
-            Console.WriteLine(talkerName);
             Assert.IsNotNull(talkerName);
+            Console.WriteLine(talkerName);
         }
 
         [TestMethod]
@@ -67,7 +71,7 @@ namespace RucheHome.Talker.Tests
 
         [TestMethod]
         [TestCategory(nameof(ITalker))]
-        public void Test_ITalker_GetAvailableCharacters_SetCharacters_GetCharacters()
+        public void Test_ITalker_GetAvailableCharacters_GetCharacters_SetCharacters()
         {
             var talker = this.GetTalker();
 
@@ -85,9 +89,19 @@ namespace RucheHome.Talker.Tests
                 Assert.IsNotNull(r.Value, r.Message);
                 Assert.IsTrue(r.Value.Count > 0);
                 CollectionAssert.AllItemsAreUnique(r.Value);
-                this.CheckAvailableCharacters(r.Value);
+                this.ValidateAvailableCharacters(r.Value);
 
                 characters = r.Value;
+            }
+
+            // 現在のキャラクターを取得
+            string orgCharacter = null;
+            {
+                var r = talker.GetCharacter();
+                Assert.IsNotNull(r.Value, r.Message);
+
+                orgCharacter = r.Value;
+                Console.WriteLine($@"{nameof(orgCharacter)} == {orgCharacter}");
             }
 
             foreach (var character in characters)
@@ -107,11 +121,17 @@ namespace RucheHome.Talker.Tests
                     Assert.AreEqual(r.Value, character);
                 }
             }
+
+            // 元のキャラクターに戻す
+            {
+                var r = talker.SetCharacter(orgCharacter);
+                Assert.IsTrue(r.Value, r.Message);
+            }
         }
 
         [TestMethod]
         [TestCategory(nameof(ITalker))]
-        public void Test_ITalker_GetAvailableCharacters_SetText_GetText()
+        public void Test_ITalker_SetText_GetText()
         {
             var talker = this.GetTalker();
 
@@ -228,7 +248,7 @@ namespace RucheHome.Talker.Tests
 
         [TestMethod]
         [TestCategory(nameof(ITalker))]
-        public void Test_ITalker_GetAvailableCharacters_SetText_Speak_Stop()
+        public void Test_ITalker_SetText_Speak_Stop()
         {
             var talker = this.GetTalker();
 
@@ -263,7 +283,170 @@ namespace RucheHome.Talker.Tests
             }
         }
 
+        [TestMethod]
+        [TestCategory(nameof(ITalker))]
+        public void Test_ITalker_SetText_SaveFile_Normal()
+        {
+            var talker = this.GetTalker();
+            var filePath = this.MakeSaveFilePath();
+
+            // 進捗ウィンドウを出すためにランダムな長文にする
+            var text = "音声ファイル保存テストです。\nテストテストテスト。\n";
+            for (int i = 0; i < 50; ++i)
+            {
+                text += Path.GetRandomFileName();
+            }
+
+            // テキスト設定
+            {
+                var r = talker.SetText(text);
+                Assert.IsTrue(r.Value, r.Message);
+            }
+
+            // 音声ファイル保存
+            {
+                var r = talker.SaveFile(filePath);
+                Assert.IsNotNull(r.Value, r.Message);
+                Console.WriteLine(r.Value);
+                Assert.IsTrue(File.Exists(r.Value));
+
+                // 削除しておく
+                DeleteSavedFiles(r.Value);
+            }
+        }
+
+        [TestMethod]
+        [TestCategory(nameof(ITalker))]
+        public void Test_ITalker_SetText_SaveFile_WhiteSpace()
+        {
+            var talker = this.GetTalker();
+            var filePath = this.MakeSaveFilePath();
+
+            // 空白文
+            var text = "\r\n\t 　";
+            for (int i = 0; i < 6; ++i)
+            {
+                text += text;
+            }
+
+            // テキスト設定
+            {
+                var r = talker.SetText(text);
+                Assert.IsTrue(r.Value, r.Message);
+            }
+
+            // 音声ファイル保存
+            {
+                var r = talker.SaveFile(filePath);
+                Assert.IsNull(r.Value);
+                Console.WriteLine(r.Message);
+
+                // ダイアログが出ている可能性があるので閉じる
+                CloseAllModalsIfProcessTalkerBase(talker);
+            }
+        }
+
+        [TestMethod]
+        [TestCategory(nameof(ITalker))]
+        public void Test_ITalker_SetText_SaveFile_Symbol()
+        {
+            var talker = this.GetTalker();
+            var filePath = this.MakeSaveFilePath();
+
+            // 記号のみ
+            var text = @"＃""'！？／＜;＞#!?/<:>";
+            for (int i = 0; i < 4; ++i)
+            {
+                text += text;
+            }
+
+            // テキスト設定
+            {
+                var r = talker.SetText(text);
+                Assert.IsTrue(r.Value, r.Message);
+            }
+
+            // 音声ファイル保存
+            {
+                var r = talker.SaveFile(filePath);
+
+                // 成否は操作対象ソフト次第
+                if (r.Value == null)
+                {
+                    Console.WriteLine(r.Message);
+
+                    // ダイアログが出ている可能性があるので閉じる
+                    CloseAllModalsIfProcessTalkerBase(talker);
+                }
+                else
+                {
+                    Console.WriteLine(r.Value);
+                    Assert.IsTrue(File.Exists(r.Value));
+
+                    // 削除しておく
+                    DeleteSavedFiles(r.Value);
+                }
+            }
+        }
+
         #endregion
+
+        /// <summary>
+        /// WM_CLOSE メッセージID値。
+        /// </summary>
+        private const int WM_CLOSE = 0x0010;
+
+        /// <summary>
+        /// もし <see cref="ProcessTalkerBase{TParameterId}"/>
+        /// 派生クラスならば、すべてのモーダルウィンドウに WM_CLOSE メッセージを送信する。
+        /// </summary>
+        protected static void CloseAllModalsIfProcessTalkerBase(ITalker talker)
+        {
+            try
+            {
+                // 操作対象プロセス取得
+                var obj = new PrivateObject(talker);
+                var process = obj.GetProperty(@"TargetProcess") as Process;
+                if (process == null)
+                {
+                    return;
+                }
+
+                var app = new WindowsAppFriend(process);
+
+                while (true)
+                {
+                    var topWin = WindowControl.FromZTop(app);
+
+                    // メインウィンドウなら処理終了
+                    if (topWin == null || topWin.Handle == process.MainWindowHandle)
+                    {
+                        break;
+                    }
+
+                    topWin.SendMessage(WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
+                }
+            }
+            catch { }
+        }
+
+        /// <summary>
+        /// SaveFile メソッドで保存されたファイルを削除する。
+        /// </summary>
+        /// <param name="savedFilePath">SaveFile メソッドの戻り値。</param>
+        protected static void DeleteSavedFiles(string savedFilePath)
+        {
+            if (File.Exists(savedFilePath))
+            {
+                File.Delete(savedFilePath);
+            }
+
+            var txtPath = Path.ChangeExtension(savedFilePath, @".txt");
+            if (File.Exists(txtPath))
+            {
+                File.Delete(txtPath);
+            }
+        }
 
         /// <summary>
         /// テスト用の Talker インスタンスを取得する。
@@ -316,15 +499,43 @@ namespace RucheHome.Talker.Tests
         protected abstract IEnumerable<IParameterInfo> GetParameterInfosImpl();
 
         /// <summary>
-        /// GetAvailableCharacters メソッドの戻り値に対する追加のチェック処理を行う。
+        /// GetAvailableCharacters メソッドの戻り値に対する追加の検証を行う。
         /// </summary>
         /// <param name="characters">有効キャラクター配列。</param>
         /// <remarks>
         /// 既定では何も行わない。
         /// </remarks>
-        protected virtual void CheckAvailableCharacters(ReadOnlyCollection<string> characters)
+        protected virtual void ValidateAvailableCharacters(
+            ReadOnlyCollection<string> characters)
         {
             // 何もしない
+        }
+
+        /// <summary>
+        /// 音声ファイル保存処理テスト時に作成希望する音声ファイルパスを作成する。
+        /// </summary>
+        /// <returns>音声ファイルパス。</returns>
+        /// <remarks>
+        /// 既定では、ユーザテンポラリディレクトリ内のランダムな名前のファイルを返す。
+        /// </remarks>
+        protected virtual string MakeSaveFilePath()
+        {
+            string wavPath = null;
+
+            var basePath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+
+            for (int i = 0; ; ++i)
+            {
+                wavPath = basePath + i + @".wav";
+                var txtPath = basePath + i + @".txt";
+
+                if (!File.Exists(wavPath) && !File.Exists(txtPath))
+                {
+                    break;
+                }
+            }
+
+            return wavPath;
         }
 
         #endregion

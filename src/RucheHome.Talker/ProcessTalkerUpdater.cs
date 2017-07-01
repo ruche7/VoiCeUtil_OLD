@@ -43,10 +43,7 @@ namespace RucheHome.Talker
         /// <summary>
         /// デストラクタ。
         /// </summary>
-        ~ProcessTalkerUpdater()
-        {
-            this.Dispose(false);
-        }
+        ~ProcessTalkerUpdater() => this.Dispose(false);
 
         /// <summary>
         /// 並走させるタスクの最大数を取得する。
