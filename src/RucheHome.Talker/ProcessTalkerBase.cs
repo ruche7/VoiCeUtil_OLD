@@ -847,13 +847,11 @@ namespace RucheHome.Talker
                             }
 
                             // 終了orブロッキング状態まで待つ
-                            for (var sw = Stopwatch.StartNew(); ; Thread.Sleep(1))
+                            for (
+                                var sw = Stopwatch.StartNew();
+                                !app.WaitForExit(0);
+                                Thread.Sleep(0))
                             {
-                                if (app.WaitForExit(0))
-                                {
-                                    break;
-                                }
-
                                 app.Refresh();
                                 var state = this.CheckState(app).Value;
                                 if (

@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -19,7 +21,9 @@ namespace RucheHome.Talker.Tests
         {
             var talker = this.GetTalker();
 
-            Assert.IsNotNull(talker.TalkerName);
+            var talkerName = talker.TalkerName;
+            Console.WriteLine(talkerName);
+            Assert.IsNotNull(talkerName);
         }
 
         [TestMethod]
@@ -28,7 +32,9 @@ namespace RucheHome.Talker.Tests
         {
             var talker = this.GetTalker();
 
-            Assert.AreEqual(talker.State, TalkerState.Idle);
+            var state = talker.State;
+            Console.WriteLine(state);
+            Assert.AreEqual(state, TalkerState.Idle);
         }
 
         [TestMethod]
@@ -55,7 +61,8 @@ namespace RucheHome.Talker.Tests
         {
             var talker = this.GetTalker();
 
-            Assert.IsNull(talker.FailStateMessage, talker.FailStateMessage);
+            var failStateMessage = talker.FailStateMessage;
+            Assert.IsNull(failStateMessage, failStateMessage);
         }
 
         [TestMethod]
@@ -126,12 +133,109 @@ namespace RucheHome.Talker.Tests
 
         [TestMethod]
         [TestCategory(nameof(ITalker))]
+        public void Test_ITalker_GetParameters_SetParameters()
+        {
+            // パラメータ群を出力するローカルメソッド
+            void writeParameters(IEnumerable<KeyValuePair<object, decimal>> parameters)
+            {
+                if (parameters == null)
+                {
+                    Console.WriteLine(@"{0}", null);
+                }
+                else
+                {
+                    foreach (var kv in parameters)
+                    {
+                        Console.WriteLine(@"{0} : {1}", kv.Key, kv.Value);
+                    }
+                }
+            }
+
+            var talker = this.GetTalker();
+            var infos = this.GetParameterInfos();
+
+            Dictionary<object, decimal> orgValues = null;
+
+            // パラメータ群取得
+            {
+                var r = talker.GetParameters();
+                writeParameters(r.Value);
+                Assert.IsNotNull(r.Value, r.Message);
+                CollectionAssert.AreEqual(r.Value.Keys, infos.Keys);
+
+                orgValues = r.Value;
+            }
+
+            // 最小許容値設定
+            {
+                var r =
+                    talker.SetParameters(
+                        infos.ToDictionary(kv => kv.Key, kv => kv.Value.MinValue));
+                Assert.IsNotNull(r.Value, r.Message);
+                CollectionAssert.AreEqual(r.Value.Keys, infos.Keys);
+                foreach (var kv in r.Value)
+                {
+                    Assert.IsTrue(kv.Value.Value, $@"{kv.Key} : {kv.Value.Message}");
+                }
+            }
+
+            // パラメータ群取得(最小許容値)
+            {
+                var r = talker.GetParameters();
+                writeParameters(r.Value);
+                Assert.IsNotNull(r.Value, r.Message);
+                CollectionAssert.AreEqual(r.Value.Keys, infos.Keys);
+                CollectionAssert.AreEqual(
+                    r.Value.Values,
+                    infos.Select(kv => kv.Value.MinValue).ToArray());
+            }
+
+            // 最大許容値設定
+            {
+                var r =
+                    talker.SetParameters(
+                        infos.ToDictionary(kv => kv.Key, kv => kv.Value.MaxValue));
+                Assert.IsNotNull(r.Value, r.Message);
+                CollectionAssert.AreEqual(r.Value.Keys, infos.Keys);
+                foreach (var kv in r.Value)
+                {
+                    Assert.IsTrue(kv.Value.Value, $@"{kv.Key} : {kv.Value.Message}");
+                }
+            }
+
+            // パラメータ群取得(最大許容値)
+            {
+                var r = talker.GetParameters();
+                writeParameters(r.Value);
+                Assert.IsNotNull(r.Value, r.Message);
+                CollectionAssert.AreEqual(r.Value.Keys, infos.Keys);
+                CollectionAssert.AreEqual(
+                    r.Value.Values,
+                    infos.Select(kv => kv.Value.MaxValue).ToArray());
+            }
+
+            // 初期値設定
+            {
+                var r = talker.SetParameters(orgValues);
+                Assert.IsNotNull(r.Value, r.Message);
+                CollectionAssert.AreEqual(r.Value.Keys, infos.Keys);
+                foreach (var kv in r.Value)
+                {
+                    Assert.IsTrue(kv.Value.Value, $@"{kv.Key} : {kv.Value.Message}");
+                }
+            }
+        }
+
+        [TestMethod]
+        [TestCategory(nameof(ITalker))]
         public void Test_ITalker_GetAvailableCharacters_SetText_Speak_Stop()
         {
             var talker = this.GetTalker();
 
             // 読み切らないよう長めのテキストにする
             var text = "テキスト読み上げテストです。\nテストテストテスト。\n";
+            text += text;
+            text += text;
             text += text;
             text += text;
 
@@ -181,6 +285,22 @@ namespace RucheHome.Talker.Tests
             return talker;
         }
 
+        /// <summary>
+        /// パラメータ情報ディクショナリを取得する。
+        /// </summary>
+        /// <returns>パラメータ情報ディクショナリ。</returns>
+        protected Dictionary<object, IParameterInfo> GetParameterInfos()
+        {
+            var infos = GetParameterInfosImpl();
+
+            if (infos == null)
+            {
+                Assert.Inconclusive(@"パラメータ情報一覧を取得できません。");
+            }
+
+            return infos.ToDictionary(i => i.Id);
+        }
+
         #region 要オーバライド
 
         /// <summary>
@@ -188,6 +308,12 @@ namespace RucheHome.Talker.Tests
         /// </summary>
         /// <returns>Talker インスタンス。</returns>
         protected abstract TTalker GetTalkerImpl();
+
+        /// <summary>
+        /// パラメータ情報一覧を取得する。
+        /// </summary>
+        /// <returns>パラメータ情報一覧の列挙。</returns>
+        protected abstract IEnumerable<IParameterInfo> GetParameterInfosImpl();
 
         /// <summary>
         /// GetAvailableCharacters メソッドの戻り値に対する追加のチェック処理を行う。

@@ -19,6 +19,7 @@ namespace RucheHome.Talker.Tests
             var talker = this.GetTalker();
 
             var processFileName = talker.ProcessFileName;
+            Console.WriteLine(processFileName);
             Assert.IsNotNull(processFileName);
             Assert.AreNotEqual(processFileName, @"");
         }
@@ -41,6 +42,7 @@ namespace RucheHome.Talker.Tests
             var processFilePath = this.GetTalkerProcessFilePathCache();
 
             var r = talker.GetProcessFilePath();
+            Console.WriteLine(r.Value);
             Assert.IsNotNull(r.Value, r.Message);
             Assert.IsTrue(File.Exists(r.Value));
             Assert.AreEqual(r.Value, processFilePath);

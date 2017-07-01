@@ -92,7 +92,12 @@ namespace RucheHome.Talker.AITalkEx
                 !async.IsCompleted &&
                 (timeoutMilliseconds < 0 || sw.ElapsedMilliseconds < timeoutMilliseconds); )
             {
-                Thread.Sleep(1);
+                Thread.Sleep(0);
+            }
+
+            if (async.IsCompleted && async.ExecutingException != null)
+            {
+                throw async.ExecutingException;
             }
 
             return async.IsCompleted;
@@ -108,23 +113,33 @@ namespace RucheHome.Talker.AITalkEx
                 (new WindowsAppFriend(process, @"v2.0.50727")) : null;
 
         /// <summary>
-        /// 文章入力欄下にあるボタン群の親コントロールを取得する。
+        /// Zインデックスツリーによって子孫コントロールを取得する。
         /// </summary>
-        /// <param name="mainWindow">メインウィンドウ。</param>
+        /// <typeparam name="TControl">子孫コントロール型。</typeparam>
+        /// <param name="root">ツリーのルートとなるコントロール。</param>
+        /// <param name="zIndices">Zインデックスツリー。</param>
         /// <returns>コントロール。取得できなかった場合は null 。</returns>
-        /// <remarks>
-        /// Zインデックスによって対象を特定する。
-        /// </remarks>
-        private static WindowControl GetMainButtonsParent(WindowControl mainWindow)
+        private static TControl GetControlFromZIndex<TControl>(
+            WindowControl root,
+            params int[] zIndices)
+            where TControl : WindowControl
         {
-            try
+            if (root != null && zIndices != null)
             {
-                return mainWindow?.IdentifyFromZIndex(2, 0, 0, 1, 0, 1, 0);
+                try
+                {
+                    var c = root.IdentifyFromZIndex(zIndices);
+                    return
+                        (c is TControl ctrl) ?
+                            ctrl :
+                            (Activator.CreateInstance(typeof(TControl), c) as TControl);
+                }
+                catch (Exception ex)
+                {
+                    ThreadTrace.WriteException(ex);
+                }
             }
-            catch (Exception ex)
-            {
-                ThreadTrace.WriteException(ex);
-            }
+
             return null;
         }
 
@@ -158,51 +173,213 @@ namespace RucheHome.Talker.AITalkEx
         }
 
         /// <summary>
+        /// 文章入力欄下にあるボタン群の親コントロールを取得する。
+        /// </summary>
+        /// <param name="mainWindow">メインウィンドウ。</param>
+        /// <returns>コントロール。取得できなかった場合は null 。</returns>
+        /// <remarks>
+        /// Zインデックスによって対象を特定する。
+        /// </remarks>
+        private static WindowControl GetMainButtonsParent(WindowControl mainWindow) =>
+            GetControlFromZIndex<WindowControl>(mainWindow, 2, 0, 0, 1, 0, 1, 0);
+
+        /// <summary>
         /// 文章入力欄下にあるボタンコントロールを取得する。
         /// </summary>
         /// <param name="parent">ボタン群の親コントロール。</param>
         /// <param name="button">ボタン種別。</param>
         /// <returns>コントロール。取得できなかった場合は null 。</returns>
-        private static FormsButton GetMainButton(WindowControl parent, MainButton button)
-        {
-            if (parent != null)
-            {
-                try
-                {
-                    return new FormsButton(parent.IdentifyFromZIndex((int)button));
-                }
-                catch (Exception ex)
-                {
-                    ThreadTrace.WriteException(ex);
-                }
-            }
-
-            return null;
-        }
+        private static FormsButton GetMainButton(WindowControl parent, MainButton button) =>
+            GetControlFromZIndex<FormsButton>(parent, (int)button);
 
         /// <summary>
         /// 文章入力欄コントロールを取得する。
         /// </summary>
         /// <param name="mainWindow">メインウィンドウ。</param>
         /// <returns>コントロール。取得できなかった場合は null 。</returns>
-        private static FormsRichTextBox GetMainRichTextBox(WindowControl mainWindow)
-        {
-            if (mainWindow == null)
-            {
-                return null;
-            }
+        private static FormsRichTextBox GetMainRichTextBox(WindowControl mainWindow) =>
+            GetControlFromZIndex<FormsRichTextBox>(mainWindow, 2, 0, 0, 1, 0, 1, 1, 1);
 
+        /// <summary>
+        /// ウィンドウ下部のタブコントロールを取得する。
+        /// </summary>
+        /// <param name="mainWindow">メインウィンドウ。</param>
+        /// <returns>コントロール。取得できなかった場合は null 。</returns>
+        private static FormsTabControl GetTabControl(WindowControl mainWindow) =>
+            GetControlFromZIndex<FormsTabControl>(mainWindow, 2, 0, 0, 0, 0);
+
+        /// <summary>
+        /// タブコントロールから指定した名前のタブページを検索する。
+        /// </summary>
+        /// <param name="tabControl">タブコントロール。</param>
+        /// <param name="name">検索するタブページ名。</param>
+        /// <returns>コントロール。見つからなかった場合は null 。</returns>
+        private static WindowControl FindTabPage(FormsTabControl tabControl, string name)
+        {
             try
             {
                 return
-                    new FormsRichTextBox(
-                        mainWindow.IdentifyFromZIndex(2, 0, 0, 1, 0, 1, 1, 1));
+                    tabControl?
+                        .GetFromWindowText(name)
+                        .FirstOrDefault(
+                            c => c.TypeFullName == @"System.Windows.Forms.TabPage");
             }
             catch (Exception ex)
             {
                 ThreadTrace.WriteException(ex);
             }
             return null;
+        }
+
+        /// <summary>
+        /// ウィンドウ下部のタブコントロールから、
+        /// パラメータを保持するテキストボックスのディクショナリを取得する。
+        /// </summary>
+        /// <param name="tabControl">タブコントロール。</param>
+        /// <returns>
+        /// テキストボックスのディクショナリ。取得できなかった場合は null 。
+        /// </returns>
+        private static Result<Dictionary<ParameterId, FormsTextBox>>
+        GetTabControlParameterTextBoxes(FormsTabControl tabControl)
+        {
+            Dictionary<ParameterId, FormsTextBox> dictNull = null;
+
+            if (tabControl == null)
+            {
+                return MakeResult(dictNull, @"本体のタブコントロールが見つかりません。");
+            }
+
+            var dict = new Dictionary<ParameterId, FormsTextBox>();
+            int tabIndex = -1;
+
+            try
+            {
+                // 元のタブインデックスを保存
+                tabIndex = tabControl.SelectedIndex;
+
+                // 音声効果タブ
+                {
+                    var name = @"音声効果";
+
+                    // 音声効果タブページ取得
+                    var page = FindTabPage(tabControl, name);
+                    if (page == null)
+                    {
+                        // 一度も開いていない場合は取得できないので開いてみる
+                        if (!WaitAsyncAction(async => tabControl.EmulateTabSelect(2, async)))
+                        {
+                            return
+                                MakeResult(
+                                    dictNull,
+                                    name + @"タブ選択処理がタイムアウトしました。");
+                        }
+                        tabControl.Refresh();
+                        page = FindTabPage(tabControl, name);
+                    }
+                    var panel = GetControlFromZIndex<WindowControl>(page, 0);
+                    if (panel == null)
+                    {
+                        return MakeResult(dictNull, $@"本体の{name}タブが見つかりません。");
+                    }
+
+                    // 各テキストボックス取得
+                    dict.Add(
+                        ParameterId.Volume,
+                        GetControlFromZIndex<FormsTextBox>(panel, 8));
+                    dict.Add(
+                        ParameterId.Speed,
+                        GetControlFromZIndex<FormsTextBox>(panel, 9));
+                    dict.Add(
+                        ParameterId.Tone,
+                        GetControlFromZIndex<FormsTextBox>(panel, 10));
+                    dict.Add(
+                        ParameterId.Intonation,
+                        GetControlFromZIndex<FormsTextBox>(panel, 11));
+                    if (dict.Any(kv => kv.Value == null))
+                    {
+                        return
+                            MakeResult(
+                                dictNull,
+                                $@"本体の{name}タブ内の数値入力欄が見つかりません。");
+                    }
+                }
+
+                // ポーズタブ
+                {
+                    var name = @"ポーズ";
+
+                    // ポーズタブページ取得
+                    var page = FindTabPage(tabControl, name);
+                    if (page == null)
+                    {
+                        // 一度も開いていない場合は取得できないので開いてみる
+                        if (!WaitAsyncAction(async => tabControl.EmulateTabSelect(3, async)))
+                        {
+                            return
+                                MakeResult(
+                                    dictNull,
+                                    name + @"タブ選択処理がタイムアウトしました。");
+                        }
+                        tabControl.Refresh();
+                        page = FindTabPage(tabControl, name);
+                    }
+                    var panel = GetControlFromZIndex<WindowControl>(page, 0);
+                    if (panel == null)
+                    {
+                        return MakeResult(dictNull, $@"本体の{name}タブが見つかりません。");
+                    }
+
+                    // 各テキストボックス取得
+                    dict.Add(
+                        ParameterId.PauseShort,
+                        GetControlFromZIndex<FormsTextBox>(panel, 3, 0));
+                    dict.Add(
+                        ParameterId.PauseLong,
+                        GetControlFromZIndex<FormsTextBox>(panel, 5, 0));
+                    dict.Add(
+                        ParameterId.PauseSentence,
+                        GetControlFromZIndex<FormsTextBox>(panel, 1, 0));
+                    dict.Add(
+                        ParameterId.PauseBegin,
+                        GetControlFromZIndex<FormsTextBox>(panel, 7, 0));
+                    dict.Add(
+                        ParameterId.PauseEnd,
+                        GetControlFromZIndex<FormsTextBox>(panel, 8, 0));
+                    if (dict.Any(kv => kv.Value == null))
+                    {
+                        return
+                            MakeResult(
+                                dictNull,
+                                $@"本体の{name}タブ内の数値入力欄が見つかりません。");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ThreadTrace.WriteException(ex);
+                return
+                    MakeResult<Dictionary<ParameterId, FormsTextBox>>(
+                        message: @"パラメータの取得に失敗しました。");
+            }
+            finally
+            {
+                // 元のタブページに戻す
+                // 失敗してもよい
+                try
+                {
+                    if (tabIndex >= 0 && tabIndex != tabControl.SelectedIndex)
+                    {
+                        WaitAsyncAction(
+                            async => tabControl.EmulateTabSelect(tabIndex, async));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ThreadDebug.WriteException(ex);
+                }
+            }
+
+            return MakeResult(dict);
         }
 
         /// <summary>
@@ -266,7 +443,7 @@ namespace RucheHome.Talker.AITalkEx
             {
                 return WindowTitleKind.FileSaving;
             }
-            if (title.StartsWith(this.ProcessProduct) == true)
+            if (title.StartsWith(this.ProcessProduct))
             {
                 return WindowTitleKind.Main;
             }
@@ -362,6 +539,10 @@ namespace RucheHome.Talker.AITalkEx
             {
                 switch (this.CheckWindowTitleKind(title))
                 {
+                case WindowTitleKind.Main:
+                    // 状態決定不可
+                    return null;
+
                 case WindowTitleKind.StartupOrCleanup:
                     // 未起動or起動中なら起動中、そうでなければ終了中
                     return
@@ -380,7 +561,8 @@ namespace RucheHome.Talker.AITalkEx
                             TalkerState.Startup : TalkerState.Blocking;
                 }
 
-                return null;
+                // ここには来ないはずだが現状維持にしておく
+                return this.State;
             }
 
             WindowsAppFriend app = null;
@@ -549,8 +731,53 @@ namespace RucheHome.Talker.AITalkEx
         /// </remarks>
         protected override Result<Dictionary<ParameterId, decimal>> GetParametersImpl()
         {
-            // TODO: 要実装
-            return MakeResult<Dictionary<ParameterId, decimal>>(message: @"未実装です。");
+            Dictionary<ParameterId, decimal> dictNull = null;
+
+            // メインウィンドウを取得
+            var mainWin = this.GetMainWindow();
+            if (mainWin == null)
+            {
+                return MakeResult(dictNull, @"本体のウィンドウが見つかりません。");
+            }
+
+            // タブコントロールを取得
+            var tabControl = GetTabControl(mainWin);
+            if (tabControl == null)
+            {
+                return MakeResult(dictNull, @"本体のタブページが見つかりません。");
+            }
+
+            // パラメータテキストボックス群を取得
+            var r = GetTabControlParameterTextBoxes(tabControl);
+            if (r.Value == null)
+            {
+                return MakeResult(dictNull, r.Message);
+            }
+            var textBoxes = r.Value;
+
+            var dict = new Dictionary<ParameterId, decimal>();
+
+            try
+            {
+                foreach (var kv in textBoxes)
+                {
+                    if (!decimal.TryParse(kv.Value.Text, out var d))
+                    {
+                        return
+                            MakeResult(
+                                dictNull,
+                                kv.Key.GetInfo().DisplayName + @"の値が不正です。");
+                    }
+                    dict.Add(kv.Key, d);
+                }
+            }
+            catch (Exception ex)
+            {
+                ThreadTrace.WriteException(ex);
+                return MakeResult(dictNull, @"パラメータの取得に失敗しました。");
+            }
+
+            return MakeResult(dict);
         }
 
         /// <summary>
@@ -575,8 +802,103 @@ namespace RucheHome.Talker.AITalkEx
         protected override Result<Dictionary<ParameterId, Result<bool>>> SetParametersImpl(
             IEnumerable<KeyValuePair<ParameterId, decimal>> parameters)
         {
-            // TODO: 要実装
-            return MakeResult<Dictionary<ParameterId, Result<bool>>>(message: @"未実装です。");
+            Dictionary<ParameterId, Result<bool>> dictNull = null;
+
+            // メインウィンドウを取得
+            var mainWin = this.GetMainWindow();
+            if (mainWin == null)
+            {
+                return MakeResult(dictNull, @"本体のウィンドウが見つかりません。");
+            }
+
+            // タブコントロールを取得
+            var tabControl = GetTabControl(mainWin);
+            if (tabControl == null)
+            {
+                return MakeResult(dictNull, @"本体のタブページが見つかりません。");
+            }
+
+            // パラメータテキストボックス群を取得
+            var r = GetTabControlParameterTextBoxes(tabControl);
+            if (r.Value == null)
+            {
+                return MakeResult(dictNull, r.Message);
+            }
+            var textBoxes = r.Value;
+
+            var dict = new Dictionary<ParameterId, Result<bool>>();
+
+            foreach (var kv in parameters)
+            {
+                // 存在するパラメータのみ設定
+                if (!textBoxes.TryGetValue(kv.Key, out var textBox))
+                {
+                    continue;
+                }
+
+                var id = kv.Key;
+                var value = kv.Value;
+                var info = id.GetInfo();
+                var format = @"F" + info.Digits;
+
+                // 範囲チェック
+                if (value < info.MinValue)
+                {
+                    dict.Add(
+                        id,
+                        MakeResult(
+                            false,
+                            $@"最小許容値 {info.MinValue.ToString(format)} " +
+                            $@"より小さい値 {value.ToString(format)} は設定できません。"));
+                    continue;
+                }
+                if (value > info.MaxValue)
+                {
+                    dict.Add(
+                        id,
+                        MakeResult(
+                            false,
+                            $@"最大許容値 {info.MaxValue.ToString(format)} " +
+                            $@"より大きい値 {value.ToString(format)} は設定できません。"));
+                    continue;
+                }
+
+                try
+                {
+                    var text = value.ToString(format);
+                    var ok = WaitAsyncAction(async => textBox.EmulateChangeText(text, async));
+                    dict.Add(
+                        id,
+                        MakeResult(
+                            ok,
+                            ok ?
+                                null :
+                                (info.DisplayName + @"設定処理がタイムアウトしました。")));
+                }
+                catch (Exception ex)
+                {
+                    ThreadTrace.WriteException(ex);
+                    dict.Add(
+                        id,
+                        MakeResult(
+                            false,
+                            ex.Message ?? (ex.GetType().Name + @" 例外が発生しました。")));
+                }
+            }
+
+            // テキストボックスにフォーカスがあるうちはスライダーが更新されないので
+            // タブコントロールにフォーカスを移す
+            // 失敗してもよい
+            try
+            {
+                tabControl.SetFocus();
+            }
+            catch (Exception ex)
+            {
+                ThreadDebug.WriteException(ex);
+            }
+
+            return MakeResult(dict);
         }
 
         /// <summary>

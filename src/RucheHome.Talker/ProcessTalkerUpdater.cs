@@ -56,7 +56,7 @@ namespace RucheHome.Talker
         /// <summary>
         /// 状態更新処理間隔ミリ秒数を取得または設定する。
         /// </summary>
-        public int TalkerUpdateIntervalMilliseconds { get; set; } = 20;
+        public int TalkerUpdateIntervalMilliseconds { get; set; } = 10;
 
         /// <summary>
         /// プロセスリスト更新間隔ミリ秒数を取得または設定する。
