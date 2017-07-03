@@ -5,9 +5,9 @@ using Codeer.Friendly;
 using Codeer.Friendly.Windows;
 using Codeer.Friendly.Windows.Grasp;
 using Codeer.Friendly.Windows.NativeStandardControls;
-using RucheHome.Util;
+using RucheHome.Diagnostics;
 
-using static RucheHome.Util.ArgumentValidater;
+using static RucheHome.Diagnostics.ArgumentValidater;
 
 namespace RucheHome.Talker
 {

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using RucheHome.Talker.AITalkEx;
@@ -66,6 +67,49 @@ namespace RucheHome.Talker.Tests.AITalkEx
         {
             // 全 Talker を破棄
             AI.Talker.DisposeAll();
+        }
+
+        [TestMethod]
+        [TestCategory(nameof(AITalkEx) + @"." + nameof(AI.Talker))]
+        public void Test_AITalkEx_Talker_SetText_SaveFile_Symbol()
+        {
+            var talker = this.GetTalker();
+            var filePath = this.MakeSaveFilePath();
+
+            // 記号のみ
+            var text = @"＃""'！？／＜;＞#!?/<:>";
+            for (int i = 0; i < 4; ++i)
+            {
+                text += text;
+            }
+
+            // テキスト設定
+            {
+                var r = talker.SetText(text);
+                Assert.IsTrue(r.Value, r.Message);
+            }
+
+            // 音声ファイル保存
+            {
+                var r = talker.SaveFile(filePath);
+
+                // 成否は操作対象ソフト次第
+                if (r.Value == null)
+                {
+                    Console.WriteLine(r.Message);
+
+                    // ダイアログが出ている可能性があるので閉じる
+                    CloseAllModalsIfProcessTalker(talker);
+                }
+                else
+                {
+                    Console.WriteLine(r.Value);
+                    Assert.IsTrue(File.Exists(r.Value));
+
+                    // 削除しておく
+                    DeleteSavedFiles(r.Value);
+                }
+            }
         }
 
         #region オーバライド

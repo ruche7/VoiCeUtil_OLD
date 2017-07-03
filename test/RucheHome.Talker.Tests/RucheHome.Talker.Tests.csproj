@@ -28,6 +28,7 @@
     <PlatformTarget>x86</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
     <OutputPath>bin\Release\</OutputPath>
@@ -37,6 +38,7 @@
     <PlatformTarget>x86</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Codeer.Friendly, Version=2.5.0.0, Culture=neutral, PublicKeyToken=6c44da6fca38aa86, processorArchitecture=MSIL">
@@ -71,9 +73,9 @@
     <Compile Include="TalkerTestBase.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\lib\RucheHomeLib\RucheHomeLib.csproj">
-      <Project>{df1b25fe-0fdf-4c86-a779-aff5217a7c6b}</Project>
-      <Name>RucheHomeLib</Name>
+    <ProjectReference Include="..\..\src\RucheHome.Core\RucheHome.Core.csproj">
+      <Project>{33ab6685-2e0e-49e2-86fe-15385ec365c6}</Project>
+      <Name>RucheHome.Core</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\src\RucheHome.Talker.AITalkEx\RucheHome.Talker.AITalkEx.csproj">
       <Project>{7b3ad7e7-fc97-422b-9b3b-dd5471eaff83}</Project>

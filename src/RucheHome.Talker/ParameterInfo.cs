@@ -1,6 +1,6 @@
 ﻿using System;
 
-using static RucheHome.Util.ArgumentValidater;
+using static RucheHome.Diagnostics.ArgumentValidater;
 
 namespace RucheHome.Talker
 {

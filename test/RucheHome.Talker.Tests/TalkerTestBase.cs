@@ -338,53 +338,24 @@ namespace RucheHome.Talker.Tests
             // 音声ファイル保存
             {
                 var r = talker.SaveFile(filePath);
-                Assert.IsNull(r.Value);
-                Console.WriteLine(r.Message);
 
-                // ダイアログが出ている可能性があるので閉じる
-                CloseAllModalsIfProcessTalker(talker);
-            }
-        }
-
-        [TestMethod]
-        [TestCategory(nameof(ITalker))]
-        public void Test_ITalker_SetText_SaveFile_Symbol()
-        {
-            var talker = this.GetTalker();
-            var filePath = this.MakeSaveFilePath();
-
-            // 記号のみ
-            var text = @"＃""'！？／＜;＞#!?/<:>";
-            for (int i = 0; i < 4; ++i)
-            {
-                text += text;
-            }
-
-            // テキスト設定
-            {
-                var r = talker.SetText(text);
-                Assert.IsTrue(r.Value, r.Message);
-            }
-
-            // 音声ファイル保存
-            {
-                var r = talker.SaveFile(filePath);
-
-                // 成否は操作対象ソフト次第
-                if (r.Value == null)
+                // 成否は CanSaveBlankText の値次第
+                if (talker.CanSaveBlankText)
                 {
-                    Console.WriteLine(r.Message);
-
-                    // ダイアログが出ている可能性があるので閉じる
-                    CloseAllModalsIfProcessTalker(talker);
-                }
-                else
-                {
+                    Assert.IsNotNull(r.Value, r.Message);
                     Console.WriteLine(r.Value);
                     Assert.IsTrue(File.Exists(r.Value));
 
                     // 削除しておく
                     DeleteSavedFiles(r.Value);
+                }
+                else
+                {
+                    Assert.IsNull(r.Value);
+                    Console.WriteLine(r.Message);
+
+                    // ダイアログが出ている可能性があるので閉じる
+                    CloseAllModalsIfProcessTalker(talker);
                 }
             }
         }

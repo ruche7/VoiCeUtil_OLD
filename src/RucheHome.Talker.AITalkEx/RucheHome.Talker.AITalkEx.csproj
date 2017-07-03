@@ -69,9 +69,9 @@
     <Compile Include="Talker.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\lib\RucheHomeLib\RucheHomeLib.csproj">
-      <Project>{df1b25fe-0fdf-4c86-a779-aff5217a7c6b}</Project>
-      <Name>RucheHomeLib</Name>
+    <ProjectReference Include="..\RucheHome.Core\RucheHome.Core.csproj">
+      <Project>{33ab6685-2e0e-49e2-86fe-15385ec365c6}</Project>
+      <Name>RucheHome.Core</Name>
     </ProjectReference>
     <ProjectReference Include="..\RucheHome.Talker\RucheHome.Talker.csproj">
       <Project>{44f2ff62-f248-4b1a-9f9e-1ceefde5e6e6}</Project>

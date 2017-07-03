@@ -7,9 +7,9 @@ using System.Linq;
 using Codeer.Friendly;
 using Codeer.Friendly.Windows.Grasp;
 using Ong.Friendly.FormsStandardControls;
-using RucheHome.Util;
+using RucheHome.Diagnostics;
 
-using static RucheHome.Util.ArgumentValidater;
+using static RucheHome.Diagnostics.ArgumentValidater;
 
 namespace RucheHome.Talker.AITalkEx
 {

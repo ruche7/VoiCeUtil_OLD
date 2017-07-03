@@ -5,9 +5,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using RucheHome.Util;
+using RucheHome.Diagnostics;
+using RucheHome.ObjectModel;
 
-using static RucheHome.Util.ArgumentValidater;
+using static RucheHome.Diagnostics.ArgumentValidater;
 
 namespace RucheHome.Talker
 {
