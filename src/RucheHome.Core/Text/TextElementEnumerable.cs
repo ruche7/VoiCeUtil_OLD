@@ -5,18 +5,18 @@ using System.Globalization;
 
 using static RucheHome.Diagnostics.ArgumentValidater;
 
-namespace RucheHome.Strings
+namespace RucheHome.Text
 {
     /// <summary>
     /// サロゲートペアを考慮した文字列挙を提供するクラス。
     /// </summary>
-    public class StringElementEnumerable : IEnumerable<string>
+    public class TextElementEnumerable : IEnumerable<string>
     {
         /// <summary>
         /// コンストラクタ。
         /// </summary>
         /// <param name="source">対象文字列。</param>
-        public StringElementEnumerable(string source)
+        public TextElementEnumerable(string source)
         {
             ValidateArgumentNull(source, nameof(source));
 

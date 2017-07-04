@@ -5,7 +5,7 @@ using System.Text;
 
 using static RucheHome.Diagnostics.ArgumentValidater;
 
-namespace RucheHome.Strings.Extensions
+namespace RucheHome.Text.Extensions
 {
     /// <summary>
     /// String クラスおよび StringBuilder クラスに対する拡張メソッドを提供する静的クラス。
