@@ -47,6 +47,8 @@ namespace RucheHome.Talker
             this.TalkerName = talkerName ?? processProduct;
             this.CanSaveBlankText = canSaveBlankText;
             this.HasCharacters = hasCharacters;
+
+            this.ProcessDetector = new ProcessDetector(productName: processProduct);
         }
 
         /// <summary>
@@ -371,6 +373,14 @@ namespace RucheHome.Talker
         private bool IsPropertyChangedOnSaveFile { get; set; } = false;
 
         /// <summary>
+        /// プロセス検索インスタンスを取得する。
+        /// </summary>
+        /// <remarks>
+        /// ProductName のみ設定された状態で初期化される。
+        /// </remarks>
+        private ProcessDetector ProcessDetector { get; }
+
+        /// <summary>
         /// 状態を更新する。
         /// </summary>
         /// <param name="processes">
@@ -379,24 +389,13 @@ namespace RucheHome.Talker
         /// <returns>プロパティ値変更通知を行うデリゲート。</returns>
         private Action UpdateImpl(IEnumerable<Process> processes = null)
         {
-            var procs = processes ?? Process.GetProcessesByName(this.ProcessFileName);
+            // プロセス列挙が渡された場合はファイル名を検索条件にしない
+            this.ProcessDetector.FileName = (processes == null) ? this.ProcessFileName : null;
 
-            var targetProcess =
-                procs.FirstOrDefault(
-                    p =>
-                    {
-                        try
-                        {
-                            return this.IsOwnProcess(p);
-                        }
-                        catch (Exception ex)
-                        {
-                            ThreadDebug.WriteException(ex);
-                        }
-                        return false;
-                    });
+            // 検索
+            var process = this.ProcessDetector.Detect(processes).FirstOrDefault();
 
-            return this.UpdateByTargetProcess(targetProcess);
+            return this.UpdateByTargetProcess(process);
         }
 
         /// <summary>
@@ -869,6 +868,7 @@ namespace RucheHome.Talker
             bool propChangedOnSaveFile = this.IsPropertyChangedOnSaveFile;
             object lockObj = propChangedOnSaveFile ? (new object()) : this.LockObject;
 
+            Result<bool> result;
             Action raisePropChanged = null;
 
             try
@@ -903,15 +903,22 @@ namespace RucheHome.Talker
                         process = Process.Start(processFilePath);
                         if (process == null)
                         {
-                            ThreadTrace.WriteLine(@"Process.Start returns null.");
                             return (false, @"起動処理に失敗しました。");
                         }
 
                         // 入力待機
-                        if (!process.WaitForInputIdle(StandardTimeoutMilliseconds))
+                        try
                         {
-                            ThreadTrace.WriteLine(@"WaitForInputIdle is failed.");
-                            return (false, @"起動待機に失敗しました。");
+                            if (!process.WaitForInputIdle(StandardTimeoutMilliseconds))
+                            {
+                                return (false, @"起動待機に失敗しました。");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            // 管理者権限で起動する設定になっていてUACが有効だとここに来る
+                            ThreadTrace.WriteException(ex);
+                            return (false, @"管理者権限で起動した可能性があります。");
                         }
 
                         // 操作対象プロセスか？
@@ -944,22 +951,41 @@ namespace RucheHome.Talker
                     switch (this.State)
                     {
                     case TalkerState.None:
-                        return (false, @"起動状態にできませんでした。");
+                        result = (false, @"起動状態にできませんでした。");
+                        break;
+
+                    case TalkerState.Cleanup:
+                        // 多重起動に引っ掛かるとここに来る場合がある
+                        // 通常は事前に弾くはず ⇒ 起動状態を確認できていない可能性が高い
+                        result = (false, @"管理者権限で起動済みの可能性があります。");
+                        break;
 
                     case TalkerState.Fail:
-                        return MakeStateErrorResult(false);
+                        result = MakeStateErrorResult(false);
+                        break;
 
                     default:
+                        result = true;
                         break;
                     }
                 }
             }
             finally
             {
-                raisePropChanged?.Invoke();
+                try
+                {
+                    raisePropChanged?.Invoke();
+                }
+                catch (Exception ex)
+                {
+                    ThreadTrace.WriteException(ex);
+                    result = (
+                        false,
+                        ex.Message ?? (ex.GetType().Name + @" 例外が発生しました。"));
+                }
             }
 
-            return true;
+            return result;
         }
 
         /// <summary>
@@ -982,6 +1008,7 @@ namespace RucheHome.Talker
                 return MakeStateErrorResult<bool?>(false);
             }
 
+            Result<bool?> result;
             Action raisePropChanged = null;
 
             try
@@ -1053,24 +1080,37 @@ namespace RucheHome.Talker
                     switch (this.State)
                     {
                     case TalkerState.Fail:
-                        return MakeStateErrorResult<bool?>(false);
+                        result = MakeStateErrorResult<bool?>(false);
+                        break;
 
                     case TalkerState.Blocking:
                     case TalkerState.FileSaving:
-                        return (null, @"本体側で終了が保留されました。");
+                        result = (null, @"本体側で終了が保留されました。");
+                        break;
 
                     default:
                         // Startup, Idle は終了後即再起動したものと判断
+                        result = true;
                         break;
                     }
                 }
             }
             finally
             {
-                raisePropChanged?.Invoke();
+                try
+                {
+                    raisePropChanged?.Invoke();
+                }
+                catch (Exception ex)
+                {
+                    ThreadTrace.WriteException(ex);
+                    result = (
+                        false,
+                        ex.Message ?? (ex.GetType().Name + @" 例外が発生しました。"));
+                }
             }
 
-            return true;
+            return result;
         }
 
         #endregion
@@ -1325,6 +1365,7 @@ namespace RucheHome.Talker
                 return MakeStateErrorResult(false);
             }
 
+            Result<bool> result;
             Action raisePropChanged = null;
 
             try
@@ -1346,18 +1387,28 @@ namespace RucheHome.Talker
                         }
                     }
 
-                    var result = this.SpeakImpl();
+                    result = this.SpeakImpl();
 
                     // 状態更新
                     raisePropChanged = this.UpdateByCurrentTargetProcess();
-
-                    return result;
                 }
             }
             finally
             {
-                raisePropChanged?.Invoke();
+                try
+                {
+                    raisePropChanged?.Invoke();
+                }
+                catch (Exception ex)
+                {
+                    ThreadTrace.WriteException(ex);
+                    result = (
+                        false,
+                        ex.Message ?? (ex.GetType().Name + @" 例外が発生しました。"));
+                }
             }
+
+            return result;
         }
 
         /// <summary>
@@ -1376,6 +1427,7 @@ namespace RucheHome.Talker
                 return MakeStateErrorResult(false);
             }
 
+            Result<bool> result;
             Action raisePropChanged = null;
 
             try
@@ -1392,18 +1444,28 @@ namespace RucheHome.Talker
                         return (true, @"停止済みです。");
                     }
 
-                    var result = this.StopImpl();
+                    result = this.StopImpl();
 
                     // 状態更新
                     raisePropChanged = this.UpdateByCurrentTargetProcess();
-
-                    return result;
                 }
             }
             finally
             {
-                raisePropChanged?.Invoke();
+                try
+                {
+                    raisePropChanged?.Invoke();
+                }
+                catch (Exception ex)
+                {
+                    ThreadTrace.WriteException(ex);
+                    result = (
+                        false,
+                        ex.Message ?? (ex.GetType().Name + @" 例外が発生しました。"));
+                }
             }
+
+            return result;
         }
 
         /// <summary>
@@ -1425,6 +1487,7 @@ namespace RucheHome.Talker
                 return MakeStateErrorResult<string>();
             }
 
+            Result<string> result;
             Action raisePropChanged = null;
 
             try
@@ -1487,6 +1550,13 @@ namespace RucheHome.Talker
                         // lock 内だが IsSaveFileRunning によりデッドロック回避する
                         raisePropChanged?.Invoke();
                     }
+                    catch (Exception ex)
+                    {
+                        ThreadTrace.WriteException(ex);
+                        return (
+                            null,
+                            ex.Message ?? (ex.GetType().Name + @" 例外が発生しました。"));
+                    }
                     finally
                     {
                         raisePropChanged = null;
@@ -1505,18 +1575,28 @@ namespace RucheHome.Talker
                         }
                     }
 
-                    var result = this.SaveFileImpl(fileFullPath);
+                    result = this.SaveFileImpl(fileFullPath);
 
                     // 状態更新
                     raisePropChanged = this.UpdateByCurrentTargetProcess();
-
-                    return result;
                 }
             }
             finally
             {
-                raisePropChanged?.Invoke();
+                try
+                {
+                    raisePropChanged?.Invoke();
+                }
+                catch (Exception ex)
+                {
+                    ThreadTrace.WriteException(ex);
+                    result = (
+                        null,
+                        ex.Message ?? (ex.GetType().Name + @" 例外が発生しました。"));
+                }
             }
+
+            return result;
         }
 
         #endregion

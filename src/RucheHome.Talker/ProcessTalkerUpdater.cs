@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -69,7 +70,7 @@ namespace RucheHome.Talker
         {
             ValidateArgumentNull(talker, nameof(talker));
 
-            lock (this.lockObject)
+            lock (this.TalkerTaskLock)
             {
                 if (this.Talkers.Contains(talker))
                 {
@@ -105,7 +106,7 @@ namespace RucheHome.Talker
 
             List<Task> removedTasks = null;
 
-            lock (this.lockObject)
+            lock (this.TalkerTaskLock)
             {
                 // 位置検索
                 var index = this.Talkers.IndexOf(talker);
@@ -138,6 +139,10 @@ namespace RucheHome.Talker
                     }
                 }
             }
+            lock (((ICollection)this.LastExceptionMap).SyncRoot)
+            {
+                this.LastExceptionMap.Remove(talker);
+            }
 
             // lock 内で Wait するとデッドロックするので注意
             if (removedTasks != null && removedTasks.Count > 0)
@@ -146,6 +151,22 @@ namespace RucheHome.Talker
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// <see cref="IProcessTalker.Update"/>
+        /// メソッド呼び出しで送出された直近の例外を取得する。
+        /// </summary>
+        /// <param name="talker"><see cref="IProcessTalker"/> インスタンス。</param>
+        /// <returns>例外。登録されていないか例外が送出されていないならば null 。</returns>
+        public Exception GetLastException(IProcessTalker talker)
+        {
+            ValidateArgumentNull(talker, nameof(talker));
+
+            lock (((ICollection)this.LastExceptionMap).SyncRoot)
+            {
+                return this.LastExceptionMap.TryGetValue(talker, out var ex) ? ex : null;
+            }
         }
 
         /// <summary>
@@ -163,6 +184,11 @@ namespace RucheHome.Talker
         /// </summary>
         private Stack<(Task task, CancellationTokenSource cancelTokenSource)> Tasks { get; } =
             new Stack<(Task task, CancellationTokenSource cancelTokenSource)>();
+
+        /// <summary>
+        /// Talkers, TargetTalkerIndex, Tasks の排他制御用オブジェクト。
+        /// </summary>
+        private object TalkerTaskLock = new object();
 
         /// <summary>
         /// 実行ファイル名ごとのプロセス配列ディクショナリを取得する。
@@ -184,9 +210,10 @@ namespace RucheHome.Talker
         private long ProcessesMapUpdateTime { get; set; } = -1;
 
         /// <summary>
-        /// 排他制御用オブジェクト。
+        /// 最後に発生した例外のディクショナリを取得する。
         /// </summary>
-        private object lockObject = new object();
+        private Dictionary<IProcessTalker, Exception> LastExceptionMap { get; } =
+            new Dictionary<IProcessTalker, Exception>();
 
         /// <summary>
         /// タスクを1つ増やす。
@@ -256,13 +283,38 @@ namespace RucheHome.Talker
                 !cancelToken.IsCancellationRequested;
                 Thread.Sleep(this.TalkerUpdateIntervalMilliseconds))
             {
+                // 対象 Talker 決定
                 IProcessTalker talker = null;
-                Process[] processes = null;
-
-                lock (this.lockObject)
+                lock (this.TalkerTaskLock)
                 {
                     // 別の場所で lock して Cancel が呼ばれるため、
                     // この位置でもキャンセル済みか否か確認しておく
+                    if (cancelToken.IsCancellationRequested)
+                    {
+                        break;
+                    }
+
+                    if (this.TargetTalkerIndex >= this.Talkers.Count)
+                    {
+                        this.TargetTalkerIndex = 0;
+                    }
+                    if (this.TargetTalkerIndex < this.Talkers.Count)
+                    {
+                        // 処理対象取得
+                        talker = this.Talkers[this.TargetTalkerIndex];
+                        ++this.TargetTalkerIndex;
+                    }
+                }
+                if (talker == null)
+                {
+                    continue;
+                }
+
+                // プロセス配列取得
+                Process[] processes = null;
+                lock (((ICollection)this.ProcessesMap).SyncRoot)
+                {
+                    // Dispose 呼び出しされている可能性があるため確認
                     if (cancelToken.IsCancellationRequested)
                     {
                         break;
@@ -275,31 +327,36 @@ namespace RucheHome.Talker
                         this.ProcessesMapUpdateTime < 0 ||
                         timeInterval >= this.ProcessListUpdateIntervalMilliseconds)
                     {
-                        // 更新のためにキャッシュをクリア
+                        // 新規作成させるためにクリア
                         this.ProcessesMap.Clear();
                         this.ProcessesMapUpdateTime = timeNow;
                     }
 
-                    if (this.TargetTalkerIndex >= this.Talkers.Count)
-                    {
-                        this.TargetTalkerIndex = 0;
-                    }
-                    if (this.TargetTalkerIndex < this.Talkers.Count)
-                    {
-                        // 処理対象取得
-                        talker = this.Talkers[this.TargetTalkerIndex];
-                        ++this.TargetTalkerIndex;
-
-                        // プロセス配列取得
-                        processes =
-                            this.ProcessesMap.GetOrAdd(
-                                talker.ProcessFileName,
-                                name => Process.GetProcessesByName(name));
-                    }
+                    // プロセス配列取得or作成
+                    processes =
+                        this.ProcessesMap.GetOrAdd(
+                            talker.ProcessFileName,
+                            name => Process.GetProcessesByName(name));
                 }
 
                 // 更新処理
-                talker?.Update(processes);
+                try
+                {
+                    talker.Update(processes);
+                }
+                catch (Exception ex)
+                {
+                    lock (((ICollection)this.LastExceptionMap).SyncRoot)
+                    {
+                        // Dispose 呼び出しされている可能性があるため確認
+                        if (cancelToken.IsCancellationRequested)
+                        {
+                            break;
+                        }
+
+                        this.LastExceptionMap[talker] = ex;
+                    }
+                }
             }
         }
 
@@ -324,7 +381,7 @@ namespace RucheHome.Talker
         {
             List<Task> removedTasks = null;
 
-            lock (this.lockObject)
+            lock (this.TalkerTaskLock)
             {
                 this.Talkers.Clear();
                 this.TargetTalkerIndex = 0;
@@ -341,9 +398,18 @@ namespace RucheHome.Talker
                         }
                         removedTasks.Add(task);
                     }
-                }
 
+                    // 念のためクリア
+                    this.Tasks.Clear();
+                }
+            }
+            lock (((ICollection)this.ProcessesMap).SyncRoot)
+            {
                 this.ProcessesMap.Clear();
+            }
+            lock (((ICollection)this.LastExceptionMap).SyncRoot)
+            {
+                this.LastExceptionMap.Clear();
             }
 
             // lock 内で Wait するとデッドロックするので注意

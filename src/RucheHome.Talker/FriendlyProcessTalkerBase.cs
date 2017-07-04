@@ -290,19 +290,26 @@ namespace RucheHome.Talker
         /// 操作対象プロセスからアプリインスタンスを生成する。
         /// </summary>
         /// <param name="process">操作対象プロセス。</param>
-        /// <returns>操作対象アプリ。引数値が不正ならば null 。</returns>
+        /// <returns>操作対象アプリ。生成できなければ null 。</returns>
         private WindowsAppFriend CreateApp(Process process)
         {
-            if (process?.HasExited == false)
+            try
             {
-                switch (this.ProcessClrVersion)
+                if (process?.HasExited == false)
                 {
-                case ClrVersion.V2:
-                    return new WindowsAppFriend(process, @"v2.0.50727");
+                    switch (this.ProcessClrVersion)
+                    {
+                    case ClrVersion.V2:
+                        return new WindowsAppFriend(process, @"v2.0.50727");
 
-                case ClrVersion.V4:
-                    return new WindowsAppFriend(process, @"v4.0.30319");
+                    case ClrVersion.V4:
+                        return new WindowsAppFriend(process, @"v4.0.30319");
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                ThreadTrace.WriteException(ex);
             }
 
             return null;
@@ -375,7 +382,7 @@ namespace RucheHome.Talker
                     this.TargetApp?.Dispose();
                     this.TargetApp = (process == null) ? null : this.CreateApp(process);
 
-                    targetAppChanged = true;
+                    targetAppChanged = (this.TargetApp != targetAppOld);
                 }
             }
 
@@ -453,6 +460,11 @@ namespace RucheHome.Talker
                 app =
                     (this.TargetApp?.ProcessId == process.Id) ?
                         this.TargetApp : CreateApp(process);
+                if (app == null)
+                {
+                    // アプリが終了している
+                    return TalkerState.None;
+                }
 
                 // トップレベルウィンドウ取得
                 var topWin = WindowControl.FromZTop(app);
