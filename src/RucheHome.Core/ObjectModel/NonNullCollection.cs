@@ -2,8 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-
-using static RucheHome.Diagnostics.ArgumentValidater;
+using RucheHome.Diagnostics;
 
 namespace RucheHome.ObjectModel
 {
@@ -39,7 +38,7 @@ namespace RucheHome.ObjectModel
         /// <param name="item">挿入する要素。</param>
         protected override void InsertItem(int index, T item)
         {
-            ValidateArgumentNull(item, nameof(item));
+            ArgumentValidation.IsNotNull(item, nameof(item));
 
             base.InsertItem(index, item);
         }
@@ -51,7 +50,7 @@ namespace RucheHome.ObjectModel
         /// <param name="item">上書きする要素。</param>
         protected override void SetItem(int index, T item)
         {
-            ValidateArgumentNull(item, nameof(item));
+            ArgumentValidation.IsNotNull(item, nameof(item));
 
             base.SetItem(index, item);
         }

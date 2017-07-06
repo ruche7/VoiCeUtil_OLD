@@ -2,8 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-
-using static RucheHome.Diagnostics.ArgumentValidater;
+using RucheHome.Diagnostics;
 
 namespace RucheHome.Text.Extensions
 {
@@ -459,10 +458,9 @@ namespace RucheHome.Text.Extensions
             IEnumerable<string> oldValues,
             IEnumerable<string> newValues)
         {
-            // null チェック
-            ValidateArgumentNull(self, nameof(self));
-            ValidateArgumentNull(oldValues, nameof(oldValues));
-            ValidateArgumentNull(newValues, nameof(newValues));
+            ArgumentValidation.IsNotNull(self, nameof(self));
+            ArgumentValidation.IsNotNull(oldValues, nameof(oldValues));
+            ArgumentValidation.IsNotNull(newValues, nameof(newValues));
 
             var newVals = newValues.ToArray();
             if (newVals.Contains(null))

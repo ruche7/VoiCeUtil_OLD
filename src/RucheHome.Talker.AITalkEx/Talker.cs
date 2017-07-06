@@ -9,8 +9,6 @@ using Codeer.Friendly.Windows.Grasp;
 using Ong.Friendly.FormsStandardControls;
 using RucheHome.Diagnostics;
 
-using static RucheHome.Diagnostics.ArgumentValidater;
-
 namespace RucheHome.Talker.AITalkEx
 {
     /// <summary>
@@ -40,7 +38,7 @@ namespace RucheHome.Talker.AITalkEx
                 hasCharacters: false)
         {
             // 例外回避発動時はここで例外になる
-            ValidateArgumentInvalidEnum(product, nameof(product));
+            ArgumentValidation.IsEnumDefined(product, nameof(product));
         }
 
         /// <summary>
@@ -50,7 +48,7 @@ namespace RucheHome.Talker.AITalkEx
         /// <returns><see cref="Talker"/> インスタンス。</returns>
         public static Talker Get(Product product)
         {
-            ValidateArgumentInvalidEnum(product, nameof(product));
+            ArgumentValidation.IsEnumDefined(product, nameof(product));
 
             Talker talker = null;
 

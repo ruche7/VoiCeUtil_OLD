@@ -7,8 +7,6 @@ using Codeer.Friendly.Windows.Grasp;
 using Codeer.Friendly.Windows.NativeStandardControls;
 using RucheHome.Diagnostics;
 
-using static RucheHome.Diagnostics.ArgumentValidater;
-
 namespace RucheHome.Talker
 {
     /// <summary>
@@ -65,7 +63,7 @@ namespace RucheHome.Talker
                 canSaveBlankText,
                 hasCharacters)
         {
-            ValidateArgumentInvalidEnum(processClrVersion, nameof(processClrVersion));
+            ArgumentValidation.IsEnumDefined(processClrVersion, nameof(processClrVersion));
 
             this.ProcessClrVersion = processClrVersion;
         }
@@ -120,7 +118,7 @@ namespace RucheHome.Talker
             Action<Async> action,
             int timeoutMilliseconds = StandardTimeoutMilliseconds)
         {
-            ValidateArgumentNull(action, nameof(action));
+            ArgumentValidation.IsNotNull(action, nameof(action));
 
             var async = new Async();
 

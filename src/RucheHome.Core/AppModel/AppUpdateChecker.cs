@@ -7,9 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
+using RucheHome.Diagnostics;
 using RucheHome.ObjectModel;
-
-using static RucheHome.Diagnostics.ArgumentValidater;
 
 namespace RucheHome.AppModel
 {
@@ -95,8 +94,8 @@ namespace RucheHome.AppModel
         /// </param>
         public AppUpdateChecker(Assembly app, string baseUri)
         {
-            ValidateArgumentNull(app, nameof(app));
-            ValidateArgumentNullOrWhiteSpace(baseUri, nameof(baseUri));
+            ArgumentValidation.IsNotNull(app, nameof(app));
+            ArgumentValidation.IsNotNullOrWhiteSpace(baseUri, nameof(baseUri));
 
             var productAttr =
                 app.GetCustomAttribute<AssemblyProductAttribute>() ??
@@ -134,9 +133,9 @@ namespace RucheHome.AppModel
             Version currentVersion,
             string baseUri)
         {
-            ValidateArgumentNullOrWhiteSpace(currentProduct, nameof(currentProduct));
-            ValidateArgumentNull(currentVersion, nameof(currentVersion));
-            ValidateArgumentNullOrWhiteSpace(baseUri, nameof(baseUri));
+            ArgumentValidation.IsNotNullOrWhiteSpace(currentProduct, nameof(currentProduct));
+            ArgumentValidation.IsNotNull(currentVersion, nameof(currentVersion));
+            ArgumentValidation.IsNotNullOrWhiteSpace(baseUri, nameof(baseUri));
 
             this.CurrentProduct = currentProduct;
             this.CurrentVersion = currentVersion;
@@ -361,11 +360,11 @@ namespace RucheHome.AppModel
             Version currentVersion,
             int redirectCount = 0)
         {
-            ValidateArgumentNull(webClient, nameof(webClient));
-            ValidateArgumentNullOrWhiteSpace(baseUri, nameof(baseUri));
-            ValidateArgumentNullOrWhiteSpace(product, nameof(product));
-            ValidateArgumentNullOrWhiteSpace(currentProduct, nameof(currentProduct));
-            ValidateArgumentNull(currentVersion, nameof(currentVersion));
+            ArgumentValidation.IsNotNull(webClient, nameof(webClient));
+            ArgumentValidation.IsNotNullOrWhiteSpace(baseUri, nameof(baseUri));
+            ArgumentValidation.IsNotNullOrWhiteSpace(product, nameof(product));
+            ArgumentValidation.IsNotNullOrWhiteSpace(currentProduct, nameof(currentProduct));
+            ArgumentValidation.IsNotNull(currentVersion, nameof(currentVersion));
 
             // リダイレクト回数制限オーバー
             if (redirectCount > RedirectCountLimit)

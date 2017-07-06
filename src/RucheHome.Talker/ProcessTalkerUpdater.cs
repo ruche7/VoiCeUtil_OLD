@@ -5,8 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-
-using static RucheHome.Diagnostics.ArgumentValidater;
+using RucheHome.Diagnostics;
 
 namespace RucheHome.Talker
 {
@@ -36,7 +35,7 @@ namespace RucheHome.Talker
         /// <param name="taskCountLimit">並走させるタスクの最大数。 1 以上 1024 以下。</param>
         public ProcessTalkerUpdater(int taskCountLimit)
         {
-            ValidateArgumentOutOfRange(taskCountLimit, 1, 1024, nameof(taskCountLimit));
+            ArgumentValidation.IsWithinRange(taskCountLimit, 1, 1024, nameof(taskCountLimit));
 
             this.TaskCountLimit = taskCountLimit;
         }
@@ -68,7 +67,7 @@ namespace RucheHome.Talker
         /// <returns>登録できたならば true 。既に登録済みならば false 。</returns>
         public bool Register(IProcessTalker talker)
         {
-            ValidateArgumentNull(talker, nameof(talker));
+            ArgumentValidation.IsNotNull(talker, nameof(talker));
 
             lock (this.TalkerTaskLock)
             {
@@ -102,7 +101,7 @@ namespace RucheHome.Talker
         /// <returns>破棄できたならば true 。登録されていないならば false 。</returns>
         public bool Remove(IProcessTalker talker)
         {
-            ValidateArgumentNull(talker, nameof(talker));
+            ArgumentValidation.IsNotNull(talker, nameof(talker));
 
             List<Task> removedTasks = null;
 
@@ -161,7 +160,7 @@ namespace RucheHome.Talker
         /// <returns>例外。登録されていないか例外が送出されていないならば null 。</returns>
         public Exception GetLastException(IProcessTalker talker)
         {
-            ValidateArgumentNull(talker, nameof(talker));
+            ArgumentValidation.IsNotNull(talker, nameof(talker));
 
             lock (((ICollection)this.LastExceptionMap).SyncRoot)
             {

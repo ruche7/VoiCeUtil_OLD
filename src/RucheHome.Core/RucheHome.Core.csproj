@@ -43,7 +43,7 @@
     <Compile Include="AppModel\AppUpdateChecker.cs" />
     <Compile Include="AppModel\ConfigDirectoryPath.cs" />
     <Compile Include="AppModel\ConfigKeeper.cs" />
-    <Compile Include="Diagnostics\ArgumentValidater.cs" />
+    <Compile Include="Diagnostics\ArgumentValidation.cs" />
     <Compile Include="Diagnostics\ProcessDetector.cs" />
     <Compile Include="Diagnostics\ThreadDebug.cs" />
     <Compile Include="Diagnostics\ThreadTrace.cs" />

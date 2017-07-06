@@ -8,8 +8,6 @@ using System.Threading;
 using RucheHome.Diagnostics;
 using RucheHome.ObjectModel;
 
-using static RucheHome.Diagnostics.ArgumentValidater;
-
 namespace RucheHome.Talker
 {
     /// <summary>
@@ -39,8 +37,8 @@ namespace RucheHome.Talker
             bool canSaveBlankText = false,
             bool hasCharacters = false)
         {
-            ValidateArgumentNullOrEmpty(processFileName, nameof(processFileName));
-            ValidateArgumentNull(processProduct, nameof(processProduct));
+            ArgumentValidation.IsNotNullOrEmpty(processFileName, nameof(processFileName));
+            ArgumentValidation.IsNotNull(processProduct, nameof(processProduct));
 
             this.ProcessFileName = processFileName;
             this.ProcessProduct = processProduct;
@@ -181,8 +179,8 @@ namespace RucheHome.Talker
             Func<T, bool> predicator,
             int timeoutMilliseconds = StandardTimeoutMilliseconds)
         {
-            ValidateArgumentNull(getter, nameof(getter));
-            ValidateArgumentNull(predicator, nameof(predicator));
+            ArgumentValidation.IsNotNull(getter, nameof(getter));
+            ArgumentValidation.IsNotNull(predicator, nameof(predicator));
 
             var value = getter();
 

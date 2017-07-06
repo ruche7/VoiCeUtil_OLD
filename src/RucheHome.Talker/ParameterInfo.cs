@@ -1,6 +1,5 @@
 ﻿using System;
-
-using static RucheHome.Diagnostics.ArgumentValidater;
+using RucheHome.Diagnostics;
 
 namespace RucheHome.Talker
 {
@@ -27,12 +26,12 @@ namespace RucheHome.Talker
             decimal minValue = 0,
             decimal maxValue = decimal.MaxValue)
         {
-            ValidateArgumentOutOfRange(digits, 0, int.MaxValue, nameof(digits));
+            ArgumentValidation.IsWithinRange(digits, 0, int.MaxValue, nameof(digits));
             if (minValue > maxValue)
             {
                 throw new ArgumentException(@"minValue > maxValue");
             }
-            ValidateArgumentOutOfRange(
+            ArgumentValidation.IsWithinRange(
                 defaultValue,
                 minValue,
                 maxValue,

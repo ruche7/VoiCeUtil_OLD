@@ -2,8 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
-
-using static RucheHome.Diagnostics.ArgumentValidater;
+using RucheHome.Diagnostics;
 
 namespace RucheHome.Text
 {
@@ -18,7 +17,7 @@ namespace RucheHome.Text
         /// <param name="source">対象文字列。</param>
         public TextElementEnumerable(string source)
         {
-            ValidateArgumentNull(source, nameof(source));
+            ArgumentValidation.IsNotNull(source, nameof(source));
 
             this.Source = source;
         }

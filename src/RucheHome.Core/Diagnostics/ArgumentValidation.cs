@@ -7,10 +7,7 @@ namespace RucheHome.Diagnostics
     /// <summary>
     /// メソッド実引数の検証処理を提供する静的クラス。
     /// </summary>
-    /// <remarks>
-    /// このクラスを using static して利用することを想定している。
-    /// </remarks>
-    public static class ArgumentValidater
+    public static class ArgumentValidation
     {
         /// <summary>
         /// 引数値が null ならば ArgumentNullException 例外を送出する。
@@ -18,7 +15,7 @@ namespace RucheHome.Diagnostics
         /// <typeparam name="T">引数の型。</typeparam>
         /// <param name="arg">引数値。</param>
         /// <param name="argName">引数名。例外メッセージに利用される。</param>
-        public static void ValidateArgumentNull<T>(T arg, string argName = null)
+        public static void IsNotNull<T>(T arg, string argName = null)
         {
             if (arg == null)
             {
@@ -36,7 +33,7 @@ namespace RucheHome.Diagnostics
         /// <param name="minValue">最小許容値。</param>
         /// <param name="maxValue">最大許容値。</param>
         /// <param name="argName">引数名。例外メッセージに利用される。</param>
-        public static void ValidateArgumentOutOfRange<T>(
+        public static void IsWithinRange<T>(
             T arg,
             T minValue = default(T),
             T maxValue = default(T),
@@ -68,7 +65,7 @@ namespace RucheHome.Diagnostics
         /// <typeparam name="T">引数の列挙型。</typeparam>
         /// <param name="arg">引数値。</param>
         /// <param name="argName">引数名。例外メッセージに利用される。</param>
-        public static void ValidateArgumentInvalidEnum<T>(T arg, string argName = null)
+        public static void IsEnumDefined<T>(T arg, string argName = null)
             where T : struct, IConvertible
         {
             if (!Enum.IsDefined(typeof(T), arg))
@@ -88,9 +85,9 @@ namespace RucheHome.Diagnostics
         /// </summary>
         /// <param name="arg">引数値。</param>
         /// <param name="argName">引数名。例外メッセージに利用される。</param>
-        public static void ValidateArgumentNullOrEmpty(string arg, string argName = null)
+        public static void IsNotNullOrEmpty(string arg, string argName = null)
         {
-            ValidateArgumentNull(arg, argName);
+            IsNotNull(arg, argName);
 
             if (arg.Length == 0)
             {
@@ -107,11 +104,11 @@ namespace RucheHome.Diagnostics
         /// </summary>
         /// <param name="arg">引数値。</param>
         /// <param name="argName">引数名。例外メッセージに利用される。</param>
-        public static void ValidateArgumentNullOrWhiteSpace(
+        public static void IsNotNullOrWhiteSpace(
             string arg,
             string argName = null)
         {
-            ValidateArgumentNull(arg, argName);
+            IsNotNull(arg, argName);
 
             if (string.IsNullOrWhiteSpace(arg))
             {
