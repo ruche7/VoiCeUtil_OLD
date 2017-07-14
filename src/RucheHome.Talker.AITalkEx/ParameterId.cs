@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 
 namespace RucheHome.Talker.AITalkEx
@@ -60,6 +62,24 @@ namespace RucheHome.Talker.AITalkEx
     /// </summary>
     public static class ParameterIdExtension
     {
+#if DEBUG
+        /// <summary>
+        /// 静的コンストラクタ。
+        /// </summary>
+        static ParameterIdExtension()
+        {
+            // Infos, ZOrderIndices に全列挙値が含まれているか確認
+            Debug.Assert(
+                AllIds.All(p => Infos.ContainsKey(p) && ZOrderIndices.ContainsKey(p)));
+        }
+#endif // DEBUG
+
+        /// <summary>
+        /// 全パラメータID値のコレクションを取得する。
+        /// </summary>
+        public static ReadOnlyCollection<ParameterId> AllIds { get; } =
+            Array.AsReadOnly(((ParameterId[])Enum.GetValues(typeof(ParameterId))).ToArray());
+
         /// <summary>
         /// パラメータ情報を取得する。
         /// </summary>
@@ -69,9 +89,41 @@ namespace RucheHome.Talker.AITalkEx
             Infos.TryGetValue(self, out var info) ? info : null;
 
         /// <summary>
+        /// 音声効果設定であるか否かを取得する。
+        /// </summary>
+        /// <param name="self">パラメータID。</param>
+        /// <returns>音声効果設定ならば true 。そうでなければ false 。</returns>
+        public static bool IsEffect(this ParameterId self) =>
+            (self >= ParameterId.Volume && self <= ParameterId.Intonation);
+
+        /// <summary>
+        /// ポーズ設定であるか否かを取得する。
+        /// </summary>
+        /// <param name="self">パラメータID。</param>
+        /// <returns>ポーズ設定ならば true 。そうでなければ false 。</returns>
+        public static bool IsPause(this ParameterId self) =>
+            (self >= ParameterId.PauseShort && self <= ParameterId.PauseEnd);
+
+        /// <summary>
+        /// タブページを基準とするテキストボックスのZオーダーインデックス配列を取得する。
+        /// </summary>
+        /// <param name="self">パラメータID。</param>
+        /// <returns>Zオーダーインデックス配列。引数値が無効ならば null 。</returns>
+        internal static int[] GetZOrderIndices(this ParameterId self) =>
+            ZOrderIndices.TryGetValue(self, out var indices) ? (int[])indices.Clone() : null;
+
+        /// <summary>
+        /// タブページ名を取得する。
+        /// </summary>
+        /// <param name="self">パラメータID。</param>
+        /// <returns>タブページ名。引数値が無効ならば null 。</returns>
+        internal static string GetTabPageName(this ParameterId self) =>
+            self.IsEffect() ? @"音声効果" : (self.IsPause() ? @"ポーズ" : null);
+
+        /// <summary>
         /// パラメータ情報ディクショナリ。
         /// </summary>
-        public static readonly Dictionary<ParameterId, ParameterInfo<ParameterId>> Infos =
+        private static readonly Dictionary<ParameterId, ParameterInfo<ParameterId>> Infos =
             new[]
             {
                 new ParameterInfo<ParameterId>(
@@ -94,5 +146,25 @@ namespace RucheHome.Talker.AITalkEx
                     ParameterId.PauseEnd, @"終了ポーズ", 0, 0, 0, 10000),
             }
             .ToDictionary(pi => pi.Id);
+
+        /// <summary>
+        /// タブページを基準とするテキストボックスのZオーダーインデックス配列ディクショナリ。
+        /// </summary>
+        private static readonly Dictionary<ParameterId, int[]> ZOrderIndices =
+            new Dictionary<ParameterId, int[]>
+            {
+                // 音声効果
+                { ParameterId.Volume, new[] { 0, 8 } },
+                { ParameterId.Speed, new[] { 0, 9 } },
+                { ParameterId.Tone, new[] { 0, 10 } },
+                { ParameterId.Intonation, new[] { 0, 11 } },
+
+                // ポーズ
+                { ParameterId.PauseShort, new[] { 0, 3, 0 } },
+                { ParameterId.PauseLong, new[] { 0, 5, 0 } },
+                { ParameterId.PauseSentence, new[] { 0, 1, 0 } },
+                { ParameterId.PauseBegin, new[] { 0, 7, 0 } },
+                { ParameterId.PauseEnd, new[] { 0, 8, 0 } },
+            };
     }
 }

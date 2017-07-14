@@ -189,7 +189,7 @@ namespace RucheHome.Talker
                 !predicator(value) &&
                 (timeoutMilliseconds < 0 || sw.ElapsedMilliseconds < timeoutMilliseconds);)
             {
-                Thread.Sleep(0);
+                Thread.Yield();
                 value = getter();
             }
 
@@ -605,8 +605,7 @@ namespace RucheHome.Talker
         /// </summary>
         /// <param name="character">
         /// キャラクター。
-        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装から
-        /// null が渡されることはない。
+        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装から null が渡されることはない。
         /// 有効でないキャラクターは渡されうる。
         /// </param>
         /// <returns>成功したならば true 。そうでなければ false 。</returns>
@@ -644,8 +643,7 @@ namespace RucheHome.Talker
         /// </summary>
         /// <param name="text">
         /// 文章。
-        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装から
-        /// null が渡されることはない。
+        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装から null が渡されることはない。
         /// </param>
         /// <returns>成功したならば true 。そうでなければ false 。</returns>
         /// <remarks>

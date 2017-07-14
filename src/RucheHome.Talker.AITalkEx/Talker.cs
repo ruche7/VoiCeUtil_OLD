@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -21,13 +20,13 @@ namespace RucheHome.Talker.AITalkEx
     /// <item><description>株式会社インターネットの Talk Ex シリーズ</description></item>
     /// </list>
     /// </remarks>
-    public sealed class Talker : FriendlyProcessTalkerBase<ParameterId>
+    public class Talker : FriendlyProcessTalkerBase<ParameterId>
     {
         /// <summary>
         /// コンストラクタ。
         /// </summary>
         /// <param name="product">製品種別。</param>
-        private Talker(Product product)
+        public Talker(Product product)
             :
             base(
                 ClrVersion.V2,
@@ -40,59 +39,6 @@ namespace RucheHome.Talker.AITalkEx
             // 例外回避発動時はここで例外になる
             ArgumentValidation.IsEnumDefined(product, nameof(product));
         }
-
-        /// <summary>
-        /// 製品種別ごとに一意のインスタンスを取得する。
-        /// </summary>
-        /// <param name="product">製品種別。</param>
-        /// <returns><see cref="Talker"/> インスタンス。</returns>
-        public static Talker Get(Product product)
-        {
-            ArgumentValidation.IsEnumDefined(product, nameof(product));
-
-            Talker talker = null;
-
-            lock (TalkerCacheLock)
-            {
-                talker = TalkerCache.GetOrAdd(product, p => new Talker(p));
-
-                // 破棄済みなら新しいインスタンスに差し換え
-                if (talker?.IsDisposed != false)
-                {
-                    talker = new Talker(product);
-                    TalkerCache[product] = talker;
-                }
-            }
-
-            return talker;
-        }
-
-        /// <summary>
-        /// キャッシュされている全インスタンスを破棄する。
-        /// </summary>
-        public static void DisposeAll()
-        {
-            lock (TalkerCacheLock)
-            {
-                foreach (var kv in TalkerCache)
-                {
-                    kv.Value?.Dispose();
-                }
-
-                TalkerCache.Clear();
-            }
-        }
-
-        /// <summary>
-        /// インスタンスキャッシュディクショナリを取得する。
-        /// </summary>
-        private static ConcurrentDictionary<Product, Talker> TalkerCache { get; } =
-            new ConcurrentDictionary<Product, Talker>();
-
-        /// <summary>
-        /// <see cref="TalkerCache"/> の排他制御用オブジェクト。
-        /// </summary>
-        private static readonly object TalkerCacheLock = new object();
 
         /// <summary>
         /// 文章入力欄下にあるボタンの種別列挙。
@@ -128,11 +74,8 @@ namespace RucheHome.Talker.AITalkEx
         /// </summary>
         /// <param name="mainWindow">メインウィンドウ。</param>
         /// <returns>コントロール。取得できなかった場合は null 。</returns>
-        /// <remarks>
-        /// Zインデックスによって対象を特定する。
-        /// </remarks>
         private static WindowControl GetMainButtonsParent(WindowControl mainWindow) =>
-            GetControlFromZIndex<WindowControl>(mainWindow, 2, 0, 0, 1, 0, 1, 0);
+            GetControlFromZOrder(mainWindow, 2, 0, 0, 1, 0, 1, 0);
 
         /// <summary>
         /// 文章入力欄下にあるボタンコントロールを取得する。
@@ -141,7 +84,7 @@ namespace RucheHome.Talker.AITalkEx
         /// <param name="button">ボタン種別。</param>
         /// <returns>コントロール。取得できなかった場合は null 。</returns>
         private static FormsButton GetMainButton(WindowControl parent, MainButton button) =>
-            GetControlFromZIndex<FormsButton>(parent, (int)button);
+            GetControlFromZOrder<FormsButton>(parent, (int)button);
 
         /// <summary>
         /// 文章入力欄コントロール群を取得する。
@@ -153,7 +96,7 @@ namespace RucheHome.Talker.AITalkEx
         /// </remarks>
         private static FormsRichTextBox[] GetMainRichTextBoxes(WindowControl mainWindow)
         {
-            var parent = GetControlFromZIndex<WindowControl>(mainWindow, 2, 0, 0, 1, 0, 1, 1);
+            var parent = GetControlFromZOrder(mainWindow, 2, 0, 0, 1, 0, 1, 1);
             if (parent == null)
             {
                 return null;
@@ -195,114 +138,100 @@ namespace RucheHome.Talker.AITalkEx
         /// <param name="mainWindow">メインウィンドウ。</param>
         /// <returns>コントロール。取得できなかった場合は null 。</returns>
         private static FormsTabControl GetTabControl(WindowControl mainWindow) =>
-            GetControlFromZIndex<FormsTabControl>(mainWindow, 2, 0, 0, 0, 0);
+            GetControlFromZOrder<FormsTabControl>(mainWindow, 2, 0, 0, 0, 0);
 
         /// <summary>
         /// ウィンドウ下部のタブコントロールから、
         /// パラメータを保持するテキストボックスのディクショナリを取得する。
         /// </summary>
         /// <param name="tabControl">タブコントロール。</param>
+        /// <param name="targetParameterIds">
+        /// 取得対象パラメータID列挙。 null ならばすべて対象。
+        /// </param>
         /// <returns>
         /// テキストボックスのディクショナリ。取得できなかった場合は null 。
         /// </returns>
         private static Result<Dictionary<ParameterId, FormsTextBox>>
-        GetTabControlParameterTextBoxes(FormsTabControl tabControl)
+        GetTabControlParameterTextBoxes(
+            FormsTabControl tabControl,
+            IEnumerable<ParameterId> targetParameterIds = null)
         {
             if (tabControl == null)
             {
-                return (null, @"本体のタブコントロールが見つかりません。");
+                return (null, @"本体のタブページが見つかりません。");
             }
 
             var dict = new Dictionary<ParameterId, FormsTextBox>();
+
+            // 現在選択中のタブアイテムインデックスを保存
             int tabIndex = -1;
+            try
+            {
+                tabIndex = tabControl.SelectedIndex;
+                if (tabIndex < 0 || tabControl.TabCount < 4)
+                {
+                    return (null, @"本体のタブページが見つかりません");
+                }
+            }
+            catch (Exception ex)
+            {
+                ThreadTrace.WriteException(ex);
+                return (null, @"本体のタブページから情報を取得できませんでした。");
+            }
 
             try
             {
-                // 元のタブインデックスを保存
-                tabIndex = tabControl.SelectedIndex;
+                var allIds = targetParameterIds ?? ParameterIdExtension.AllIds;
+                var effectIds = allIds.Where(id => id.IsEffect());
+                var pauseIds = allIds.Where(id => id.IsPause());
 
-                // 音声効果タブ
+                (IEnumerable<ParameterId> ids, int tabIndex)[] tabs =
+                    new[] { (effectIds, 2), (pauseIds, 3) };
+
+                foreach (var tab in tabs)
                 {
-                    var name = @"音声効果";
+                    if (!tab.ids.Any())
+                    {
+                        continue;
+                    }
 
-                    // 音声効果タブページ取得
-                    var page = FindTabPage(tabControl, name);
+                    // タブページ名取得
+                    var name = tab.ids.First().GetTabPageName();
+
+                    // タブページ取得
+                    var page = FindFormsTabPage(tabControl, name);
                     if (page == null)
                     {
                         // 一度も開いていない場合は取得できないので開いてみる
-                        if (!WaitAsyncAction(async => tabControl.EmulateTabSelect(2, async)))
+                        if (
+                            !WaitAsyncAction(
+                                async => tabControl.EmulateTabSelect(tab.tabIndex, async)))
                         {
                             return (null, name + @"タブ選択処理がタイムアウトしました。");
                         }
                         tabControl.Refresh();
-                        page = FindTabPage(tabControl, name);
-                    }
-                    var panel = GetControlFromZIndex<WindowControl>(page, 0);
-                    if (panel == null)
-                    {
-                        return (null, $@"本体の{name}タブが見つかりません。");
-                    }
 
-                    // 各テキストボックス取得
-                    dict.Add(
-                        ParameterId.Volume,
-                        GetControlFromZIndex<FormsTextBox>(panel, 8));
-                    dict.Add(
-                        ParameterId.Speed,
-                        GetControlFromZIndex<FormsTextBox>(panel, 9));
-                    dict.Add(
-                        ParameterId.Tone,
-                        GetControlFromZIndex<FormsTextBox>(panel, 10));
-                    dict.Add(
-                        ParameterId.Intonation,
-                        GetControlFromZIndex<FormsTextBox>(panel, 11));
-                    if (dict.Any(kv => kv.Value == null))
-                    {
-                        return (null, $@"本体の{name}タブ内の数値入力欄が見つかりません。");
-                    }
-                }
-
-                // ポーズタブ
-                {
-                    var name = @"ポーズ";
-
-                    // ポーズタブページ取得
-                    var page = FindTabPage(tabControl, name);
-                    if (page == null)
-                    {
-                        // 一度も開いていない場合は取得できないので開いてみる
-                        if (!WaitAsyncAction(async => tabControl.EmulateTabSelect(3, async)))
+                        page = FindFormsTabPage(tabControl, name);
+                        if (page == null)
                         {
-                            return (null, name + @"タブ選択処理がタイムアウトしました。");
+                            return (null, @"本体のタブページが見つかりません。");
                         }
-                        tabControl.Refresh();
-                        page = FindTabPage(tabControl, name);
-                    }
-                    var panel = GetControlFromZIndex<WindowControl>(page, 0);
-                    if (panel == null)
-                    {
-                        return (null, $@"本体の{name}タブが見つかりません。");
                     }
 
                     // 各テキストボックス取得
-                    dict.Add(
-                        ParameterId.PauseShort,
-                        GetControlFromZIndex<FormsTextBox>(panel, 3, 0));
-                    dict.Add(
-                        ParameterId.PauseLong,
-                        GetControlFromZIndex<FormsTextBox>(panel, 5, 0));
-                    dict.Add(
-                        ParameterId.PauseSentence,
-                        GetControlFromZIndex<FormsTextBox>(panel, 1, 0));
-                    dict.Add(
-                        ParameterId.PauseBegin,
-                        GetControlFromZIndex<FormsTextBox>(panel, 7, 0));
-                    dict.Add(
-                        ParameterId.PauseEnd,
-                        GetControlFromZIndex<FormsTextBox>(panel, 8, 0));
-                    if (dict.Any(kv => kv.Value == null))
+                    foreach (var id in tab.ids)
                     {
-                        return (null, $@"本体の{name}タブ内の数値入力欄が見つかりません。");
+                        var textBox =
+                            GetControlFromZOrder<FormsTextBox>(page, id.GetZOrderIndices());
+                        if (textBox == null)
+                        {
+                            return (
+                                null,
+                                $@"本体の{name}タブの" +
+                                $@"{id.GetInfo().DisplayName}入力欄が見つかりません。");
+                        }
+
+                        dict.Add(id, textBox);
                     }
                 }
             }
@@ -313,11 +242,11 @@ namespace RucheHome.Talker.AITalkEx
             }
             finally
             {
-                // 元のタブページに戻す
+                // 元のタブページを選択する
                 // 失敗してもよい
                 try
                 {
-                    if (tabIndex >= 0 && tabIndex != tabControl.SelectedIndex)
+                    if (tabIndex != tabControl.SelectedIndex)
                     {
                         WaitAsyncAction(
                             async => tabControl.EmulateTabSelect(tabIndex, async));
@@ -342,7 +271,7 @@ namespace RucheHome.Talker.AITalkEx
         /// </summary>
         private const string SaveProgressWindowTitle = @"音声保存";
 
-        #region FriendlyProcessTalkerBase<Talker.ParameterId> のオーバライド
+        #region FriendlyProcessTalkerBase<ParameterId> のオーバライド
 
         /// <summary>
         /// ウィンドウタイトル種別を調べる。
@@ -396,7 +325,7 @@ namespace RucheHome.Talker.AITalkEx
 
         #endregion
 
-        #region ProcessTalkerBase<Talker.ParameterId> のオーバライド
+        #region ProcessTalkerBase<ParameterId> のオーバライド
 
         /// <summary>
         /// 現在設定されている文章を取得する。
@@ -561,7 +490,8 @@ namespace RucheHome.Talker.AITalkEx
             }
 
             // パラメータテキストボックス群を取得
-            var (textBoxes, failMessage) = GetTabControlParameterTextBoxes(tabControl);
+            var (textBoxes, failMessage) =
+                GetTabControlParameterTextBoxes(tabControl, parameters.Select(kv => kv.Key));
             if (textBoxes == null)
             {
                 return (null, failMessage);

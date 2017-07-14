@@ -15,6 +15,11 @@ namespace RucheHome.Talker.Tests.AITalkEx
     public class TalkerTest : ProcessTalkerTestBase<AI.Talker>
     {
         /// <summary>
+        /// 全 Talker インスタンス配列を取得または設定する。
+        /// </summary>
+        private static AI.Talker[] AllTalkers { get; set; } = null;
+
+        /// <summary>
         /// テスト用の Talker インスタンスを取得または設定する。
         /// </summary>
         private static AI.Talker TestTalker { get; set; } = null;
@@ -32,19 +37,21 @@ namespace RucheHome.Talker.Tests.AITalkEx
         public static void Initialize(TestContext context)
         {
             // 全 Talker 取得
-            var talkers =
-                ((Product[])Enum.GetValues(typeof(Product))).Select(p => AI.Talker.Get(p));
-            Assert.IsTrue(talkers.Any());
-            Assert.IsTrue(talkers.All(t => t != null));
+            AllTalkers =
+                ((Product[])Enum.GetValues(typeof(Product)))
+                    .Select(p => new AI.Talker(p))
+                    .ToArray();
+            Assert.IsTrue(AllTalkers.Any());
+            Assert.IsTrue(AllTalkers.All(t => t != null));
 
             // 一度 Update を走らせる
-            foreach (var talker in talkers)
+            foreach (var talker in AllTalkers)
             {
                 talker.Update();
             }
 
             // 起動中の Talker をテスト対象にする
-            TestTalker = talkers.FirstOrDefault(t => t.IsAlive);
+            TestTalker = AllTalkers.FirstOrDefault(t => t.IsAlive);
             if (TestTalker == null)
             {
                 Assert.Inconclusive(@"操作対象 AITalkEx アプリを1つ以上起動してください。");
@@ -66,7 +73,10 @@ namespace RucheHome.Talker.Tests.AITalkEx
         public static void Cleanup()
         {
             // 全 Talker を破棄
-            AI.Talker.DisposeAll();
+            foreach (var talker in AllTalkers)
+            {
+                talker.Dispose();
+            }
         }
 
         [TestMethod]

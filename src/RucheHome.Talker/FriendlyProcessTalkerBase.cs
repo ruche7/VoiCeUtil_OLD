@@ -138,30 +138,115 @@ namespace RucheHome.Talker
         }
 
         /// <summary>
-        /// Zインデックスツリーによって子孫コントロールを取得する。
+        /// Zオーダーインデックスを辿ることによって子孫コントロールを取得する。
         /// </summary>
-        /// <typeparam name="TControl">
-        /// 子孫コントロール型。
-        /// <see cref="WindowControl"/> クラス以外の場合、
-        /// <see cref="WindowControl"/> インスタンスを引数に取るコンストラクタが必要。
-        /// </typeparam>
         /// <param name="root">ツリーのルートとなるコントロール。</param>
-        /// <param name="zIndices">Zインデックスツリー。</param>
+        /// <param name="zIndices">Zオーダーインデックス配列。</param>
         /// <returns>コントロール。取得できなかった場合は null 。</returns>
-        protected static TControl GetControlFromZIndex<TControl>(
+        protected static WindowControl GetControlFromZOrder(
             WindowControl root,
             params int[] zIndices)
-            where TControl : WindowControl
         {
             if (root != null && zIndices != null)
             {
                 try
                 {
-                    var c = root.IdentifyFromZIndex(zIndices);
+                    return root.IdentifyFromZIndex(zIndices);
+                }
+                catch (Exception ex)
+                {
+                    ThreadDebug.WriteException(ex);
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Zオーダーインデックスを辿ることによって子孫コントロールを取得する。
+        /// </summary>
+        /// <typeparam name="TControl">
+        /// 子孫コントロール型。
+        /// <see cref="WindowControl"/> インスタンスを代入可能ではない場合、
+        /// <see cref="WindowControl"/> インスタンスを引数に取るコンストラクタが必要。
+        /// </typeparam>
+        /// <param name="root">ツリーのルートとなるコントロール。</param>
+        /// <param name="zIndices">Zオーダーインデックス配列。</param>
+        /// <returns>コントロール。取得できなかった場合は null 。</returns>
+        protected static TControl GetControlFromZOrder<TControl>(
+            WindowControl root,
+            params int[] zIndices)
+            where TControl : class
+        {
+            var c = GetControlFromZOrder(root, zIndices);
+            if (c != null)
+            {
+                try
+                {
                     return
-                        (c is TControl ctrl) ?
-                            ctrl :
-                            (Activator.CreateInstance(typeof(TControl), c) as TControl);
+                        typeof(TControl).IsAssignableFrom(typeof(WindowControl)) ?
+                            (TControl)(object)c :
+                            (TControl)Activator.CreateInstance(typeof(TControl), c);
+                }
+                catch (Exception ex)
+                {
+                    ThreadDebug.WriteException(ex);
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// ビジュアルツリーインデックスを辿ることによってWPFの子孫コントロールを取得する。
+        /// </summary>
+        /// <param name="root">ツリーのルートとなるコントロール。</param>
+        /// <param name="treeIndices">ビジュアルツリーインデックス配列。</param>
+        /// <returns>WPFコントロール。取得できなかった場合は null 。</returns>
+        protected static AppVar GetControlFromVisualTree(
+            WindowControl root,
+            params int[] treeIndices)
+        {
+            if (root != null && treeIndices != null)
+            {
+                try
+                {
+                    return root.IdentifyFromVisualTreeIndex(treeIndices);
+                }
+                catch (Exception ex)
+                {
+                    ThreadDebug.WriteException(ex);
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// ビジュアルツリーインデックスを辿ることによってWPFの子孫コントロールを取得する。
+        /// </summary>
+        /// <typeparam name="TControl">
+        /// WPFの子孫コントロール型。
+        /// <see cref="AppVar"/> インスタンスを代入可能ではない場合、
+        /// <see cref="AppVar"/> インスタンスを引数に取るコンストラクタが必要。
+        /// </typeparam>
+        /// <param name="root">ツリーのルートとなるコントロール。</param>
+        /// <param name="treeIndices">ビジュアルツリーインデックス配列。</param>
+        /// <returns>WPFコントロール。取得できなかった場合は null 。</returns>
+        protected static TControl GetControlFromVisualTree<TControl>(
+            WindowControl root,
+            params int[] treeIndices)
+            where TControl : class
+        {
+            var v = GetControlFromVisualTree(root, treeIndices);
+            if (v != null)
+            {
+                try
+                {
+                    return
+                        typeof(TControl).IsAssignableFrom(typeof(AppVar)) ?
+                            (TControl)(object)v :
+                            (TControl)Activator.CreateInstance(typeof(TControl), v);
                 }
                 catch (Exception ex)
                 {
@@ -179,9 +264,9 @@ namespace RucheHome.Talker
         /// <param name="name">検索するタブページ名。</param>
         /// <returns>タブページ。見つからなかった場合は null 。</returns>
         /// <remarks>
-        /// 検索対象はWinFormsの TabPage かWPFの TabItem のみ。
+        /// 検索対象はWinFormsの TabPage のみ。
         /// </remarks>
-        protected static WindowControl FindTabPage(WindowControl tabControl, string name)
+        protected static WindowControl FindFormsTabPage(WindowControl tabControl, string name)
         {
             try
             {
@@ -189,9 +274,7 @@ namespace RucheHome.Talker
                     tabControl?
                         .GetFromWindowText(name)
                         .FirstOrDefault(
-                            c =>
-                                c.TypeFullName == @"System.Windows.Forms.TabPage" ||
-                                c.TypeFullName == @"System.Windows.Controls.TabItem");
+                            c => c.TypeFullName == @"System.Windows.Forms.TabPage");
             }
             catch (Exception ex)
             {
@@ -208,7 +291,7 @@ namespace RucheHome.Talker
         protected static NativeComboBox GetFileDialogFileNameComboBox(
             WindowControl fileDialog)
             =>
-            GetControlFromZIndex<NativeComboBox>(fileDialog, 11, 0, 4, 0);
+            GetControlFromZOrder<NativeComboBox>(fileDialog, 11, 0, 4, 0);
 
         /// <summary>
         /// ファイルダイアログから決定ボタンを取得する。

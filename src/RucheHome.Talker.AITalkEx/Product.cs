@@ -71,6 +71,19 @@ namespace RucheHome.Talker.AITalkEx
     /// </summary>
     public static class ProductExtension
     {
+#if DEBUG
+        /// <summary>
+        /// 静的コンストラクタ。
+        /// </summary>
+        static ProductExtension()
+        {
+            // Infos に全列挙値が含まれているか確認
+            Debug.Assert(
+                ((Product[])Enum.GetValues(typeof(Product)))
+                    .All(p => Infos.ContainsKey(p)));
+        }
+#endif // DEBUG
+
         /// <summary>
         /// プロセスの実行ファイル名(拡張子なし)を取得する。
         /// </summary>
@@ -136,19 +149,6 @@ namespace RucheHome.Talker.AITalkEx
             /// </summary>
             public string TalkerName { get; }
         }
-
-#if DEBUG
-        /// <summary>
-        /// 静的コンストラクタ。
-        /// </summary>
-        static ProductExtension()
-        {
-            // Infos に全列挙値が含まれているか確認
-            Debug.Assert(
-                ((Product[])Enum.GetValues(typeof(Product)))
-                    .All(p => Infos.ContainsKey(p)));
-        }
-#endif // DEBUG
 
         /// <summary>
         /// VOICEROID+ EX シリーズの実行ファイル名。
