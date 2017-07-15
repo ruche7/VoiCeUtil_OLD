@@ -384,7 +384,7 @@ namespace RucheHome.Talker
         /// <param name="processes">
         /// 対象プロセス検索先列挙。メソッド内でプロセスリストを取得させるならば null 。
         /// </param>
-        /// <returns>プロパティ値変更通知を行うデリゲート。</returns>
+        /// <returns>プロパティ値変更通知を行うデリゲート。通知不要ならば null 。</returns>
         private Action UpdateImpl(IEnumerable<Process> processes = null)
         {
             // プロセス列挙が渡された場合はファイル名を検索条件にしない
@@ -400,7 +400,7 @@ namespace RucheHome.Talker
         /// 操作対象プロセスによって状態を更新する。
         /// </summary>
         /// <param name="targetProcess">操作対象プロセス。</param>
-        /// <returns>プロパティ値変更通知を行うデリゲート。</returns>
+        /// <returns>プロパティ値変更通知を行うデリゲート。通知不要ならば null 。</returns>
         private Action UpdateByTargetProcess(Process targetProcess)
         {
             var r =
@@ -415,7 +415,7 @@ namespace RucheHome.Talker
         /// <param name="refresh">
         /// プロセスの内部状態更新を行うならば true 。既定では true 。
         /// </param>
-        /// <returns>プロパティ値変更通知を行うデリゲート。</returns>
+        /// <returns>プロパティ値変更通知を行うデリゲート。通知不要ならば null 。</returns>
         private Action UpdateByCurrentTargetProcess(bool refresh = true)
         {
             var process = this.TargetProcess;
@@ -439,7 +439,7 @@ namespace RucheHome.Talker
         /// <param name="targetProcess">
         /// 操作対象プロセス。 state が <see cref="TalkerState.None"/> の場合は無視される。
         /// </param>
-        /// <returns>プロパティ値変更通知を行うデリゲート。</returns>
+        /// <returns>プロパティ値変更通知を行うデリゲート。通知不要ならば null 。</returns>
         private Action UpdateProperties(
             TalkerState state,
             string failStateMessage,
@@ -458,83 +458,67 @@ namespace RucheHome.Talker
             this.TargetProcess = (state == TalkerState.None) ? null : targetProcess;
 
             // 変更通知対象をリストアップ
-            var changedProps = new List<(string name, object newValue, object oldValue)>();
+            var changedPropNames = new List<string>();
             if (this.State != stateOld)
             {
-                changedProps.Add((nameof(State), this.State, stateOld));
+                changedPropNames.Add(nameof(State));
             }
             if (this.IsAlive != aliveOld)
             {
-                changedProps.Add((nameof(IsAlive), this.IsAlive, aliveOld));
+                changedPropNames.Add(nameof(IsAlive));
             }
             if (this.CanOperate != canOperateOld)
             {
-                changedProps.Add((nameof(CanOperate), this.CanOperate, canOperateOld));
+                changedPropNames.Add(nameof(CanOperate));
             }
             if (this.FailStateMessage != messageOld)
             {
-                changedProps.Add(
-                    (nameof(FailStateMessage), this.FailStateMessage, messageOld));
+                changedPropNames.Add(nameof(FailStateMessage));
             }
             if (this.TargetProcess != processOld)
             {
-                changedProps.Add((nameof(TargetProcess), this.TargetProcess, processOld));
+                changedPropNames.Add(nameof(TargetProcess));
             }
             if (this.MainWindowHandle != mainWinHandleOld)
             {
-                changedProps.Add(
-                    (nameof(MainWindowHandle), this.MainWindowHandle, mainWinHandleOld));
+                changedPropNames.Add(nameof(MainWindowHandle));
             }
 
-            // デリゲート作成
+            if (changedPropNames.Count <= 0)
+            {
+                // 通知不要
+                return null;
+            }
+
+            // 通知デリゲート作成
             return
                 () =>
                 {
                     // まず PropertyChanged イベントを処理
-                    foreach (var prop in changedProps)
+                    foreach (var name in changedPropNames)
                     {
-                        this.RaisePropertyChanged(prop.name);
+                        this.RaisePropertyChanged(name);
                     }
-
-                    Exception exception = null;
 
                     // OnPropertyChanged メソッドを処理
-                    // 例外が発生してもひとまず一通り走らせる
-                    foreach (var prop in changedProps)
-                    {
-                        try
-                        {
-                            this.OnPropertyChanged(prop.name, prop.newValue, prop.oldValue);
-                        }
-                        catch (Exception ex)
-                        {
-                            exception = exception ?? ex;
-                        }
-                    }
-
-                    // 最初に発生した例外を投げる
-                    if (exception != null)
-                    {
-                        throw exception;
-                    }
+                    this.OnPropertyChanged(changedPropNames.AsReadOnly());
                 };
         }
 
         #region 要オーバライド
 
         /// <summary>
-        /// プロパティ値変更時に呼び出される。
+        /// <see cref="ProcessTalkerBase{TParameterId}"/> のプロパティ値変更時に呼び出される。
         /// </summary>
-        /// <param name="name">プロパティ名。</param>
-        /// <param name="newValue">変更後の値。</param>
-        /// <param name="oldValue">変更前の値。</param>
+        /// <param name="changedPropertyNames">
+        /// 変更されたプロパティ名のコレクション。必ず要素数 1 以上となる。
+        /// </param>
         /// <remarks>
-        /// 既定では何も行わない。
+        /// <para>派生クラスのプロパティは考慮されない。</para>
+        /// <para>既定では何も行わない。</para>
         /// </remarks>
         protected virtual void OnPropertyChanged(
-            string name,
-            object newValue,
-            object oldValue)
+            ReadOnlyCollection<string> changedPropertyNames)
         {
             // 何もしない
         }

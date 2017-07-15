@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows.Automation;
@@ -397,7 +398,12 @@ namespace RucheHome.Talker
         /// <see cref="ProcessTalkerBase{TParameterId}.IsAlive"/> が
         /// true の時のみ有効な値を返す。
         /// </remarks>
-        protected WindowsAppFriend TargetApp { get; private set; } = null;
+        protected WindowsAppFriend TargetApp
+        {
+            get => this.targetApp;
+            private set => this.SetProperty(ref this.targetApp, value);
+        }
+        private WindowsAppFriend targetApp = null;
 
         /// <summary>
         /// メインウィンドウを検索する。
@@ -470,23 +476,6 @@ namespace RucheHome.Talker
         #region 要オーバライド
 
         /// <summary>
-        /// プロパティ値変更時に呼び出される。
-        /// </summary>
-        /// <param name="name">プロパティ名。</param>
-        /// <param name="newValue">変更後の値。</param>
-        /// <param name="oldValue">変更前の値。</param>
-        /// <remarks>
-        /// 既定では何も行わない。
-        /// </remarks>
-        protected virtual void OnPropertyChangedImpl(
-            string name,
-            object newValue,
-            object oldValue)
-        {
-            // 何もしない
-        }
-
-        /// <summary>
         /// ウィンドウタイトル種別を調べる。
         /// </summary>
         /// <param name="title">ウィンドウタイトル。</param>
@@ -510,60 +499,33 @@ namespace RucheHome.Talker
         #region ProcessTalkerBase<TParameterId> のオーバライド
 
         /// <summary>
-        /// プロパティ値変更時に呼び出される。
+        /// <see cref="ProcessTalkerBase{TParameterId}"/> のプロパティ値変更時に呼び出される。
         /// </summary>
-        /// <param name="name">プロパティ名。</param>
-        /// <param name="newValue">変更後の値。</param>
-        /// <param name="oldValue">変更前の値。</param>
-        protected override sealed void OnPropertyChanged(
-            string name,
-            object newValue,
-            object oldValue)
+        /// <param name="changedPropertyNames">
+        /// 変更されたプロパティ名のコレクション。必ず要素数 1 以上となる。
+        /// </param>
+        protected override void OnPropertyChanged(
+            ReadOnlyCollection<string> changedPropertyNames)
         {
-            bool targetAppChanged = false;
-            WindowsAppFriend targetAppOld = null;
-
-            // Dispose 未実施時のみ IsAlive, TargetProcess を処理
-            // IsAlive == true 時のみ TargetApp が有効となるようにする
-            if (!this.IsDisposed)
+            if (this.IsDisposed)
             {
-                Process process = null;
-                bool processChanged = false;
-
-                switch (name)
-                {
-                case nameof(IsAlive):
-                    if (newValue is bool alive)
-                    {
-                        process = alive ? this.TargetProcess : null;
-                        processChanged = true;
-                    }
-                    break;
-
-                case nameof(TargetProcess):
-                    process = this.IsAlive ? (newValue as Process) : null;
-                    processChanged = true;
-                    break;
-                }
-
-                if (processChanged && process?.Id != this.TargetApp?.ProcessId)
-                {
-                    targetAppOld = this.TargetApp;
-                    this.TargetApp?.Dispose();
-                    this.TargetApp = (process == null) ? null : this.CreateApp(process);
-
-                    targetAppChanged = (this.TargetApp != targetAppOld);
-                }
+                return;
             }
 
-            // 派生クラス処理
-            this.OnPropertyChangedImpl(name, newValue, oldValue);
-
-            // TargetApp の変更通知
-            if (targetAppChanged)
+            // IsAlive, TargetProcess を処理
+            if (
+                changedPropertyNames.Contains(nameof(IsAlive)) ||
+                changedPropertyNames.Contains(nameof(TargetProcess)))
             {
-                this.RaisePropertyChanged(nameof(TargetApp));
-                this.OnPropertyChangedImpl(nameof(TargetApp), this.TargetApp, targetAppOld);
+                // IsAlive == true 時のみ TargetApp が有効となるようにする
+                var process = this.IsAlive ? this.TargetProcess : null;
+
+                // プロセスIDが異なるなら差し替え
+                if (process?.Id != this.TargetApp?.ProcessId)
+                {
+                    this.TargetApp?.Dispose();
+                    this.TargetApp = (process == null) ? null : this.CreateApp(process);
+                }
             }
         }
 
@@ -656,6 +618,12 @@ namespace RucheHome.Talker
                     // より大きい TalkerState を優先する
                     return states.Max();
                 }
+
+                // ここまで来たらメインウィンドウしかいないはず
+                Debug.Assert(topWins.Length == 1);
+                Debug.Assert(
+                    this.CheckWindowTitleKind(topWins[0].GetWindowText()) ==
+                    WindowTitleKind.Main);
 
                 // 派生クラス処理で状態決定する
                 return this.CheckState(topWins[0]);
