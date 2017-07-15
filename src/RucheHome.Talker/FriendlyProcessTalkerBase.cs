@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Windows.Automation;
 using Codeer.Friendly;
 using Codeer.Friendly.Windows;
 using Codeer.Friendly.Windows.Grasp;
@@ -316,6 +317,72 @@ namespace RucheHome.Talker
         }
 
         /// <summary>
+        /// ファイルダイアログにファイルパスを設定して決定ボタンをクリックする。
+        /// </summary>
+        /// <param name="fileDialog">ファイルダイアログ。</param>
+        /// <param name="filePath">ファイルパス。 null や空文字列であってはならない。</param>
+        /// <returns>成功したならば true 。そうでなければ false 。</returns>
+        protected static Result<bool> OperateFileDialog(
+            WindowControl fileDialog,
+            string filePath)
+        {
+            ArgumentValidation.IsNotNull(fileDialog, nameof(fileDialog));
+            ArgumentValidation.IsNotNullOrEmpty(filePath, nameof(filePath));
+
+            // ファイル名コンボボックス、決定ボタンを取得
+            var fileNameCombo = GetFileDialogFileNameComboBox(fileDialog);
+            if (fileNameCombo == null)
+            {
+                return (false, @"ダイアログのファイル名入力欄が見つかりません。");
+            }
+            var okButton = GetFileDialogOkButton(fileDialog);
+            if (okButton == null)
+            {
+                return (false, @"ダイアログの決定ボタンが見つかりません。");
+            }
+
+            // ファイルパス設定
+            try
+            {
+                var ok =
+                    WaitAsyncAction(
+                        async => fileNameCombo.EmulateChangeEditText(filePath, async));
+                if (!ok)
+                {
+                    return (
+                        false,
+                        @"ダイアログへのファイルパス設定処理がタイムアウトしました。");
+                }
+            }
+            catch (Exception ex)
+            {
+                ThreadTrace.WriteException(ex);
+                return (false, @"ダイアログへファイルパスを設定できませんでした。");
+            }
+
+            try
+            {
+                // 決定ボタンクリック
+                var okAsync = new Async();
+                okButton.EmulateClick(okAsync);
+
+                // ダイアログが表示されてしまったら失敗
+                var dialog = fileDialog.WaitForNextModal(okAsync);
+                if (dialog != null)
+                {
+                    return (false, @"ダイアログが表示されたため処理を中止しました。");
+                }
+            }
+            catch (Exception ex)
+            {
+                ThreadTrace.WriteException(ex);
+                return (false, @"ダイアログの決定ボタンをクリックできませんでした。");
+            }
+
+            return true;
+        }
+
+        /// <summary>
         /// 操作対象プロセスのCLRバージョン種別を取得する。
         /// </summary>
         /// <remarks>
@@ -326,6 +393,10 @@ namespace RucheHome.Talker
         /// <summary>
         /// 操作対象アプリを取得する。
         /// </summary>
+        /// <remarks>
+        /// <see cref="ProcessTalkerBase{TParameterId}.IsAlive"/> が
+        /// true の時のみ有効な値を返す。
+        /// </remarks>
         protected WindowsAppFriend TargetApp { get; private set; } = null;
 
         /// <summary>
@@ -452,12 +523,30 @@ namespace RucheHome.Talker
             bool targetAppChanged = false;
             WindowsAppFriend targetAppOld = null;
 
-            // Dispose 未実施時のみ TargetProcess を処理
-            if (!this.IsDisposed && name == nameof(TargetProcess))
+            // Dispose 未実施時のみ IsAlive, TargetProcess を処理
+            // IsAlive == true 時のみ TargetApp が有効となるようにする
+            if (!this.IsDisposed)
             {
-                // 操作対象アプリ更新
-                var process = newValue as Process;
-                if (process?.Id != this.TargetApp?.ProcessId)
+                Process process = null;
+                bool processChanged = false;
+
+                switch (name)
+                {
+                case nameof(IsAlive):
+                    if (newValue is bool alive)
+                    {
+                        process = alive ? this.TargetProcess : null;
+                        processChanged = true;
+                    }
+                    break;
+
+                case nameof(TargetProcess):
+                    process = this.IsAlive ? (newValue as Process) : null;
+                    processChanged = true;
+                    break;
+                }
+
+                if (processChanged && process?.Id != this.TargetApp?.ProcessId)
                 {
                     targetAppOld = this.TargetApp;
                     this.TargetApp?.Dispose();
@@ -489,7 +578,7 @@ namespace RucheHome.Talker
         /// <returns>状態値。</returns>
         protected override sealed Result<TalkerState> CheckState(Process process)
         {
-            if (this.IsDisposed)
+            if (this.IsDisposed || process.HasExited)
             {
                 return TalkerState.None;
             }
@@ -541,25 +630,41 @@ namespace RucheHome.Talker
                 app =
                     (this.TargetApp?.ProcessId == process.Id) ?
                         this.TargetApp : CreateApp(process);
-                if (app == null)
+                if (app == null || process.HasExited)
                 {
                     // アプリが終了している
                     return TalkerState.None;
                 }
 
-                // トップレベルウィンドウ取得
-                var topWin = WindowControl.FromZTop(app);
-
-                // トップレベルウィンドウタイトルから状態決定を試みる
-                state = decideStateByWindowTitle(topWin.GetWindowText());
-                if (state.HasValue)
+                // トップレベルウィンドウ群取得
+                var topWins = WindowControl.GetTopLevelWindows(app);
+                if (topWins == null || topWins.Length == 0)
                 {
-                    // メインウィンドウ以外はここに来る
-                    return state.Value;
+                    // アプリが終了している？
+                    return TalkerState.None;
+                }
+
+                // トップレベルウィンドウ群のタイトルから状態決定を試みる
+                var states =
+                    topWins
+                        .Select(win => decideStateByWindowTitle(win.GetWindowText()))
+                        .Where(s => s.HasValue)
+                        .Select(s => s.Value);
+                if (states.Any())
+                {
+                    // メインウィンドウ以外が含まれるならここに来る
+                    // より大きい TalkerState を優先する
+                    return states.Max();
                 }
 
                 // 派生クラス処理で状態決定する
-                return this.CheckState(topWin);
+                return this.CheckState(topWins[0]);
+            }
+            catch (FriendlyOperationException ex)
+            {
+                // Friendly の処理失敗はアプリ終了直後と判断
+                ThreadDebug.WriteException(ex);
+                return (TalkerState.None, ex.Message);
             }
             catch (Exception ex)
             {
@@ -576,6 +681,75 @@ namespace RucheHome.Talker
                     app?.Dispose();
                 }
             }
+        }
+
+        /// <summary>
+        /// <see cref="Process.CloseMainWindow"/> 呼び出し直前に呼び出される。
+        /// </summary>
+        /// <param name="process">
+        /// 操作対象プロセス。
+        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装から
+        /// null や操作対象外プロセスが渡されることはない。
+        /// </param>
+        protected override void OnProcessExiting(Process process)
+        {
+            // TargetApp を破棄
+            this.TargetApp?.Dispose();
+            this.TargetApp = null;
+        }
+
+        /// <summary>
+        /// <see cref="Process.CloseMainWindow"/>
+        /// 呼び出し後の操作対象プロセスが終了済みか否かを調べる。
+        /// </summary>
+        /// <param name="process">
+        /// <see cref="Process.CloseMainWindow"/> 呼び出し後の操作対象プロセス。
+        /// 呼び出し元で <see cref="Process.Refresh"/> 呼び出し済み。
+        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装から
+        /// null や操作対象外プロセスが渡されることはない。
+        /// </param>
+        /// <returns>
+        /// 終了を確認できたならば true 。
+        /// ブロッキング処理等により終了できないことを確認できたならば null 。
+        /// いずれも確認できなければ false 。
+        /// </returns>
+        /// <remarks>
+        /// 終了待機中に <see cref="WindowControl.GetTopLevelWindows"/>
+        /// 等が呼び出されると長時間ブロッキングされる場合があるため、
+        /// <see cref="CheckState(Process)"/> を用いないようにする。
+        /// </remarks>
+        protected override bool? CheckProcessExited(Process process)
+        {
+            if (process.WaitForExit(0))
+            {
+                return true;
+            }
+
+            // メインウィンドウをオーナーとするウィンドウが存在するならば
+            // モーダルウィンドウ表示によるブロッキングと判断
+            var handle = process.MainWindowHandle;
+            if (handle != IntPtr.Zero)
+            {
+                try
+                {
+                    var mainWin = AutomationElement.FromHandle(handle);
+                    var dialog =
+                        mainWin.FindFirst(
+                            TreeScope.Children,
+                            new PropertyCondition(
+                                AutomationElement.ControlTypeProperty,
+                                ControlType.Window));
+                    if (dialog != null)
+                    {
+                        ThreadDebug.WriteLine(
+                            dialog.Current.ClassName + ":" + dialog.Current.Name);
+                        return null;
+                    }
+                }
+                catch { }
+            }
+
+            return false;
         }
 
         #endregion

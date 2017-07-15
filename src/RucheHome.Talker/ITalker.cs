@@ -44,9 +44,9 @@ namespace RucheHome.Talker
         /// </summary>
         /// <remarks>
         /// <see cref="State"/> が
-        /// <see cref="TalkerState.None"/>,
-        /// <see cref="TalkerState.Fail"/>,
-        /// <see cref="TalkerState.Startup"/> のいずれでもなければ true を返す。
+        /// <see cref="TalkerState.None"/>, <see cref="TalkerState.Fail"/>,
+        /// <see cref="TalkerState.Startup"/>, <see cref="TalkerState.Cleanup"/>
+        /// のいずれでもなければ true を返す。
         /// </remarks>
         bool IsAlive { get; }
 

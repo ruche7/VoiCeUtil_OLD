@@ -26,6 +26,50 @@ namespace RucheHome.Diagnostics
         }
 
         /// <summary>
+        /// 引数値が比較値より小さいならば ArgumentOutOfRangeException 例外を送出する。
+        /// </summary>
+        /// <typeparam name="T">引数の型。</typeparam>
+        /// <param name="arg">引数値。</param>
+        /// <param name="minValue">最小許容値。</param>
+        /// <param name="argName">引数名。例外メッセージに利用される。</param>
+        public static void IsEqualsOrGreaterThan<T>(
+            T arg,
+            T minValue,
+            string argName = null)
+        {
+            if (Comparer<T>.Default.Compare(arg, minValue) < 0)
+            {
+                var message = $@"The value is less than {minValue}.";
+                throw
+                    (argName == null) ?
+                        new ArgumentOutOfRangeException(message) :
+                        new ArgumentOutOfRangeException(argName, arg, message);
+            }
+        }
+
+        /// <summary>
+        /// 引数値が比較値より大きいならば ArgumentOutOfRangeException 例外を送出する。
+        /// </summary>
+        /// <typeparam name="T">引数の型。</typeparam>
+        /// <param name="arg">引数値。</param>
+        /// <param name="maxValue">最大許容値。</param>
+        /// <param name="argName">引数名。例外メッセージに利用される。</param>
+        public static void IsEqualsOrLessThan<T>(
+            T arg,
+            T maxValue,
+            string argName = null)
+        {
+            if (Comparer<T>.Default.Compare(arg, maxValue) > 0)
+            {
+                var message = $@"The value is greater than {maxValue}.";
+                throw
+                    (argName == null) ?
+                        new ArgumentOutOfRangeException(message) :
+                        new ArgumentOutOfRangeException(argName, arg, message);
+            }
+        }
+
+        /// <summary>
         /// 引数値が範囲外ならば ArgumentOutOfRangeException 例外を送出する。
         /// </summary>
         /// <typeparam name="T">引数の型。</typeparam>
@@ -39,24 +83,8 @@ namespace RucheHome.Diagnostics
             T maxValue = default(T),
             string argName = null)
         {
-            var comp = Comparer<T>.Default;
-
-            if (comp.Compare(arg, minValue) < 0)
-            {
-                var message = $@"The value is less than {minValue}.";
-                throw
-                    (argName == null) ?
-                        new ArgumentOutOfRangeException(message) :
-                        new ArgumentOutOfRangeException(argName, arg, message);
-            }
-            if (comp.Compare(arg, maxValue) > 0)
-            {
-                var message = $@"The value is greater than {maxValue}";
-                throw
-                    (argName == null) ?
-                        new ArgumentOutOfRangeException(message) :
-                        new ArgumentOutOfRangeException(argName, arg, message);
-            }
+            IsEqualsOrGreaterThan(arg, minValue, argName);
+            IsEqualsOrLessThan(arg, maxValue, argName);
         }
 
         /// <summary>

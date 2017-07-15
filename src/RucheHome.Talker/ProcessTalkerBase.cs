@@ -747,6 +747,61 @@ namespace RucheHome.Talker
         /// </remarks>
         protected abstract Result<string> SaveFileImpl(string filePath);
 
+        /// <summary>
+        /// <see cref="Process.CloseMainWindow"/> 呼び出し直前に呼び出される。
+        /// </summary>
+        /// <param name="process">
+        /// 操作対象プロセス。
+        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装から
+        /// null や操作対象外プロセスが渡されることはない。
+        /// </param>
+        /// <remarks>
+        /// 既定では何も行わない。
+        /// </remarks>
+        protected virtual void OnProcessExiting(Process process)
+        {
+            // 何もしない
+        }
+
+        /// <summary>
+        /// <see cref="Process.CloseMainWindow"/>
+        /// 呼び出し後の操作対象プロセスが終了済みか否かを調べる。
+        /// </summary>
+        /// <param name="process">
+        /// <see cref="Process.CloseMainWindow"/> 呼び出し後の操作対象プロセス。
+        /// 呼び出し元で <see cref="Process.Refresh"/> 呼び出し済み。
+        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装から
+        /// null や操作対象外プロセスが渡されることはない。
+        /// </param>
+        /// <returns>
+        /// 終了を確認できたならば true 。
+        /// ブロッキング処理等により終了できないことを確認できたならば null 。
+        /// いずれも確認できなければ false 。
+        /// </returns>
+        /// <remarks>
+        /// 既定では <see cref="Process.WaitForExit(int)"/> と
+        /// <see cref="CheckState(Process)"/> を用いて終了もしくはブロッキング判定を行う。
+        /// </remarks>
+        protected virtual bool? CheckProcessExited(Process process)
+        {
+            if (process.WaitForExit(0))
+            {
+                return true;
+            }
+
+            switch (this.CheckState(process).Value)
+            {
+            case TalkerState.None:
+                return true;
+
+            case TalkerState.Blocking:
+            case TalkerState.FileSaving:
+                return null;
+            }
+
+            return false;
+        }
+
         #endregion
 
         #region IProcessTalker の実装
@@ -1029,12 +1084,17 @@ namespace RucheHome.Talker
 
                     try
                     {
-                        var app = this.TargetProcess;
+                        var process = this.TargetProcess;
 
-                        if (app?.HasExited == false)
+                        if (process?.HasExited == false)
                         {
+                            // 終了前処理
+                            this.OnProcessExiting(process);
+
                             // Cleanup 状態以外ならば終了通知
-                            if (this.State != TalkerState.Cleanup && !app.CloseMainWindow())
+                            if (
+                                this.State != TalkerState.Cleanup &&
+                                !process.CloseMainWindow())
                             {
                                 return (false, @"終了通知に失敗しました。");
                             }
@@ -1042,21 +1102,9 @@ namespace RucheHome.Talker
                             // 終了orブロッキング状態まで待つ
                             var done =
                                 WaitUntil(
-                                    () =>
-                                    {
-                                        if (app.WaitForExit(0))
-                                        {
-                                            return true;
-                                        }
-
-                                        app.Refresh();
-                                        var state = this.CheckState(app).Value;
-                                        return (
-                                            state == TalkerState.None ||
-                                            state == TalkerState.Blocking ||
-                                            state == TalkerState.FileSaving);
-                                    });
-                            if (!done)
+                                    () => this.CheckProcessExited(process),
+                                    f => f != false);
+                            if (done == false)
                             {
                                 return (false, @"終了状態へ遷移しませんでした。");
                             }

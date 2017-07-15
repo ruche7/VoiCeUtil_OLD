@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Codeer.Friendly;
+using Codeer.Friendly.Dynamic;
 using Codeer.Friendly.Windows.Grasp;
 using Ong.Friendly.FormsStandardControls;
 using RucheHome.Diagnostics;
@@ -589,6 +590,27 @@ namespace RucheHome.Talker.AITalkEx
                 return (false, @"本体のウィンドウが見つかりません。");
             }
 
+            // 文章入力欄を取得
+            var textBoxes = GetMainRichTextBoxes(mainWin);
+            if (textBoxes == null || textBoxes.Length == 0)
+            {
+                return (false, @"本体の文章入力欄が見つかりません。");
+            }
+
+            // カーソルを先頭へ持っていく
+            // 失敗しても先へ進む
+            foreach (var textBox in textBoxes)
+            {
+                try
+                {
+                    textBox.Dynamic().Select(0, 0);
+                }
+                catch (Exception ex)
+                {
+                    ThreadDebug.WriteException(ex);
+                }
+            }
+
             // ボタン群の親を取得
             var parent = GetMainButtonsParent(mainWin);
             if (parent == null)
@@ -822,54 +844,11 @@ namespace RucheHome.Talker.AITalkEx
             Debug.Assert(fileDialog != null);
             Debug.Assert(!string.IsNullOrEmpty(filePath));
 
-            // ファイル名コンボボックス、決定ボタンを取得
-            var fileNameCombo = GetFileDialogFileNameComboBox(fileDialog);
-            if (fileNameCombo == null)
+            // ファイルパス設定＆決定ボタンクリック処理
+            var r = OperateFileDialog(fileDialog, filePath);
+            if (!r.Value)
             {
-                return (false, @"ダイアログのファイル名入力欄が見つかりません。");
-            }
-            var okButton = GetFileDialogOkButton(fileDialog);
-            if (okButton == null)
-            {
-                return (false, @"ダイアログの保存ボタンが見つかりません。");
-            }
-
-            // ファイルパス設定
-            try
-            {
-                var ok =
-                    WaitAsyncAction(
-                        async => fileNameCombo.EmulateChangeEditText(filePath, async));
-                if (!ok)
-                {
-                    return (
-                        false,
-                        @"ダイアログへのファイルパス設定処理がタイムアウトしました。");
-                }
-            }
-            catch (Exception ex)
-            {
-                ThreadTrace.WriteException(ex);
-                return (false, @"ダイアログへファイルパスを設定できませんでした。");
-            }
-
-            try
-            {
-                // 決定ボタンクリック
-                var okAsync = new Async();
-                okButton.EmulateClick(okAsync);
-
-                // ダイアログが表示されてしまったら失敗
-                var dialog = fileDialog.WaitForNextModal(okAsync);
-                if (dialog != null)
-                {
-                    return (false, @"ダイアログが表示されたため処理を中止しました。");
-                }
-            }
-            catch (Exception ex)
-            {
-                ThreadTrace.WriteException(ex);
-                return (false, @"ダイアログの保存ボタンをクリックできませんでした。");
+                return r;
             }
 
             // トップレベルウィンドウがファイルダイアログ以外になるまで待つ

@@ -26,7 +26,7 @@ namespace RucheHome.Talker
             decimal minValue = 0,
             decimal maxValue = decimal.MaxValue)
         {
-            ArgumentValidation.IsWithinRange(digits, 0, int.MaxValue, nameof(digits));
+            ArgumentValidation.IsEqualsOrGreaterThan(digits, 0, nameof(digits));
             if (minValue > maxValue)
             {
                 throw new ArgumentException(@"minValue > maxValue");
