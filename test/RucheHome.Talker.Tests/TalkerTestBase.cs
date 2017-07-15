@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using Codeer.Friendly.Windows;
 using Codeer.Friendly.Windows.Grasp;
+using Codeer.Friendly.Windows.NativeStandardControls;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace RucheHome.Talker.Tests
@@ -181,7 +182,7 @@ namespace RucheHome.Talker.Tests
                 var r = talker.GetParameters();
                 writeParameters(r.Value);
                 Assert.IsNotNull(r.Value, r.Message);
-                CollectionAssert.AreEqual(r.Value.Keys, infos.Keys);
+                CollectionAssert.IsSubsetOf(r.Value.Keys, infos.Keys);
 
                 orgValues = r.Value;
             }
@@ -192,7 +193,7 @@ namespace RucheHome.Talker.Tests
                     talker.SetParameters(
                         infos.ToDictionary(kv => kv.Key, kv => kv.Value.MinValue));
                 Assert.IsNotNull(r.Value, r.Message);
-                CollectionAssert.AreEqual(r.Value.Keys, infos.Keys);
+                CollectionAssert.IsSubsetOf(r.Value.Keys, infos.Keys);
                 foreach (var kv in r.Value)
                 {
                     Assert.IsTrue(kv.Value.Value, $@"{kv.Key} : {kv.Value.Message}");
@@ -204,10 +205,12 @@ namespace RucheHome.Talker.Tests
                 var r = talker.GetParameters();
                 writeParameters(r.Value);
                 Assert.IsNotNull(r.Value, r.Message);
-                CollectionAssert.AreEqual(r.Value.Keys, infos.Keys);
+                CollectionAssert.IsSubsetOf(r.Value.Keys, infos.Keys);
                 CollectionAssert.AreEqual(
                     r.Value.Values,
-                    infos.Select(kv => kv.Value.MinValue).ToArray());
+                    r.Value.Keys
+                        .Select(id => infos.First(kv => id.Equals(kv.Key)).Value.MinValue)
+                        .ToArray());
             }
 
             // 最大許容値設定
@@ -216,7 +219,7 @@ namespace RucheHome.Talker.Tests
                     talker.SetParameters(
                         infos.ToDictionary(kv => kv.Key, kv => kv.Value.MaxValue));
                 Assert.IsNotNull(r.Value, r.Message);
-                CollectionAssert.AreEqual(r.Value.Keys, infos.Keys);
+                CollectionAssert.IsSubsetOf(r.Value.Keys, infos.Keys);
                 foreach (var kv in r.Value)
                 {
                     Assert.IsTrue(kv.Value.Value, $@"{kv.Key} : {kv.Value.Message}");
@@ -228,17 +231,19 @@ namespace RucheHome.Talker.Tests
                 var r = talker.GetParameters();
                 writeParameters(r.Value);
                 Assert.IsNotNull(r.Value, r.Message);
-                CollectionAssert.AreEqual(r.Value.Keys, infos.Keys);
+                CollectionAssert.IsSubsetOf(r.Value.Keys, infos.Keys);
                 CollectionAssert.AreEqual(
                     r.Value.Values,
-                    infos.Select(kv => kv.Value.MaxValue).ToArray());
+                    r.Value.Keys
+                        .Select(id => infos.First(kv => id.Equals(kv.Key)).Value.MaxValue)
+                        .ToArray());
             }
 
             // 初期値設定
             {
                 var r = talker.SetParameters(orgValues);
                 Assert.IsNotNull(r.Value, r.Message);
-                CollectionAssert.AreEqual(r.Value.Keys, infos.Keys);
+                CollectionAssert.IsSubsetOf(r.Value.Keys, infos.Keys);
                 foreach (var kv in r.Value)
                 {
                     Assert.IsTrue(kv.Value.Value, $@"{kv.Key} : {kv.Value.Message}");
@@ -368,8 +373,8 @@ namespace RucheHome.Talker.Tests
         private const int WM_CLOSE = 0x0010;
 
         /// <summary>
-        /// もし <see cref="IProcessTalker"/>
-        /// 実装クラスならば、すべてのモーダルウィンドウに WM_CLOSE メッセージを送信する。
+        /// もし <see cref="IProcessTalker"/> 実装クラスならば、
+        /// すべてのモーダルウィンドウに WM_CLOSE メッセージを送信する。
         /// </summary>
         protected static void CloseAllModalsIfProcessTalker(ITalker talker)
         {
@@ -398,6 +403,47 @@ namespace RucheHome.Talker.Tests
                     }
 
                     topWin.SendMessage(WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
+                }
+            }
+            catch { }
+        }
+
+        /// <summary>
+        /// もし <see cref="IProcessTalker"/> 実装クラスならば、
+        /// すべてのネイティブモーダルウィンドウの先頭ボタンをクリックする。
+        /// </summary>
+        protected static void ClickAllModalsFirstButtonIfProcessTalker(ITalker talker)
+        {
+            try
+            {
+                var processTalker = talker as IProcessTalker;
+                if (processTalker == null)
+                {
+                    return;
+                }
+                var mainWinHandle = processTalker.MainWindowHandle;
+                if (mainWinHandle == IntPtr.Zero)
+                {
+                    return;
+                }
+                var app = new WindowsAppFriend(mainWinHandle);
+
+                while (true)
+                {
+                    var topWin = WindowControl.FromZTop(app);
+
+                    // メインウィンドウなら処理終了
+                    if (topWin == null || topWin.Handle == mainWinHandle)
+                    {
+                        break;
+                    }
+
+                    // ネイティブボタンがあればクリック
+                    var natives = topWin.GetFromWindowClass(@"Button");
+                    if (natives.Length > 0)
+                    {
+                        new NativeButton(natives[0]).EmulateClick();
+                    }
                 }
             }
             catch { }

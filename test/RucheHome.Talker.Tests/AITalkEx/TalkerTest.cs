@@ -75,7 +75,7 @@ namespace RucheHome.Talker.Tests.AITalkEx
             // 全 Talker を破棄
             foreach (var talker in AllTalkers)
             {
-                talker.Dispose();
+                talker?.Dispose();
             }
         }
 

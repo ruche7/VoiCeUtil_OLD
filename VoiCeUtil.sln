@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.14
+VisualStudioVersion = 15.0.26430.15
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Talker", "src\RucheHome.Talker\RucheHome.Talker.csproj", "{44F2FF62-F248-4B1A-9F9E-1CEEFDE5E6E6}"
 EndProject
@@ -16,6 +16,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Core", "src\RucheHome.Core\RucheHome.Core.csproj", "{33AB6685-2E0E-49E2-86FE-15385EC365C6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Windows", "src\RucheHome.Windows\RucheHome.Windows.csproj", "{2FE0815F-364A-409E-A34E-39880676A693}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Talker.Voiceroid2", "src\RucheHome.Talker.Voiceroid2\RucheHome.Talker.Voiceroid2.csproj", "{7F61A3DE-15C7-4B95-A797-718F1DD063F6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -43,6 +45,10 @@ Global
 		{2FE0815F-364A-409E-A34E-39880676A693}.Debug|x86.Build.0 = Debug|Any CPU
 		{2FE0815F-364A-409E-A34E-39880676A693}.Release|x86.ActiveCfg = Release|Any CPU
 		{2FE0815F-364A-409E-A34E-39880676A693}.Release|x86.Build.0 = Release|Any CPU
+		{7F61A3DE-15C7-4B95-A797-718F1DD063F6}.Debug|x86.ActiveCfg = Debug|x86
+		{7F61A3DE-15C7-4B95-A797-718F1DD063F6}.Debug|x86.Build.0 = Debug|x86
+		{7F61A3DE-15C7-4B95-A797-718F1DD063F6}.Release|x86.ActiveCfg = Release|x86
+		{7F61A3DE-15C7-4B95-A797-718F1DD063F6}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -53,5 +59,6 @@ Global
 		{A5F01152-B185-454A-B9B1-10E0E60B5C6D} = {2EBE5B3F-BD10-4056-B386-B251471D02E8}
 		{33AB6685-2E0E-49E2-86FE-15385EC365C6} = {87905CE9-795C-44B6-86AA-1DA5A1D2F3B9}
 		{2FE0815F-364A-409E-A34E-39880676A693} = {87905CE9-795C-44B6-86AA-1DA5A1D2F3B9}
+		{7F61A3DE-15C7-4B95-A797-718F1DD063F6} = {87905CE9-795C-44B6-86AA-1DA5A1D2F3B9}
 	EndGlobalSection
 EndGlobal

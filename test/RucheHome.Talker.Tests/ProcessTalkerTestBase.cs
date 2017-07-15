@@ -58,7 +58,15 @@ namespace RucheHome.Talker.Tests
             // 終了
             {
                 var r = talker.ExitProcess();
-                Assert.IsTrue(r.Value == true, r.Message);
+                Assert.IsTrue(r.Value != false, r.Message);
+
+                if (r.Value == null)
+                {
+                    Console.WriteLine(r.Message);
+
+                    // 先頭ボタンをクリックして先へ進む
+                    ClickAllModalsFirstButtonIfProcessTalker(talker);
+                }
             }
 
             // 起動
