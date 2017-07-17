@@ -390,19 +390,21 @@ namespace RucheHome.Talker.Tests
                 {
                     return;
                 }
-                var app = new WindowsAppFriend(mainWinHandle);
 
-                while (true)
+                using (var app = new WindowsAppFriend(mainWinHandle))
                 {
-                    var topWin = WindowControl.FromZTop(app);
-
-                    // メインウィンドウなら処理終了
-                    if (topWin == null || topWin.Handle == mainWinHandle)
+                    while (true)
                     {
-                        break;
-                    }
+                        var topWin = WindowControl.FromZTop(app);
 
-                    topWin.SendMessage(WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
+                        // メインウィンドウなら処理終了
+                        if (topWin == null || topWin.Handle == mainWinHandle)
+                        {
+                            break;
+                        }
+
+                        topWin.SendMessage(WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
+                    }
                 }
             }
             catch { }
@@ -426,23 +428,25 @@ namespace RucheHome.Talker.Tests
                 {
                     return;
                 }
-                var app = new WindowsAppFriend(mainWinHandle);
 
-                while (true)
+                using (var app = new WindowsAppFriend(mainWinHandle))
                 {
-                    var topWin = WindowControl.FromZTop(app);
-
-                    // メインウィンドウなら処理終了
-                    if (topWin == null || topWin.Handle == mainWinHandle)
+                    while (true)
                     {
-                        break;
-                    }
+                        var topWin = WindowControl.FromZTop(app);
 
-                    // ネイティブボタンがあればクリック
-                    var natives = topWin.GetFromWindowClass(@"Button");
-                    if (natives.Length > 0)
-                    {
-                        new NativeButton(natives[0]).EmulateClick();
+                        // メインウィンドウなら処理終了
+                        if (topWin == null || topWin.Handle == mainWinHandle)
+                        {
+                            break;
+                        }
+
+                        // ネイティブボタンがあればクリック
+                        var natives = topWin.GetFromWindowClass(@"Button");
+                        if (natives.Length > 0)
+                        {
+                            new NativeButton(natives[0]).EmulateClick();
+                        }
                     }
                 }
             }
@@ -478,6 +482,11 @@ namespace RucheHome.Talker.Tests
             if (talker == null)
             {
                 Assert.Inconclusive(@"Talker インスタンスを取得できません。");
+            }
+
+            if (talker is IProcessTalker pt)
+            {
+                pt.Update();
             }
             if (!talker.IsAlive)
             {

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
@@ -9,7 +10,7 @@ using Codeer.Friendly.Windows.Grasp;
 using Codeer.Friendly.Windows.NativeStandardControls;
 using RucheHome.Diagnostics;
 
-namespace RucheHome.Talker
+namespace RucheHome.Talker.Friendly
 {
     /// <summary>
     /// Codeer.Friendly ライブラリを用いた
@@ -20,8 +21,8 @@ namespace RucheHome.Talker
     /// <see cref="IProcessTalker"/> インタフェースの各メソッドは互いに排他制御されている。
     /// そのため、派生クラスで抽象メソッドを実装する際、それらのメソッドを呼び出さないこと。
     /// </remarks>
-    public abstract class FriendlyProcessTalkerBase<TParameterId>
-        : ProcessTalkerBase<TParameterId>, IDisposable
+    public abstract class ProcessTalkerBase<TParameterId>
+        : Talker.ProcessTalkerBase<TParameterId>, IDisposable
     {
         /// <summary>
         /// CLRバージョン種別列挙。
@@ -50,7 +51,7 @@ namespace RucheHome.Talker
         /// <param name="talkerName">名前。 null ならば processProduct を使う。</param>
         /// <param name="canSaveBlankText">空白文を音声ファイル保存可能ならば true 。</param>
         /// <param name="hasCharacters">キャラクター設定を保持しているならば true 。</param>
-        protected FriendlyProcessTalkerBase(
+        protected ProcessTalkerBase(
             ClrVersion processClrVersion,
             string processFileName,
             string processProduct,
@@ -73,7 +74,7 @@ namespace RucheHome.Talker
         /// <summary>
         /// デストラクタ。
         /// </summary>
-        ~FriendlyProcessTalkerBase() => this.Dispose(false);
+        ~ProcessTalkerBase() => this.Dispose(false);
 
         /// <summary>
         /// <see cref="Dispose()"/> メソッドによってリソース破棄済みであるか否かを取得する。
@@ -81,7 +82,7 @@ namespace RucheHome.Talker
         public bool IsDisposed { get; private set; } = false;
 
         /// <summary>
-        /// ウィンドウタイトル種別列挙。
+        /// ウィンドウ種別列挙。
         /// </summary>
         protected enum WindowTitleKind
         {
@@ -112,7 +113,7 @@ namespace RucheHome.Talker
         /// <param name="action">非同期アクション。</param>
         /// <param name="timeoutMilliseconds">
         /// タイムアウトミリ秒数。既定値は
-        /// <see cref="ProcessTalkerBase{TParameterId}.StandardTimeoutMilliseconds"/> 。
+        /// <see cref="Talker.ProcessTalkerBase{TParameterId}.StandardTimeoutMilliseconds"/> 。
         /// 負数ならば無制限。
         /// </param>
         /// <returns>完了したならば true 。タイムアウトしたならば false 。</returns>
@@ -137,152 +138,6 @@ namespace RucheHome.Talker
             }
 
             return async.IsCompleted;
-        }
-
-        /// <summary>
-        /// Zオーダーインデックスを辿ることによって子孫コントロールを取得する。
-        /// </summary>
-        /// <param name="root">ツリーのルートとなるコントロール。</param>
-        /// <param name="zIndices">Zオーダーインデックス配列。</param>
-        /// <returns>コントロール。取得できなかった場合は null 。</returns>
-        protected static WindowControl GetControlFromZOrder(
-            WindowControl root,
-            params int[] zIndices)
-        {
-            if (root != null && zIndices != null)
-            {
-                try
-                {
-                    return root.IdentifyFromZIndex(zIndices);
-                }
-                catch (Exception ex)
-                {
-                    ThreadDebug.WriteException(ex);
-                }
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// Zオーダーインデックスを辿ることによって子孫コントロールを取得する。
-        /// </summary>
-        /// <typeparam name="TControl">
-        /// 子孫コントロール型。
-        /// <see cref="WindowControl"/> インスタンスを代入可能ではない場合、
-        /// <see cref="WindowControl"/> インスタンスを引数に取るコンストラクタが必要。
-        /// </typeparam>
-        /// <param name="root">ツリーのルートとなるコントロール。</param>
-        /// <param name="zIndices">Zオーダーインデックス配列。</param>
-        /// <returns>コントロール。取得できなかった場合は null 。</returns>
-        protected static TControl GetControlFromZOrder<TControl>(
-            WindowControl root,
-            params int[] zIndices)
-            where TControl : class
-        {
-            var c = GetControlFromZOrder(root, zIndices);
-            if (c != null)
-            {
-                try
-                {
-                    return
-                        typeof(TControl).IsAssignableFrom(typeof(WindowControl)) ?
-                            (TControl)(object)c :
-                            (TControl)Activator.CreateInstance(typeof(TControl), c);
-                }
-                catch (Exception ex)
-                {
-                    ThreadDebug.WriteException(ex);
-                }
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// ビジュアルツリーインデックスを辿ることによってWPFの子孫コントロールを取得する。
-        /// </summary>
-        /// <param name="root">ツリーのルートとなるコントロール。</param>
-        /// <param name="treeIndices">ビジュアルツリーインデックス配列。</param>
-        /// <returns>WPFコントロール。取得できなかった場合は null 。</returns>
-        protected static AppVar GetControlFromVisualTree(
-            WindowControl root,
-            params int[] treeIndices)
-        {
-            if (root != null && treeIndices != null)
-            {
-                try
-                {
-                    return root.IdentifyFromVisualTreeIndex(treeIndices);
-                }
-                catch (Exception ex)
-                {
-                    ThreadDebug.WriteException(ex);
-                }
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// ビジュアルツリーインデックスを辿ることによってWPFの子孫コントロールを取得する。
-        /// </summary>
-        /// <typeparam name="TControl">
-        /// WPFの子孫コントロール型。
-        /// <see cref="AppVar"/> インスタンスを代入可能ではない場合、
-        /// <see cref="AppVar"/> インスタンスを引数に取るコンストラクタが必要。
-        /// </typeparam>
-        /// <param name="root">ツリーのルートとなるコントロール。</param>
-        /// <param name="treeIndices">ビジュアルツリーインデックス配列。</param>
-        /// <returns>WPFコントロール。取得できなかった場合は null 。</returns>
-        protected static TControl GetControlFromVisualTree<TControl>(
-            WindowControl root,
-            params int[] treeIndices)
-            where TControl : class
-        {
-            var v = GetControlFromVisualTree(root, treeIndices);
-            if (v != null)
-            {
-                try
-                {
-                    return
-                        typeof(TControl).IsAssignableFrom(typeof(AppVar)) ?
-                            (TControl)(object)v :
-                            (TControl)Activator.CreateInstance(typeof(TControl), v);
-                }
-                catch (Exception ex)
-                {
-                    ThreadDebug.WriteException(ex);
-                }
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// タブコントロールから指定した名前のタブページを検索する。
-        /// </summary>
-        /// <param name="tabControl">タブコントロール。</param>
-        /// <param name="name">検索するタブページ名。</param>
-        /// <returns>タブページ。見つからなかった場合は null 。</returns>
-        /// <remarks>
-        /// 検索対象はWinFormsの TabPage のみ。
-        /// </remarks>
-        protected static WindowControl FindFormsTabPage(WindowControl tabControl, string name)
-        {
-            try
-            {
-                return
-                    tabControl?
-                        .GetFromWindowText(name)
-                        .FirstOrDefault(
-                            c => c.TypeFullName == @"System.Windows.Forms.TabPage");
-            }
-            catch (Exception ex)
-            {
-                ThreadTrace.WriteException(ex);
-            }
-            return null;
         }
 
         /// <summary>
@@ -395,7 +250,7 @@ namespace RucheHome.Talker
         /// 操作対象アプリを取得する。
         /// </summary>
         /// <remarks>
-        /// <see cref="ProcessTalkerBase{TParameterId}.IsAlive"/> が
+        /// <see cref="Talker.ProcessTalkerBase{TParameterId}.IsAlive"/> が
         /// true の時のみ有効な値を返す。
         /// </remarks>
         protected WindowsAppFriend TargetApp
@@ -409,7 +264,7 @@ namespace RucheHome.Talker
         /// メインウィンドウを検索する。
         /// </summary>
         /// <returns>メインウィンドウ。見つからなかった場合は null 。</returns>
-        protected WindowControl FindMainWindow()
+        protected AppVar FindMainWindow()
         {
             var app = this.TargetApp;
             if (app == null)
@@ -419,15 +274,15 @@ namespace RucheHome.Talker
 
             try
             {
-                return
-                    WindowControl.GetTopLevelWindows(app)
-                        .FirstOrDefault(
+                var mainWins =
+                    this.EnumerateWindows(app)
+                        .Where(
                             win =>
                             {
                                 try
                                 {
                                     var kind =
-                                        this.CheckWindowTitleKind(win.GetWindowText());
+                                        this.CheckWindowTitleKind(this.GetWindowTitle(win));
                                     return (kind == WindowTitleKind.Main);
                                 }
                                 catch (Exception ex)
@@ -436,11 +291,85 @@ namespace RucheHome.Talker
                                 }
                                 return false;
                             });
+
+                if (mainWins.Any())
+                {
+                    return mainWins.First();
+                }
             }
             catch (Exception ex)
             {
                 ThreadTrace.WriteException(ex);
             }
+
+            return null;
+        }
+
+        /// <summary>
+        /// 引数値が型 T およびその派生型ならばキャストし、
+        /// そうでなければ第1引数に引数値をとる T のコンストラクタ呼び出しを行う。
+        /// </summary>
+        /// <typeparam name="T">キャストまたは生成する型。</typeparam>
+        /// <param name="value">生成元の値。</param>
+        /// <returns>キャストまたは生成された値。</returns>
+        internal protected static T CastOrCreate<T>(object value) =>
+            (value != null && typeof(T).IsInstanceOfType(value)) ?
+                (T)value : (T)Activator.CreateInstance(typeof(T), value);
+
+        /// <summary>
+        /// Zオーダーインデックスを辿ることによって子孫コントロールを取得する。
+        /// </summary>
+        /// <param name="root">ツリーのルートとなるコントロール。</param>
+        /// <param name="zIndices">Zオーダーインデックス配列。</param>
+        /// <returns>コントロール。取得できなかった場合は null 。</returns>
+        private static WindowControl GetControlFromZOrder(
+            WindowControl root,
+            params int[] zIndices)
+        {
+            if (root != null && zIndices != null)
+            {
+                try
+                {
+                    return root.IdentifyFromZIndex(zIndices);
+                }
+                catch (Exception ex)
+                {
+                    ThreadDebug.WriteException(ex);
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Zオーダーインデックスを辿ることによって子孫コントロールを取得する。
+        /// </summary>
+        /// <typeparam name="TControl">
+        /// 子孫コントロール型。
+        /// <see cref="WindowControl"/> インスタンスを代入可能ではない場合、
+        /// <see cref="WindowControl"/> インスタンスを引数に取るコンストラクタが必要。
+        /// </typeparam>
+        /// <param name="root">ツリーのルートとなるコントロール。</param>
+        /// <param name="zIndices">Zオーダーインデックス配列。</param>
+        /// <returns>コントロール。取得できなかった場合は null 。</returns>
+        private static TControl GetControlFromZOrder<TControl>(
+            WindowControl root,
+            params int[] zIndices)
+            where TControl : class
+        {
+            var c = GetControlFromZOrder(root, zIndices);
+            if (c != null)
+            {
+                try
+                {
+                    return CastOrCreate<TControl>(c);
+                }
+                catch (Exception ex)
+                {
+                    ThreadDebug.WriteException(ex);
+                }
+            }
+
             return null;
         }
 
@@ -476,6 +405,32 @@ namespace RucheHome.Talker
         #region 要オーバライド
 
         /// <summary>
+        /// 現在表示されているウィンドウを列挙する。
+        /// </summary>
+        /// <param name="app">
+        /// 操作対象アプリ。
+        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装から
+        /// null や操作対象外アプリが渡されることはない。
+        /// </param>
+        /// <returns>ウィンドウを表す <see cref="AppVar"/> 列挙。</returns>
+        protected abstract IEnumerable<AppVar> EnumerateWindows(WindowsAppFriend app);
+
+        /// <summary>
+        /// ウィンドウタイトルを取得する。
+        /// </summary>
+        /// <param name="window">
+        /// ウィンドウを表す <see cref="AppVar"/> 。
+        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装から
+        /// <see cref="EnumerateWindows"/> の列挙値以外が渡されることはない。
+        /// </param>
+        /// <returns>ウィンドウタイトル。</returns>
+        /// <remarks>
+        /// 既定では <see cref="WindowControl"/> を用いる。
+        /// </remarks>
+        protected virtual string GetWindowTitle(AppVar window) =>
+            new WindowControl(window).GetWindowText();
+
+        /// <summary>
         /// ウィンドウタイトル種別を調べる。
         /// </summary>
         /// <param name="title">ウィンドウタイトル。</param>
@@ -485,14 +440,17 @@ namespace RucheHome.Talker
         /// <summary>
         /// メインウィンドウがトップレベルである前提で、操作対象アプリの状態を調べる。
         /// </summary>
-        /// <param name="mainWindow">メインウィンドウ。必ずトップレベル。</param>
+        /// <param name="mainWindow">
+        /// メインウィンドウを表す <see cref="AppVar"/> 。必ずトップレベル。
+        /// </param>
         /// <returns>状態値。</returns>
         /// <remarks>
         /// このメソッドの戻り値によって
-        /// <see cref="ProcessTalkerBase{TParameterId}.State"/> プロパティ等が更新される。
+        /// <see cref="Talker.ProcessTalkerBase{TParameterId}.State"/>
+        /// プロパティ等が更新される。
         /// 状態値が <see cref="TalkerState.Fail"/> の場合は付随メッセージも利用される。
         /// </remarks>
-        protected abstract Result<TalkerState> CheckState(WindowControl mainWindow);
+        protected abstract Result<TalkerState> CheckState(AppVar mainWindow);
 
         #endregion
 
@@ -626,7 +584,7 @@ namespace RucheHome.Talker
                     WindowTitleKind.Main);
 
                 // 派生クラス処理で状態決定する
-                return this.CheckState(topWins[0]);
+                return this.CheckState(topWins[0].AppVar);
             }
             catch (FriendlyOperationException ex)
             {
@@ -709,8 +667,6 @@ namespace RucheHome.Talker
                                 ControlType.Window));
                     if (dialog != null)
                     {
-                        ThreadDebug.WriteLine(
-                            dialog.Current.ClassName + ":" + dialog.Current.Name);
                         return null;
                     }
                 }

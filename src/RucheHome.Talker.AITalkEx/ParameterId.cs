@@ -68,9 +68,12 @@ namespace RucheHome.Talker.AITalkEx
         /// </summary>
         static ParameterIdExtension()
         {
-            // Infos, ZOrderIndices に全列挙値が含まれているか確認
+            // Infos, ControlsTreeIndices に全列挙値が含まれているか確認
             Debug.Assert(
-                AllIds.All(p => Infos.ContainsKey(p) && ZOrderIndices.ContainsKey(p)));
+                AllIds.All(p => Infos.ContainsKey(p) && ControlsTreeIndices.ContainsKey(p)));
+
+            // 全列挙値が音声効果設定またはボイスプリセット設定であることを確認
+            Debug.Assert(AllIds.All(p => p.IsEffect() || p.IsPause()));
         }
 #endif // DEBUG
 
@@ -105,12 +108,14 @@ namespace RucheHome.Talker.AITalkEx
             (self >= ParameterId.PauseShort && self <= ParameterId.PauseEnd);
 
         /// <summary>
-        /// タブページを基準とするテキストボックスのZオーダーインデックス配列を取得する。
+        /// タブページを基準とするテキストボックスの
+        /// Controls プロパティツリーインデックス配列を取得する。
         /// </summary>
         /// <param name="self">パラメータID。</param>
         /// <returns>Zオーダーインデックス配列。引数値が無効ならば null 。</returns>
-        internal static int[] GetZOrderIndices(this ParameterId self) =>
-            ZOrderIndices.TryGetValue(self, out var indices) ? (int[])indices.Clone() : null;
+        internal static int[] GetControlsTreeIndices(this ParameterId self) =>
+            ControlsTreeIndices.TryGetValue(self, out var indices) ?
+                (int[])indices.Clone() : null;
 
         /// <summary>
         /// タブページ名を取得する。
@@ -148,23 +153,24 @@ namespace RucheHome.Talker.AITalkEx
             .ToDictionary(pi => pi.Id);
 
         /// <summary>
-        /// タブページを基準とするテキストボックスのZオーダーインデックス配列ディクショナリ。
+        /// タブページを基準とするテキストボックスの
+        /// Controls プロパティツリーインデックス配列ディクショナリ。
         /// </summary>
-        private static readonly Dictionary<ParameterId, int[]> ZOrderIndices =
+        private static readonly Dictionary<ParameterId, int[]> ControlsTreeIndices =
             new Dictionary<ParameterId, int[]>
             {
                 // 音声効果
-                { ParameterId.Volume, new[] { 0, 8 } },
-                { ParameterId.Speed, new[] { 0, 9 } },
-                { ParameterId.Tone, new[] { 0, 10 } },
-                { ParameterId.Intonation, new[] { 0, 11 } },
+                { ParameterId.Volume, new[] { 0, 7 } },
+                { ParameterId.Speed, new[] { 0, 6 } },
+                { ParameterId.Tone, new[] { 0, 5 } },
+                { ParameterId.Intonation, new[] { 0, 4 } },
 
                 // ポーズ
-                { ParameterId.PauseShort, new[] { 0, 3, 0 } },
-                { ParameterId.PauseLong, new[] { 0, 5, 0 } },
-                { ParameterId.PauseSentence, new[] { 0, 1, 0 } },
-                { ParameterId.PauseBegin, new[] { 0, 7, 0 } },
-                { ParameterId.PauseEnd, new[] { 0, 8, 0 } },
+                { ParameterId.PauseShort, new[] { 0, 13, 1 } },
+                { ParameterId.PauseLong, new[] { 0, 11, 1 } },
+                { ParameterId.PauseSentence, new[] { 0, 15, 1 } },
+                { ParameterId.PauseBegin, new[] { 0, 9, 1 } },
+                { ParameterId.PauseEnd, new[] { 0, 8, 1 } },
             };
     }
 }

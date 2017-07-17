@@ -93,9 +93,11 @@ namespace RucheHome.Talker.Voiceroid2
         /// </summary>
         static ParameterIdExtension()
         {
-            // Infos, VisualTreeIndices に全列挙値が含まれているか確認
-            Debug.Assert(
-                AllIds.All(p => Infos.ContainsKey(p) && VisualTreeIndices.ContainsKey(p)));
+            // Infos, GuiGroups に全列挙値が含まれているか確認
+            Debug.Assert(AllIds.All(p => Infos.ContainsKey(p) && GuiGroups.ContainsKey(p)));
+
+            // 全列挙値がマスター設定またはボイスプリセット設定であることを確認
+            Debug.Assert(AllIds.All(p => p.IsMaster() || p.IsPreset()));
         }
 #endif // DEBUG
 
@@ -118,16 +120,22 @@ namespace RucheHome.Talker.Voiceroid2
         /// </summary>
         /// <param name="self">パラメータID。</param>
         /// <returns>マスター設定ならば true 。そうでなければ false 。</returns>
-        public static bool IsMaster(this ParameterId self) =>
-            (self >= ParameterId.Volume && self <= ParameterId.PauseSentence);
+        public static bool IsMaster(this ParameterId self)
+        {
+            var (group, _) = self.GetGuiGroup();
+            return (group == GuiGroup.MasterSound || group == GuiGroup.MasterPause);
+        }
 
         /// <summary>
         /// ボイスプリセット設定であるか否かを取得する。
         /// </summary>
         /// <param name="self">パラメータID。</param>
         /// <returns>ボイスプリセット設定ならば true 。そうでなければ false 。</returns>
-        public static bool IsPreset(this ParameterId self) =>
-            (self >= ParameterId.PresetVolume && self <= ParameterId.PresetSorrow);
+        public static bool IsPreset(this ParameterId self)
+        {
+            var (group, _) = self.GetGuiGroup();
+            return (group == GuiGroup.PresetSound || group == GuiGroup.PresetEmotion);
+        }
 
         /// <summary>
         /// 存在しない可能性のある設定であるか否かを取得する。
@@ -138,13 +146,46 @@ namespace RucheHome.Talker.Voiceroid2
             (self >= ParameterId.PresetJoy && self <= ParameterId.PresetSorrow);
 
         /// <summary>
-        /// スライダーのビジュアルツリーインデックス配列を取得する。
+        /// パラメータの属するGUIグループを定義する列挙。
+        /// </summary>
+        internal enum GuiGroup
+        {
+            /// <summary>
+            /// 不明。
+            /// </summary>
+            Unknown = -1,
+
+            /// <summary>
+            /// マスター設定の音量、話速、高さ、抑揚。
+            /// </summary>
+            MasterSound = 0,
+
+            /// <summary>
+            /// マスター設定のポーズ関連。
+            /// </summary>
+            MasterPause,
+
+            /// <summary>
+            /// ボイスプリセット設定の音量、話速、高さ、抑揚。
+            /// </summary>
+            PresetSound,
+
+            /// <summary>
+            /// ボイスプリセット設定の感情関連。
+            /// </summary>
+            PresetEmotion,
+        }
+
+        /// <summary>
+        /// パラメータの属するGUIグループとグループ内インデックスを取得する。
         /// </summary>
         /// <param name="self">パラメータID。</param>
-        /// <returns>ビジュアルツリーインデックス配列。引数値が無効ならば null 。</returns>
-        internal static int[] GetVisualTreeIndices(this ParameterId self) =>
-            VisualTreeIndices.TryGetValue(self, out var indices) ?
-                CommonVisualTreeIndices.Concat(indices).ToArray() : null;
+        /// <returns>
+        /// GUIグループとグループ内インデックス。
+        /// 引数値が不正ならば (<see cref="GuiGroup.Unknown"/>, -1) 。
+        /// </returns>
+        internal static (GuiGroup group, int index) GetGuiGroup(this ParameterId self) =>
+            GuiGroups.TryGetValue(self, out var g) ? g : (GuiGroup.Unknown, -1);
 
         /// <summary>
         /// タブアイテム名を取得する。
@@ -193,76 +234,33 @@ namespace RucheHome.Talker.Voiceroid2
             .ToDictionary(pi => pi.Id);
 
         /// <summary>
-        /// スライダーのビジュアルツリーインデックス配列の共通部分。
+        /// GUIグループとグループ内インデックスのディクショナリ。
         /// </summary>
-        private static readonly int[] CommonVisualTreeIndices =
-            { 0, 0, 0, 0, 1, 2, 0, 1, 0, 0, 0, 0, 0 };
-
-        /// <summary>
-        /// スライダーのビジュアルツリーインデックス配列ディクショナリ。
-        /// </summary>
-        private static readonly Dictionary<ParameterId, int[]> VisualTreeIndices =
-            new Dictionary<ParameterId, int[]>
+        private static readonly Dictionary<ParameterId, (GuiGroup group, int index)>
+        GuiGroups =
+            new Dictionary<ParameterId, (GuiGroup group, int index)>
             {
-                // マスター
-                {
-                    ParameterId.Volume,
-                    new[] { 0, 0, 1, 0, 1, 0, 0, 0, 0, 2 }
-                },
-                {
-                    ParameterId.Speed,
-                    new[] { 0, 0, 1, 0, 1, 1, 0, 0, 0, 2 }
-                },
-                {
-                    ParameterId.Tone,
-                    new[] { 0, 0, 1, 0, 1, 2, 0, 0, 0, 2 }
-                },
-                {
-                    ParameterId.Intonation,
-                    new[] { 0, 0, 1, 0, 1, 3, 0, 0, 0, 2 }
-                },
-                {
-                    ParameterId.PauseShort,
-                    new[] { 0, 0, 1, 0, 3, 0, 0, 0, 0, 2 }
-                },
-                {
-                    ParameterId.PauseLong,
-                    new[] { 0, 0, 1, 0, 3, 1, 0, 0, 0, 2 }
-                },
-                {
-                    ParameterId.PauseSentence,
-                    new[] { 0, 0, 1, 0, 3, 2, 0, 0, 0, 2 }
-                },
+                // マスター : 音量～抑揚
+                { ParameterId.Volume, (GuiGroup.MasterSound, 0) },
+                { ParameterId.Speed, (GuiGroup.MasterSound, 1) },
+                { ParameterId.Tone, (GuiGroup.MasterSound, 2) },
+                { ParameterId.Intonation, (GuiGroup.MasterSound, 3) },
 
-                // ボイス
-                {
-                    ParameterId.PresetVolume,
-                    new[] { 2, 0, 1, 0, 1, 0, 0, 0, 0, 2 }
-                },
-                {
-                    ParameterId.PresetSpeed,
-                    new[] { 2, 0, 1, 0, 1, 1, 0, 0, 0, 2 }
-                },
-                {
-                    ParameterId.PresetTone,
-                    new[] { 2, 0, 1, 0, 1, 2, 0, 0, 0, 2 }
-                },
-                {
-                    ParameterId.PresetIntonation,
-                    new[] { 2, 0, 1, 0, 1, 3, 0, 0, 0, 2 }
-                },
-                {
-                    ParameterId.PresetJoy,
-                    new[] { 2, 0, 1, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 2 }
-                },
-                {
-                    ParameterId.PresetAnger,
-                    new[] { 2, 0, 1, 0, 5, 0, 0, 1, 0, 0, 0, 0, 0, 2 }
-                },
-                {
-                    ParameterId.PresetSorrow,
-                    new[] { 2, 0, 1, 0, 5, 0, 0, 2, 0, 0, 0, 0, 0, 2 }
-                },
+                // マスター : ポーズ関連
+                { ParameterId.PauseShort, (GuiGroup.MasterPause, 0) },
+                { ParameterId.PauseLong, (GuiGroup.MasterPause, 1) },
+                { ParameterId.PauseSentence, (GuiGroup.MasterPause, 2) },
+
+                // ボイスプリセット : 音量～抑揚
+                { ParameterId.PresetVolume, (GuiGroup.PresetSound, 0) },
+                { ParameterId.PresetSpeed, (GuiGroup.PresetSound, 1) },
+                { ParameterId.PresetTone, (GuiGroup.PresetSound, 2) },
+                { ParameterId.PresetIntonation, (GuiGroup.PresetSound, 3) },
+
+                // ボイスプリセット : 感情関連
+                { ParameterId.PresetJoy, (GuiGroup.PresetEmotion, 0) },
+                { ParameterId.PresetAnger, (GuiGroup.PresetEmotion, 1) },
+                { ParameterId.PresetSorrow, (GuiGroup.PresetEmotion, 2) },
             };
     }
 }

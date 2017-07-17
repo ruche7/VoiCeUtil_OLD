@@ -102,6 +102,10 @@
       <Project>{7b3ad7e7-fc97-422b-9b3b-dd5471eaff83}</Project>
       <Name>RucheHome.Talker.AITalkEx</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\src\RucheHome.Talker.Friendly\RucheHome.Talker.Friendly.csproj">
+      <Project>{55b9ed13-f7f6-4a9a-9408-9c4449d50350}</Project>
+      <Name>RucheHome.Talker.Friendly</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\src\RucheHome.Talker.Voiceroid2\RucheHome.Talker.Voiceroid2.csproj">
       <Project>{7f61a3de-15c7-4b95-a797-718f1dd063f6}</Project>
       <Name>RucheHome.Talker.Voiceroid2</Name>

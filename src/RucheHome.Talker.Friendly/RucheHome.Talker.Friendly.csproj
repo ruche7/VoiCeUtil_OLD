@@ -4,35 +4,34 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{7B3AD7E7-FC97-422B-9B3B-DD5471EAFF83}</ProjectGuid>
+    <ProjectGuid>{55B9ED13-F7F6-4A9A-9408-9C4449D50350}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>RucheHome.Talker.AITalkEx</RootNamespace>
-    <AssemblyName>RucheHome.Talker.AITalkEx</AssemblyName>
+    <RootNamespace>RucheHome.Talker.Friendly</RootNamespace>
+    <AssemblyName>RucheHome.Talker.Friendly</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <DebugType>full</DebugType>
-    <PlatformTarget>x86</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <DocumentationFile>bin\Debug\RucheHome.Talker.AITalkEx.xml</DocumentationFile>
+    <DocumentationFile>bin\Debug\RucheHome.Talker.Friendly.xml</DocumentationFile>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
-    <Optimize>true</Optimize>
-    <DebugType>pdbonly</DebugType>
-    <PlatformTarget>x86</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <DocumentationFile>bin\Release\RucheHome.Talker.AITalkEx.xml</DocumentationFile>
+    <DocumentationFile>bin\Release\RucheHome.Talker.Friendly.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Codeer.Friendly, Version=2.5.0.0, Culture=neutral, PublicKeyToken=6c44da6fca38aa86, processorArchitecture=MSIL">
@@ -50,38 +49,37 @@
     <Reference Include="Codeer.Friendly.Windows.NativeStandardControls, Version=2.2.3.0, Culture=neutral, PublicKeyToken=90759bf0c8b8639e, processorArchitecture=MSIL">
       <HintPath>..\..\packages\Codeer.Friendly.Windows.NativeStandardControls.2.2.3\lib\net20\Codeer.Friendly.Windows.NativeStandardControls.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="Ong.Friendly.FormsStandardControls, Version=2.4.0.0, Culture=neutral, PublicKeyToken=ee7fcdb5644bd140, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\Ong.Friendly.FormsStandardControls.2.4.0\lib\net20\Ong.Friendly.FormsStandardControls.dll</HintPath>
-    </Reference>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.ValueTuple, Version=4.0.1.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\..\packages\System.ValueTuple.4.3.1\lib\netstandard1.0\System.ValueTuple.dll</HintPath>
     </Reference>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="UIAutomationClient" />
+    <Reference Include="UIAutomationTypes" />
+    <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ParameterId.cs" />
-    <Compile Include="Product.cs" />
+    <Compile Include="FormsProcessTalkerBase.cs" />
+    <Compile Include="ProcessTalkerBase.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Talker.cs" />
+    <Compile Include="WpfProcessTalkerBase.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\RucheHome.Core\RucheHome.Core.csproj">
       <Project>{33ab6685-2e0e-49e2-86fe-15385ec365c6}</Project>
       <Name>RucheHome.Core</Name>
     </ProjectReference>
-    <ProjectReference Include="..\RucheHome.Talker.Friendly\RucheHome.Talker.Friendly.csproj">
-      <Project>{55b9ed13-f7f6-4a9a-9408-9c4449d50350}</Project>
-      <Name>RucheHome.Talker.Friendly</Name>
-    </ProjectReference>
     <ProjectReference Include="..\RucheHome.Talker\RucheHome.Talker.csproj">
       <Project>{44f2ff62-f248-4b1a-9f9e-1ceefde5e6e6}</Project>
       <Name>RucheHome.Talker</Name>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -64,8 +64,9 @@ namespace RucheHome.Talker.Tests
                 {
                     Console.WriteLine(r.Message);
 
-                    // 先頭ボタンをクリックして先へ進む
+                    // 先頭ボタンをクリックして終わる
                     ClickAllModalsFirstButtonIfProcessTalker(talker);
+                    return;
                 }
             }
 
