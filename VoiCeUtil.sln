@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Talker.Voiceroid2
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Talker.Friendly", "src\RucheHome.Talker.Friendly\RucheHome.Talker.Friendly.csproj", "{55B9ED13-F7F6-4A9A-9408-9C4449D50350}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Talker.CeVIO", "src\RucheHome.Talker.CeVIO\RucheHome.Talker.CeVIO.csproj", "{AA29CE29-4FE9-47AB-96CB-AB7B68F42FBB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
@@ -55,6 +57,10 @@ Global
 		{55B9ED13-F7F6-4A9A-9408-9C4449D50350}.Debug|x86.Build.0 = Debug|Any CPU
 		{55B9ED13-F7F6-4A9A-9408-9C4449D50350}.Release|x86.ActiveCfg = Release|Any CPU
 		{55B9ED13-F7F6-4A9A-9408-9C4449D50350}.Release|x86.Build.0 = Release|Any CPU
+		{AA29CE29-4FE9-47AB-96CB-AB7B68F42FBB}.Debug|x86.ActiveCfg = Debug|x86
+		{AA29CE29-4FE9-47AB-96CB-AB7B68F42FBB}.Debug|x86.Build.0 = Debug|x86
+		{AA29CE29-4FE9-47AB-96CB-AB7B68F42FBB}.Release|x86.ActiveCfg = Release|x86
+		{AA29CE29-4FE9-47AB-96CB-AB7B68F42FBB}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -67,5 +73,6 @@ Global
 		{2FE0815F-364A-409E-A34E-39880676A693} = {87905CE9-795C-44B6-86AA-1DA5A1D2F3B9}
 		{7F61A3DE-15C7-4B95-A797-718F1DD063F6} = {87905CE9-795C-44B6-86AA-1DA5A1D2F3B9}
 		{55B9ED13-F7F6-4A9A-9408-9C4449D50350} = {87905CE9-795C-44B6-86AA-1DA5A1D2F3B9}
+		{AA29CE29-4FE9-47AB-96CB-AB7B68F42FBB} = {87905CE9-795C-44B6-86AA-1DA5A1D2F3B9}
 	EndGlobalSection
 EndGlobal
