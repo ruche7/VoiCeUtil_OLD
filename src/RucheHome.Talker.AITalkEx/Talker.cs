@@ -175,7 +175,7 @@ namespace RucheHome.Talker.AITalkEx
 
             try
             {
-                var allIds = targetParameterIds ?? ParameterIdExtension.AllIds;
+                var allIds = targetParameterIds ?? ParameterIdExtension.AllValues;
                 var effectIds = allIds.Where(id => id.IsEffect());
                 var pauseIds = allIds.Where(id => id.IsPause());
 
@@ -354,7 +354,9 @@ namespace RucheHome.Talker.AITalkEx
         /// </summary>
         /// <param name="text">
         /// 文章。
-        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装から null が渡されることはない。
+        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装から
+        /// <see cref="ProcessTalkerBase{TParameterId}.TextLengthLimit"/>
+        /// を超える文字数の値や null が渡されることはない。
         /// </param>
         /// <returns>成功したならば true 。そうでなければ false 。</returns>
         protected override Result<bool> SetTextImpl(string text)

@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using RucheHome.Diagnostics;
 using RucheHome.ObjectModel;
+using RucheHome.Text.Extensions;
 
 namespace RucheHome.Talker
 {
@@ -508,6 +509,14 @@ namespace RucheHome.Talker
         #region 要オーバライド
 
         /// <summary>
+        /// 文章の最大許容文字数を取得する。
+        /// </summary>
+        /// <remarks>
+        /// 既定では <see cref="int.MaxValue"/> を返す。
+        /// </remarks>
+        public virtual int TextLengthLimit { get; } = int.MaxValue;
+
+        /// <summary>
         /// <see cref="ProcessTalkerBase{TParameterId}"/> のプロパティ値変更時に呼び出される。
         /// </summary>
         /// <param name="changedPropertyNames">
@@ -627,7 +636,8 @@ namespace RucheHome.Talker
         /// </summary>
         /// <param name="text">
         /// 文章。
-        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装から null が渡されることはない。
+        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装から
+        /// <see cref="TextLengthLimit"/> を超える文字数の値や null が渡されることはない。
         /// </param>
         /// <returns>成功したならば true 。そうでなければ false 。</returns>
         /// <remarks>
@@ -1373,7 +1383,13 @@ namespace RucheHome.Talker
                     return MakeStateErrorResult(false);
                 }
 
-                return this.SetTextImpl(text ?? @"");
+                var value =
+                    (text == null) ?
+                        @"" :
+                        (text.Length > this.TextLengthLimit) ?
+                            text.SubstringSurrogateSafe(0, this.TextLengthLimit) : text;
+
+                return this.SetTextImpl(value);
             }
         }
 

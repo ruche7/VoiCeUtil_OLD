@@ -398,27 +398,27 @@ namespace RucheHome.Talker.Voiceroid2
 
             var dict = new Dictionary<ParameterId, T>();
 
-            var allIds = targetParameterIds ?? ParameterIdExtension.AllIds;
+            var allIds = targetParameterIds ?? ParameterIdExtension.AllValues;
             var allIdGroups = allIds.Select(id => (id: id, gi: id.GetGuiGroup()));
 
             // マスタータブ
-            var masterSounds =
+            var masterEffects =
                 allIdGroups.Where(
-                    v => v.gi.group == ParameterIdExtension.GuiGroup.MasterSound);
+                    v => v.gi.group == ParameterIdExtension.GuiGroup.MasterEffect);
             var masterPauses =
                 allIdGroups.Where(
                     v => v.gi.group == ParameterIdExtension.GuiGroup.MasterPause);
-            if (masterSounds.Any() || masterPauses.Any())
+            if (masterEffects.Any() || masterPauses.Any())
             {
                 var sliders = new Dictionary<ParameterId, WPFSlider>();
 
                 try
                 {
                     var bases = tabItems[0].Content.Content.Children[0].Content.Children;
-                    if (masterSounds.Any())
+                    if (masterEffects.Any())
                     {
                         var children = bases[1].Children;
-                        foreach (var v in masterSounds)
+                        foreach (var v in masterEffects)
                         {
                             sliders.Add(
                                 v.id,
@@ -455,13 +455,13 @@ namespace RucheHome.Talker.Voiceroid2
             }
 
             // ボイスタブ
-            var presetSounds =
+            var presetEffects =
                 allIdGroups.Where(
-                    v => v.gi.group == ParameterIdExtension.GuiGroup.PresetSound);
+                    v => v.gi.group == ParameterIdExtension.GuiGroup.PresetEffect);
             var presetEmotions =
                 allIdGroups.Where(
                     v => v.gi.group == ParameterIdExtension.GuiGroup.PresetEmotion);
-            if (presetSounds.Any() || presetEmotions.Any())
+            if (presetEffects.Any() || presetEmotions.Any())
             {
                 var sliders = new Dictionary<ParameterId, WPFSlider>();
                 int tabIndex = -1;
@@ -471,10 +471,10 @@ namespace RucheHome.Talker.Voiceroid2
                     try
                     {
                         var bases = tabItems[1].Content.Content.Children[2].Content.Children;
-                        if (presetSounds.Any())
+                        if (presetEffects.Any())
                         {
                             var children = bases[1].Children;
-                            foreach (var v in presetSounds)
+                            foreach (var v in presetEffects)
                             {
                                 sliders.Add(
                                     v.id,
@@ -843,7 +843,9 @@ namespace RucheHome.Talker.Voiceroid2
         /// </summary>
         /// <param name="text">
         /// 文章。
-        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装から null が渡されることはない。
+        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装から
+        /// <see cref="ProcessTalkerBase{TParameterId}.TextLengthLimit"/>
+        /// を超える文字数の値や null が渡されることはない。
         /// </param>
         /// <returns>成功したならば true 。そうでなければ false 。</returns>
         protected override Result<bool> SetTextImpl(string text)

@@ -19,6 +19,14 @@ namespace RucheHome.Talker
         string TalkerName { get; }
 
         /// <summary>
+        /// 文章の最大許容文字数を取得する。
+        /// </summary>
+        /// <remarks>
+        /// インスタンス生成後に値が変化することはない。
+        /// </remarks>
+        int TextLengthLimit { get; }
+
+        /// <summary>
         /// 空白文を音声ファイル保存させることが可能か否かを取得する。
         /// </summary>
         /// <remarks>

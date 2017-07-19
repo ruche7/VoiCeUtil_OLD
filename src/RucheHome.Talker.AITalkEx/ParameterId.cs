@@ -58,7 +58,7 @@ namespace RucheHome.Talker.AITalkEx
     }
 
     /// <summary>
-    /// <see cref="ParameterId"/> 列挙型に拡張メソッドを提供する静的クラス。
+    /// <see cref="ParameterId"/> 列挙型に拡張メソッド等を提供する静的クラス。
     /// </summary>
     public static class ParameterIdExtension
     {
@@ -70,17 +70,18 @@ namespace RucheHome.Talker.AITalkEx
         {
             // Infos, ControlsTreeIndices に全列挙値が含まれているか確認
             Debug.Assert(
-                AllIds.All(p => Infos.ContainsKey(p) && ControlsTreeIndices.ContainsKey(p)));
+                AllValues.All(
+                    p => Infos.ContainsKey(p) && ControlsTreeIndices.ContainsKey(p)));
 
             // 全列挙値が音声効果設定またはボイスプリセット設定であることを確認
-            Debug.Assert(AllIds.All(p => p.IsEffect() || p.IsPause()));
+            Debug.Assert(AllValues.All(p => p.IsEffect() || p.IsPause()));
         }
 #endif // DEBUG
 
         /// <summary>
         /// 全パラメータID値のコレクションを取得する。
         /// </summary>
-        public static ReadOnlyCollection<ParameterId> AllIds { get; } =
+        public static ReadOnlyCollection<ParameterId> AllValues { get; } =
             Array.AsReadOnly(((ParameterId[])Enum.GetValues(typeof(ParameterId))).ToArray());
 
         /// <summary>

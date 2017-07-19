@@ -12,78 +12,78 @@ namespace RucheHome.Talker.Voiceroid2
     public enum ParameterId
     {
         /// <summary>
-        /// マスター音量
+        /// マスター : 音量
         /// </summary>
         Volume,
 
         /// <summary>
-        /// マスター話速
+        /// マスター : 話速
         /// </summary>
         Speed,
 
         /// <summary>
-        /// マスター高さ
+        /// マスター : 高さ
         /// </summary>
         Tone,
 
         /// <summary>
-        /// マスター抑揚
+        /// マスター : 抑揚
         /// </summary>
         Intonation,
 
         /// <summary>
-        /// マスター短ポーズ
+        /// マスター : 短ポーズ
         /// </summary>
         PauseShort,
 
         /// <summary>
-        /// マスター長ポーズ
+        /// マスター : 長ポーズ
         /// </summary>
         PauseLong,
 
         /// <summary>
-        /// マスター文末ポーズ
+        /// マスター : 文末ポーズ
         /// </summary>
         PauseSentence,
 
         /// <summary>
-        /// ボイスプリセット音量
+        /// ボイスプリセット : 音量
         /// </summary>
         PresetVolume,
 
         /// <summary>
-        /// ボイスプリセット話速
+        /// ボイスプリセット : 話速
         /// </summary>
         PresetSpeed,
 
         /// <summary>
-        /// ボイスプリセット高さ
+        /// ボイスプリセット : 高さ
         /// </summary>
         PresetTone,
 
         /// <summary>
-        /// ボイスプリセット抑揚
+        /// ボイスプリセット : 抑揚
         /// </summary>
         PresetIntonation,
 
         /// <summary>
-        /// ボイスプリセット喜び
+        /// ボイスプリセット : 喜び
         /// </summary>
         PresetJoy,
 
         /// <summary>
-        /// ボイスプリセット怒り
+        /// ボイスプリセット : 怒り
         /// </summary>
         PresetAnger,
 
         /// <summary>
-        /// ボイスプリセット悲しみ
+        /// ボイスプリセット : 悲しみ
         /// </summary>
         PresetSorrow,
     }
 
     /// <summary>
-    /// <see cref="ParameterId"/> 列挙型に拡張メソッドを提供する静的クラス。
+    /// <see cref="ParameterId"/> 列挙型に拡張メソッド等を提供する静的クラス。
     /// </summary>
     public static class ParameterIdExtension
     {
@@ -94,17 +94,18 @@ namespace RucheHome.Talker.Voiceroid2
         static ParameterIdExtension()
         {
             // Infos, GuiGroups に全列挙値が含まれているか確認
-            Debug.Assert(AllIds.All(p => Infos.ContainsKey(p) && GuiGroups.ContainsKey(p)));
+            Debug.Assert(
+                AllValues.All(p => Infos.ContainsKey(p) && GuiGroups.ContainsKey(p)));
 
             // 全列挙値がマスター設定またはボイスプリセット設定であることを確認
-            Debug.Assert(AllIds.All(p => p.IsMaster() || p.IsPreset()));
+            Debug.Assert(AllValues.All(p => p.IsMaster() || p.IsPreset()));
         }
 #endif // DEBUG
 
         /// <summary>
         /// 全パラメータID値のコレクションを取得する。
         /// </summary>
-        public static ReadOnlyCollection<ParameterId> AllIds { get; } =
+        public static ReadOnlyCollection<ParameterId> AllValues { get; } =
             Array.AsReadOnly(((ParameterId[])Enum.GetValues(typeof(ParameterId))).ToArray());
 
         /// <summary>
@@ -123,7 +124,7 @@ namespace RucheHome.Talker.Voiceroid2
         public static bool IsMaster(this ParameterId self)
         {
             var (group, _) = self.GetGuiGroup();
-            return (group == GuiGroup.MasterSound || group == GuiGroup.MasterPause);
+            return (group == GuiGroup.MasterEffect || group == GuiGroup.MasterPause);
         }
 
         /// <summary>
@@ -134,7 +135,7 @@ namespace RucheHome.Talker.Voiceroid2
         public static bool IsPreset(this ParameterId self)
         {
             var (group, _) = self.GetGuiGroup();
-            return (group == GuiGroup.PresetSound || group == GuiGroup.PresetEmotion);
+            return (group == GuiGroup.PresetEffect || group == GuiGroup.PresetEmotion);
         }
 
         /// <summary>
@@ -156,9 +157,9 @@ namespace RucheHome.Talker.Voiceroid2
             Unknown = -1,
 
             /// <summary>
-            /// マスター設定の音量、話速、高さ、抑揚。
+            /// マスター設定の音声効果関連。
             /// </summary>
-            MasterSound = 0,
+            MasterEffect = 0,
 
             /// <summary>
             /// マスター設定のポーズ関連。
@@ -166,9 +167,9 @@ namespace RucheHome.Talker.Voiceroid2
             MasterPause,
 
             /// <summary>
-            /// ボイスプリセット設定の音量、話速、高さ、抑揚。
+            /// ボイスプリセット設定の音声効果関連。
             /// </summary>
-            PresetSound,
+            PresetEffect,
 
             /// <summary>
             /// ボイスプリセット設定の感情関連。
@@ -240,22 +241,22 @@ namespace RucheHome.Talker.Voiceroid2
         GuiGroups =
             new Dictionary<ParameterId, (GuiGroup group, int index)>
             {
-                // マスター : 音量～抑揚
-                { ParameterId.Volume, (GuiGroup.MasterSound, 0) },
-                { ParameterId.Speed, (GuiGroup.MasterSound, 1) },
-                { ParameterId.Tone, (GuiGroup.MasterSound, 2) },
-                { ParameterId.Intonation, (GuiGroup.MasterSound, 3) },
+                // マスター : 音声効果
+                { ParameterId.Volume, (GuiGroup.MasterEffect, 0) },
+                { ParameterId.Speed, (GuiGroup.MasterEffect, 1) },
+                { ParameterId.Tone, (GuiGroup.MasterEffect, 2) },
+                { ParameterId.Intonation, (GuiGroup.MasterEffect, 3) },
 
                 // マスター : ポーズ関連
                 { ParameterId.PauseShort, (GuiGroup.MasterPause, 0) },
                 { ParameterId.PauseLong, (GuiGroup.MasterPause, 1) },
                 { ParameterId.PauseSentence, (GuiGroup.MasterPause, 2) },
 
-                // ボイスプリセット : 音量～抑揚
-                { ParameterId.PresetVolume, (GuiGroup.PresetSound, 0) },
-                { ParameterId.PresetSpeed, (GuiGroup.PresetSound, 1) },
-                { ParameterId.PresetTone, (GuiGroup.PresetSound, 2) },
-                { ParameterId.PresetIntonation, (GuiGroup.PresetSound, 3) },
+                // ボイスプリセット : 音声効果
+                { ParameterId.PresetVolume, (GuiGroup.PresetEffect, 0) },
+                { ParameterId.PresetSpeed, (GuiGroup.PresetEffect, 1) },
+                { ParameterId.PresetTone, (GuiGroup.PresetEffect, 2) },
+                { ParameterId.PresetIntonation, (GuiGroup.PresetEffect, 3) },
 
                 // ボイスプリセット : 感情関連
                 { ParameterId.PresetJoy, (GuiGroup.PresetEmotion, 0) },
