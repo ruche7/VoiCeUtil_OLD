@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -9,8 +8,9 @@ using Codeer.Friendly.Windows;
 using Codeer.Friendly.Windows.Grasp;
 using Codeer.Friendly.Windows.NativeStandardControls;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using RucheHome.Talker;
 
-namespace RucheHome.Talker.Tests
+namespace RucheHome.Tests.Talker
 {
     /// <summary>
     /// <see cref="ITalker"/> 実装クラスに共通するテストを提供する抽象クラス。

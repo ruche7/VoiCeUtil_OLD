@@ -206,40 +206,37 @@ namespace RucheHome.Talker.Friendly
             return null;
         }
 
-        #region ProcessTalkerBase<TParameterId> のオーバライド
-
         /// <summary>
-        /// 現在表示されているウィンドウを列挙する。
+        /// メインウィンドウを検索する。
         /// </summary>
-        /// <param name="app">
-        /// 操作対象アプリ。
-        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装から
-        /// null や操作対象外アプリが渡されることはない。
-        /// </param>
-        /// <returns>ウィンドウを表す <see cref="AppVar"/> 列挙。</returns>
-        protected override sealed IEnumerable<AppVar> EnumerateWindows(WindowsAppFriend app)
+        /// <returns>メインウィンドウ。見つからなかった場合は null 。</returns>
+        /// <remarks>
+        /// 戻り値が有効である場合、本体側の
+        /// <see cref="Form"/> オブジェクトを参照している。
+        /// </remarks>
+        protected AppVar FindMainWindow()
         {
-            foreach (var form in app.Type<Application>().OpenForms)
+            var app = this.TargetApp;
+            if (app == null)
             {
-                if ((bool)form.Visible)
+                return null;
+            }
+
+            try
+            {
+                foreach (var form in app.Type<Application>().OpenForms)
                 {
-                    yield return form;
+                    if (this.CheckWindowTitleKind((string)form.Text) == WindowTitleKind.Main)
+                    {
+                        return form;
+                    }
                 }
             }
+            catch (Exception ex)
+            {
+                ThreadTrace.WriteException(ex);
+            }
+            return null;
         }
-
-        /// <summary>
-        /// ウィンドウタイトルを取得する。
-        /// </summary>
-        /// <param name="window">
-        /// ウィンドウを表す <see cref="AppVar"/> 。
-        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装から
-        /// <see cref="EnumerateWindows"/> の列挙値以外が渡されることはない。
-        /// </param>
-        /// <returns>ウィンドウタイトル。取得できなければ null 。</returns>
-        protected override sealed string GetWindowTitle(AppVar window) =>
-            (string)window.Dynamic().Text;
-
-        #endregion
     }
 }

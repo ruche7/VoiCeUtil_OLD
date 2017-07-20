@@ -4,6 +4,7 @@ using System.Windows;
 using Codeer.Friendly;
 using Codeer.Friendly.Dynamic;
 using Codeer.Friendly.Windows;
+using RucheHome.Diagnostics;
 
 namespace RucheHome.Talker.Friendly
 {
@@ -48,40 +49,38 @@ namespace RucheHome.Talker.Friendly
         {
         }
 
-        #region ProcessTalkerBase<TParameterId> のオーバライド
-
         /// <summary>
-        /// 現在表示されているウィンドウを列挙する。
+        /// メインウィンドウを検索する。
         /// </summary>
-        /// <param name="app">
-        /// 操作対象アプリ。
-        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装から
-        /// null や操作対象外アプリが渡されることはない。
-        /// </param>
-        /// <returns>ウィンドウを表す <see cref="AppVar"/> 列挙。</returns>
-        protected override sealed IEnumerable<AppVar> EnumerateWindows(WindowsAppFriend app)
+        /// <returns>メインウィンドウ。見つからなかった場合は null 。</returns>
+        /// <remarks>
+        /// 戻り値が有効である場合、本体側の
+        /// <see cref="Window"/> オブジェクトを参照している。
+        /// </remarks>
+        protected AppVar FindMainWindow()
         {
-            foreach (var window in app.Type<Application>().Current.Windows)
+            var app = this.TargetApp;
+            if (app == null)
             {
-                if ((Visibility)window.Visibility == Visibility.Visible)
+                return null;
+            }
+
+            try
+            {
+                var mainWin = app.Type<Application>().Current.MainWindow;
+
+                if (
+                    mainWin != null &&
+                    this.CheckWindowTitleKind((string)mainWin.Title) == WindowTitleKind.Main)
                 {
-                    yield return window;
+                    return mainWin;
                 }
             }
+            catch (Exception ex)
+            {
+                ThreadTrace.WriteException(ex);
+            }
+            return null;
         }
-
-        /// <summary>
-        /// ウィンドウタイトルを取得する。
-        /// </summary>
-        /// <param name="window">
-        /// ウィンドウを表す <see cref="AppVar"/> 。
-        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装から
-        /// <see cref="EnumerateWindows"/> の列挙値以外が渡されることはない。
-        /// </param>
-        /// <returns>ウィンドウタイトル。取得できなければ null 。</returns>
-        protected override sealed string GetWindowTitle(AppVar window) =>
-            (string)window.Dynamic().Title;
-
-        #endregion
     }
 }

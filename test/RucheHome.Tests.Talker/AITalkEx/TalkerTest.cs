@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using RucheHome.Talker;
 using RucheHome.Talker.AITalkEx;
 using AI = RucheHome.Talker.AITalkEx;
 
-namespace RucheHome.Talker.Tests.AITalkEx
+namespace RucheHome.Tests.Talker.AITalkEx
 {
     /// <summary>
     /// <see cref="AI.Talker"/> クラスのテストクラス。

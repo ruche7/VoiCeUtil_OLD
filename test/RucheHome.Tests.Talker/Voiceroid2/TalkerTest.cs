@@ -2,10 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using RucheHome.Talker;
 using RucheHome.Talker.Voiceroid2;
 using V2 = RucheHome.Talker.Voiceroid2;
 
-namespace RucheHome.Talker.Tests.Voiceroid2
+namespace RucheHome.Tests.Talker.Voiceroid2
 {
     [TestClass]
     public class TalkerTest : ProcessTalkerTestBase<V2.Talker>

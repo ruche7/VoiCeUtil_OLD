@@ -1,11 +1,11 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-[assembly: AssemblyTitle("RucheHome.Talker.Tests")]
+[assembly: AssemblyTitle("RucheHome.Tests.Talker")]
 [assembly: AssemblyDescription("The test project for under RucheHome.Talker namespace.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("ruche-home")]
-[assembly: AssemblyProduct("RucheHome.Talker.Tests")]
+[assembly: AssemblyProduct("RucheHome.Tests.Talker")]
 [assembly: AssemblyCopyright("Copyright (C) 2017 ruche.")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]

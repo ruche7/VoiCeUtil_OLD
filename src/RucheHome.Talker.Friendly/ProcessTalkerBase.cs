@@ -261,51 +261,6 @@ namespace RucheHome.Talker.Friendly
         private WindowsAppFriend targetApp = null;
 
         /// <summary>
-        /// メインウィンドウを検索する。
-        /// </summary>
-        /// <returns>メインウィンドウ。見つからなかった場合は null 。</returns>
-        protected AppVar FindMainWindow()
-        {
-            var app = this.TargetApp;
-            if (app == null)
-            {
-                return null;
-            }
-
-            try
-            {
-                var mainWins =
-                    this.EnumerateWindows(app)
-                        .Where(
-                            win =>
-                            {
-                                try
-                                {
-                                    var kind =
-                                        this.CheckWindowTitleKind(this.GetWindowTitle(win));
-                                    return (kind == WindowTitleKind.Main);
-                                }
-                                catch (Exception ex)
-                                {
-                                    ThreadTrace.WriteException(ex);
-                                }
-                                return false;
-                            });
-
-                if (mainWins.Any())
-                {
-                    return mainWins.First();
-                }
-            }
-            catch (Exception ex)
-            {
-                ThreadTrace.WriteException(ex);
-            }
-
-            return null;
-        }
-
-        /// <summary>
         /// 引数値が型 T およびその派生型ならばキャストし、
         /// そうでなければ第1引数に引数値をとる T のコンストラクタ呼び出しを行う。
         /// </summary>
@@ -403,32 +358,6 @@ namespace RucheHome.Talker.Friendly
         }
 
         #region 要オーバライド
-
-        /// <summary>
-        /// 現在表示されているウィンドウを列挙する。
-        /// </summary>
-        /// <param name="app">
-        /// 操作対象アプリ。
-        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装から
-        /// null や操作対象外アプリが渡されることはない。
-        /// </param>
-        /// <returns>ウィンドウを表す <see cref="AppVar"/> 列挙。</returns>
-        protected abstract IEnumerable<AppVar> EnumerateWindows(WindowsAppFriend app);
-
-        /// <summary>
-        /// ウィンドウタイトルを取得する。
-        /// </summary>
-        /// <param name="window">
-        /// ウィンドウを表す <see cref="AppVar"/> 。
-        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装から
-        /// <see cref="EnumerateWindows"/> の列挙値以外が渡されることはない。
-        /// </param>
-        /// <returns>ウィンドウタイトル。</returns>
-        /// <remarks>
-        /// 既定では <see cref="WindowControl"/> を用いる。
-        /// </remarks>
-        protected virtual string GetWindowTitle(AppVar window) =>
-            new WindowControl(window).GetWindowText();
 
         /// <summary>
         /// ウィンドウタイトル種別を調べる。

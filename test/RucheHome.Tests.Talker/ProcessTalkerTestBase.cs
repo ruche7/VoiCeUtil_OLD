@@ -1,8 +1,9 @@
 ﻿using System;
 using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using RucheHome.Talker;
 
-namespace RucheHome.Talker.Tests
+namespace RucheHome.Tests.Talker
 {
     /// <summary>
     /// <see cref="IProcessTalker"/> 実装クラスに共通するテストを提供する抽象クラス。

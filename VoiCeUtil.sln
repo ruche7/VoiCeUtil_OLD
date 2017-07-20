@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.15
+VisualStudioVersion = 15.0.26430.16
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Talker", "src\RucheHome.Talker\RucheHome.Talker.csproj", "{44F2FF62-F248-4B1A-9F9E-1CEEFDE5E6E6}"
 EndProject
@@ -10,8 +10,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{2EBE5B3F-BD10-4056-B386-B251471D02E8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Talker.AITalkEx", "src\RucheHome.Talker.AITalkEx\RucheHome.Talker.AITalkEx.csproj", "{7B3AD7E7-FC97-422B-9B3B-DD5471EAFF83}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Talker.Tests", "test\RucheHome.Talker.Tests\RucheHome.Talker.Tests.csproj", "{A5F01152-B185-454A-B9B1-10E0E60B5C6D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Core", "src\RucheHome.Core\RucheHome.Core.csproj", "{33AB6685-2E0E-49E2-86FE-15385EC365C6}"
 EndProject
@@ -22,6 +20,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Talker.Friendly", "src\RucheHome.Talker.Friendly\RucheHome.Talker.Friendly.csproj", "{55B9ED13-F7F6-4A9A-9408-9C4449D50350}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Talker.CeVIO", "src\RucheHome.Talker.CeVIO\RucheHome.Talker.CeVIO.csproj", "{AA29CE29-4FE9-47AB-96CB-AB7B68F42FBB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Tests.Talker", "test\RucheHome.Tests.Talker\RucheHome.Tests.Talker.csproj", "{A5F01152-B185-454A-B9B1-10E0E60B5C6D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -37,10 +37,6 @@ Global
 		{7B3AD7E7-FC97-422B-9B3B-DD5471EAFF83}.Debug|x86.Build.0 = Debug|x86
 		{7B3AD7E7-FC97-422B-9B3B-DD5471EAFF83}.Release|x86.ActiveCfg = Release|x86
 		{7B3AD7E7-FC97-422B-9B3B-DD5471EAFF83}.Release|x86.Build.0 = Release|x86
-		{A5F01152-B185-454A-B9B1-10E0E60B5C6D}.Debug|x86.ActiveCfg = Debug|x86
-		{A5F01152-B185-454A-B9B1-10E0E60B5C6D}.Debug|x86.Build.0 = Debug|x86
-		{A5F01152-B185-454A-B9B1-10E0E60B5C6D}.Release|x86.ActiveCfg = Release|x86
-		{A5F01152-B185-454A-B9B1-10E0E60B5C6D}.Release|x86.Build.0 = Release|x86
 		{33AB6685-2E0E-49E2-86FE-15385EC365C6}.Debug|x86.ActiveCfg = Debug|Any CPU
 		{33AB6685-2E0E-49E2-86FE-15385EC365C6}.Debug|x86.Build.0 = Debug|Any CPU
 		{33AB6685-2E0E-49E2-86FE-15385EC365C6}.Release|x86.ActiveCfg = Release|Any CPU
@@ -61,6 +57,10 @@ Global
 		{AA29CE29-4FE9-47AB-96CB-AB7B68F42FBB}.Debug|x86.Build.0 = Debug|x86
 		{AA29CE29-4FE9-47AB-96CB-AB7B68F42FBB}.Release|x86.ActiveCfg = Release|x86
 		{AA29CE29-4FE9-47AB-96CB-AB7B68F42FBB}.Release|x86.Build.0 = Release|x86
+		{A5F01152-B185-454A-B9B1-10E0E60B5C6D}.Debug|x86.ActiveCfg = Debug|x86
+		{A5F01152-B185-454A-B9B1-10E0E60B5C6D}.Debug|x86.Build.0 = Debug|x86
+		{A5F01152-B185-454A-B9B1-10E0E60B5C6D}.Release|x86.ActiveCfg = Release|x86
+		{A5F01152-B185-454A-B9B1-10E0E60B5C6D}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -68,11 +68,11 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{44F2FF62-F248-4B1A-9F9E-1CEEFDE5E6E6} = {87905CE9-795C-44B6-86AA-1DA5A1D2F3B9}
 		{7B3AD7E7-FC97-422B-9B3B-DD5471EAFF83} = {87905CE9-795C-44B6-86AA-1DA5A1D2F3B9}
-		{A5F01152-B185-454A-B9B1-10E0E60B5C6D} = {2EBE5B3F-BD10-4056-B386-B251471D02E8}
 		{33AB6685-2E0E-49E2-86FE-15385EC365C6} = {87905CE9-795C-44B6-86AA-1DA5A1D2F3B9}
 		{2FE0815F-364A-409E-A34E-39880676A693} = {87905CE9-795C-44B6-86AA-1DA5A1D2F3B9}
 		{7F61A3DE-15C7-4B95-A797-718F1DD063F6} = {87905CE9-795C-44B6-86AA-1DA5A1D2F3B9}
 		{55B9ED13-F7F6-4A9A-9408-9C4449D50350} = {87905CE9-795C-44B6-86AA-1DA5A1D2F3B9}
 		{AA29CE29-4FE9-47AB-96CB-AB7B68F42FBB} = {87905CE9-795C-44B6-86AA-1DA5A1D2F3B9}
+		{A5F01152-B185-454A-B9B1-10E0E60B5C6D} = {2EBE5B3F-BD10-4056-B386-B251471D02E8}
 	EndGlobalSection
 EndGlobal
