@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using System.Windows;
 using System.Windows.Controls;
 using Codeer.Friendly;
 using Codeer.Friendly.Dynamic;
@@ -14,6 +13,7 @@ using Codeer.Friendly.Windows.NativeStandardControls;
 using RM.Friendly.WPFStandardControls;
 using RucheHome.Diagnostics;
 using RucheHome.Talker.Friendly;
+using RucheHome.Talker.Voiceroid2.Internal;
 
 namespace RucheHome.Talker.Voiceroid2
 {
@@ -230,14 +230,12 @@ namespace RucheHome.Talker.Voiceroid2
         }
 
         /// <summary>
-        /// ウィンドウ下部の操作タブコントロールを取得する。
+        /// パラメータIDに対応するタブアイテム名を取得する。
         /// </summary>
-        /// <param name="mainWindow">メインウィンドウ。</param>
-        /// <returns>コントロール。取得できなかった場合は null 。</returns>
-        private static WPFTabControl GetOperationTabControl(AppVar mainWindow) =>
-            GetByFunc(
-                mainWindow,
-                win => new WPFTabControl(win.Content.Children[1].Children[2]));
+        /// <param name="parameterId">パラメータID。</param>
+        /// <returns>タブアイテム名。引数値が不正ならば空文字列。</returns>
+        private static string GetParameterTabItemName(ParameterId parameterId) =>
+            parameterId.IsMaster() ? @"マスター" : parameterId.IsPreset() ? @"ボイス" : @"";
 
         /// <summary>
         /// ボイスプリセットタブコントロールに対する処理を行うデリゲート型。
@@ -339,109 +337,28 @@ namespace RucheHome.Talker.Voiceroid2
         }
 
         /// <summary>
-        /// パラメータを保持するスライダーに対する処理を行うデリゲート。
+        /// <see cref="ProcessParameterSliders{T}"/> メソッドの実処理インスタンス。
         /// </summary>
-        /// <typeparam name="T">処理結果値の型。</typeparam>
-        /// <param name="id">パラメータID。</param>
-        /// <param name="slider">スライダー。</param>
-        /// <returns>
-        /// 処理結果値。
-        /// failMessage は成功ならば null 、失敗ならばエラーメッセージとすること。
-        /// </returns>
-        private delegate (T result, string failMessage) ParameterDelegate<T>(
-            ParameterId id,
-            WPFSlider slider);
-
-        /// <summary>
-        /// パラメータの属するGUIグループを定義する列挙。
-        /// </summary>
-        private enum ParameterGuiGroup
-        {
-            /// <summary>
-            /// マスター設定の音声効果関連。
-            /// </summary>
-            MasterEffect,
-
-            /// <summary>
-            /// マスター設定のポーズ関連。
-            /// </summary>
-            MasterPause,
-
-            /// <summary>
-            /// ボイスプリセット設定の音声効果関連。
-            /// </summary>
-            PresetEffect,
-
-            /// <summary>
-            /// ボイスプリセット設定の感情関連。
-            /// </summary>
-            PresetEmotion,
-        }
-
-        /// <summary>
-        /// GUIグループ別パラメータID配列ディクショナリ。
-        /// </summary>
-        private static readonly Dictionary<ParameterGuiGroup, ParameterId[]>
-        ParameterGuiGroupIds =
-            new Dictionary<ParameterGuiGroup, ParameterId[]>
-            {
-                {
-                    ParameterGuiGroup.MasterEffect,
-                    new[]
-                    {
-                        ParameterId.Volume,
-                        ParameterId.Speed,
-                        ParameterId.Tone,
-                        ParameterId.Intonation,
-                    }
-                },
-                {
-                    ParameterGuiGroup.MasterPause,
-                    new[]
-                    {
-                        ParameterId.PauseShort,
-                        ParameterId.PauseLong,
-                        ParameterId.PauseSentence,
-                    }
-                },
-                {
-                    ParameterGuiGroup.PresetEffect,
-                    new[]
-                    {
-                        ParameterId.PresetVolume,
-                        ParameterId.PresetSpeed,
-                        ParameterId.PresetTone,
-                        ParameterId.PresetIntonation,
-                    }
-                },
-                {
-                    ParameterGuiGroup.PresetEmotion,
-                    new[]
-                    {
-                        ParameterId.PresetJoy,
-                        ParameterId.PresetAnger,
-                        ParameterId.PresetSorrow,
-                    }
-                }
-            };
+        private static ParameterSliderProcessor ParameterSliderProcessor { get; } =
+            new ParameterSliderProcessor();
 
         /// <summary>
         /// パラメータを保持するスライダー群に対して処理を行う。
         /// </summary>
         /// <typeparam name="T">処理結果値の型。</typeparam>
-        /// <param name="processor">
+        /// <param name="executer">
         /// 処理デリゲート。
-        /// 戻り値の failMessage は成功ならば null 、失敗ならばエラーメッセージとすること。
+        /// 戻り値の Message は成功ならば null 、失敗ならばエラーメッセージとすること。
         /// </param>
         /// <param name="targetParameterIds">
-        /// 取得対象パラメータID列挙。 null ならばすべて対象。
+        /// 処理対象パラメータID列挙。 null ならばすべて対象。
         /// </param>
         /// <returns>処理結果のディクショナリ。失敗した場合は null 。</returns>
         private Result<Dictionary<ParameterId, T>> ProcessParameterSliders<T>(
-            ParameterDelegate<T> processor,
+            ParameterSliderProcessor.Executer<T> executer,
             IEnumerable<ParameterId> targetParameterIds = null)
         {
-            ArgumentValidation.IsNotNull(processor, nameof(processor));
+            ArgumentValidation.IsNotNull(executer, nameof(executer));
 
             // メインウィンドウを検索
             var mainWin = this.FindMainWindow();
@@ -450,179 +367,7 @@ namespace RucheHome.Talker.Voiceroid2
                 return (null, @"本体のウィンドウが見つかりません。");
             }
 
-            // タブコントロールを取得
-            var tabControl = GetOperationTabControl(mainWin);
-            if (tabControl == null)
-            {
-                return (null, @"本体のタブページが見つかりません。");
-            }
-
-            // タブアイテムコレクションを取得
-            dynamic tabItems;
-            try
-            {
-                tabItems = tabControl.Dynamic().Items;
-            }
-            catch (Exception ex)
-            {
-                ThreadTrace.WriteException(ex);
-                return (null, @"本体のタブページが見つかりません。");
-            }
-
-            var dict = new Dictionary<ParameterId, T>();
-
-            var allIds = targetParameterIds ?? ParameterIdExtension.AllValues;
-
-            // マスタータブ
-            var masterEffects =
-                ParameterGuiGroupIds[ParameterGuiGroup.MasterEffect]
-                    .Select((id, index) => (id: id, index: index))
-                    .Where(v => allIds.Contains(v.id));
-            var masterPauses =
-                ParameterGuiGroupIds[ParameterGuiGroup.MasterPause]
-                    .Select((id, index) => (id: id, index: index))
-                    .Where(v => allIds.Contains(v.id));
-            if (masterEffects.Any() || masterPauses.Any())
-            {
-                var sliders = new Dictionary<ParameterId, WPFSlider>();
-
-                try
-                {
-                    var bases = tabItems[0].Content.Content.Children[0].Content.Children;
-                    if (masterEffects.Any())
-                    {
-                        var children = bases[1].Children;
-                        foreach (var v in masterEffects)
-                        {
-                            sliders.Add(
-                                v.id,
-                                new WPFSlider(children[v.index].Content.Children[2]));
-                        }
-                    }
-                    if (masterPauses.Any())
-                    {
-                        var children = bases[3].Children;
-                        foreach (var v in masterPauses)
-                        {
-                            sliders.Add(
-                                v.id,
-                                new WPFSlider(children[v.index].Content.Children[2]));
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    ThreadTrace.WriteException(ex);
-                    return (null, @"本体のマスタータブのスライダーが見つかりませんでした。");
-                }
-
-                foreach (var s in sliders)
-                {
-                    var (result, failMessage) = processor(s.Key, s.Value);
-                    if (failMessage != null)
-                    {
-                        return (null, failMessage);
-                    }
-
-                    dict.Add(s.Key, result);
-                }
-            }
-
-            // ボイスタブ
-            var presetEffects =
-                ParameterGuiGroupIds[ParameterGuiGroup.PresetEffect]
-                    .Select((id, index) => (id: id, index: index))
-                    .Where(v => allIds.Contains(v.id));
-            var presetEmotions =
-                ParameterGuiGroupIds[ParameterGuiGroup.PresetEmotion]
-                    .Select((id, index) => (id: id, index: index))
-                    .Where(v => allIds.Contains(v.id));
-            if (presetEffects.Any() || presetEmotions.Any())
-            {
-                var sliders = new Dictionary<ParameterId, WPFSlider>();
-                int tabIndex = -1;
-
-                try
-                {
-                    try
-                    {
-                        var bases = tabItems[1].Content.Content.Children[2].Content.Children;
-                        if (presetEffects.Any())
-                        {
-                            var children = bases[1].Children;
-                            foreach (var v in presetEffects)
-                            {
-                                sliders.Add(
-                                    v.id,
-                                    new WPFSlider(children[v.index].Content.Children[2]));
-                            }
-                        }
-                        if (presetEmotions.Any())
-                        {
-                            var baseListBox = new WPFListBox(bases[5]);
-
-                            // 感情は表示されている場合のみ処理可能
-                            if (baseListBox.Visibility == Visibility.Visible)
-                            {
-                                // 直接 Items をいじるのが手っ取り早いのだが、
-                                // VOICEROID2定義の型を操作することになるのでやめておく。
-
-                                var ti = tabControl.SelectedIndex;
-                                if (ti != 1)
-                                {
-                                    // 元のタブインデックスを保存してボイスタブ選択
-                                    tabIndex = ti;
-                                    tabControl.EmulateChangeSelectedIndex(1);
-                                }
-
-                                // ビジュアルツリーからスライダーリストを得る
-                                var children = baseListBox.VisualTree().ByType<Slider>();
-
-                                foreach (var v in presetEmotions)
-                                {
-                                    sliders.Add(v.id, new WPFSlider(children[v.index]));
-                                }
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        ThreadTrace.WriteException(ex);
-                        return (
-                            null,
-                            @"本体のボイスタブのスライダーが見つかりませんでした。");
-                    }
-
-                    foreach (var s in sliders)
-                    {
-                        var (result, failMessage) = processor(s.Key, s.Value);
-                        if (failMessage != null)
-                        {
-                            return (null, failMessage);
-                        }
-
-                        dict.Add(s.Key, result);
-                    }
-                }
-                finally
-                {
-                    // 元のタブを選択する
-                    // 失敗してもよい
-                    if (tabIndex >= 0)
-                    {
-                        try
-                        {
-                            tabControl.EmulateChangeSelectedIndex(tabIndex);
-                        }
-                        catch (Exception ex)
-                        {
-                            ThreadDebug.WriteException(ex);
-                        }
-                    }
-                }
-            }
-
-            return dict;
+            return ParameterSliderProcessor.Execute(mainWin, executer, targetParameterIds);
         }
 
         /// <summary>
@@ -974,13 +719,11 @@ namespace RucheHome.Talker.Voiceroid2
         protected override Result<Dictionary<ParameterId, decimal>> GetParametersImpl()
         {
             // パラメータ値を取得するローカルメソッド
-            (decimal result, string failMessage) getParameter(
-                ParameterId id,
-                WPFSlider slider)
+            Result<decimal> getParameter(ParameterId id, WPFSlider slider)
             {
                 try
                 {
-                    return ((decimal)slider.Value, null);
+                    return (decimal)slider.Value;
                 }
                 catch (Exception ex)
                 {
@@ -988,8 +731,8 @@ namespace RucheHome.Talker.Voiceroid2
                 }
                 return (
                     0,
-                    (id.IsMaster() ? @"マスター" : @"ボイス") + @"タブの" +
-                    id.GetInfo().DisplayName + @"の値が不正です。");
+                    GetParameterTabItemName(id) + @"タブの" +
+                    id.GetInfo().DisplayName + @"値を取得できませんでした。");
             }
 
             try
@@ -1018,16 +761,11 @@ namespace RucheHome.Talker.Voiceroid2
             IEnumerable<KeyValuePair<ParameterId, decimal>> parameters)
         {
             // setParameter の戻り値を作成するローカルメソッド
-            (Result<bool> result, string failMessage) makeSetParameterResult(
-                bool value,
-                string message = null)
-                =>
+            Result<Result<bool>> makeSetParameterResult(bool value, string message = null) =>
                 (new Result<bool>(value, message), null);
 
             // パラメータ値を設定するローカルメソッド
-            (Result<bool> result, string failMessage) setParameter(
-                ParameterId id,
-                WPFSlider slider)
+            Result<Result<bool>> setParameter(ParameterId id, WPFSlider slider)
             {
                 var value = parameters.First(kv => kv.Key == id).Value;
                 var info = id.GetInfo();
@@ -1039,7 +777,8 @@ namespace RucheHome.Talker.Voiceroid2
                     return
                         makeSetParameterResult(
                             false,
-                            $@"最小許容値 {info.MinValue.ToString(format)} " +
+                            GetParameterTabItemName(id) + @"タブの" +
+                            $@"{info.DisplayName}値に {info.MinValue.ToString(format)} " +
                             $@"より小さい値 {value.ToString(format)} は設定できません。");
                 }
                 if (value > info.MaxValue)
@@ -1047,14 +786,14 @@ namespace RucheHome.Talker.Voiceroid2
                     return
                         makeSetParameterResult(
                             false,
-                            $@"最大許容値 {info.MaxValue.ToString(format)} " +
+                            GetParameterTabItemName(id) + @"タブの" +
+                            $@"{info.DisplayName}値に {info.MaxValue.ToString(format)} " +
                             $@"より大きい値 {value.ToString(format)} は設定できません。");
                 }
 
                 try
                 {
                     slider.EmulateChangeValue((double)value);
-                    return makeSetParameterResult(true);
                 }
                 catch (Exception ex)
                 {
@@ -1064,6 +803,8 @@ namespace RucheHome.Talker.Voiceroid2
                             false,
                             ex.Message ?? (ex.GetType().Name + @" 例外が発生しました。"));
                 }
+
+                return makeSetParameterResult(true);
             }
 
             try
