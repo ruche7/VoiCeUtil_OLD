@@ -353,6 +353,79 @@ namespace RucheHome.Talker.Voiceroid2
             WPFSlider slider);
 
         /// <summary>
+        /// パラメータの属するGUIグループを定義する列挙。
+        /// </summary>
+        private enum ParameterGuiGroup
+        {
+            /// <summary>
+            /// マスター設定の音声効果関連。
+            /// </summary>
+            MasterEffect,
+
+            /// <summary>
+            /// マスター設定のポーズ関連。
+            /// </summary>
+            MasterPause,
+
+            /// <summary>
+            /// ボイスプリセット設定の音声効果関連。
+            /// </summary>
+            PresetEffect,
+
+            /// <summary>
+            /// ボイスプリセット設定の感情関連。
+            /// </summary>
+            PresetEmotion,
+        }
+
+        /// <summary>
+        /// GUIグループ別パラメータID配列ディクショナリ。
+        /// </summary>
+        private static readonly Dictionary<ParameterGuiGroup, ParameterId[]>
+        ParameterGuiGroupIds =
+            new Dictionary<ParameterGuiGroup, ParameterId[]>
+            {
+                {
+                    ParameterGuiGroup.MasterEffect,
+                    new[]
+                    {
+                        ParameterId.Volume,
+                        ParameterId.Speed,
+                        ParameterId.Tone,
+                        ParameterId.Intonation,
+                    }
+                },
+                {
+                    ParameterGuiGroup.MasterPause,
+                    new[]
+                    {
+                        ParameterId.PauseShort,
+                        ParameterId.PauseLong,
+                        ParameterId.PauseSentence,
+                    }
+                },
+                {
+                    ParameterGuiGroup.PresetEffect,
+                    new[]
+                    {
+                        ParameterId.PresetVolume,
+                        ParameterId.PresetSpeed,
+                        ParameterId.PresetTone,
+                        ParameterId.PresetIntonation,
+                    }
+                },
+                {
+                    ParameterGuiGroup.PresetEmotion,
+                    new[]
+                    {
+                        ParameterId.PresetJoy,
+                        ParameterId.PresetAnger,
+                        ParameterId.PresetSorrow,
+                    }
+                }
+            };
+
+        /// <summary>
         /// パラメータを保持するスライダー群に対して処理を行う。
         /// </summary>
         /// <typeparam name="T">処理結果値の型。</typeparam>
@@ -399,15 +472,16 @@ namespace RucheHome.Talker.Voiceroid2
             var dict = new Dictionary<ParameterId, T>();
 
             var allIds = targetParameterIds ?? ParameterIdExtension.AllValues;
-            var allIdGroups = allIds.Select(id => (id: id, gi: id.GetGuiGroup()));
 
             // マスタータブ
             var masterEffects =
-                allIdGroups.Where(
-                    v => v.gi.group == ParameterIdExtension.GuiGroup.MasterEffect);
+                ParameterGuiGroupIds[ParameterGuiGroup.MasterEffect]
+                    .Select((id, index) => (id: id, index: index))
+                    .Where(v => allIds.Contains(v.id));
             var masterPauses =
-                allIdGroups.Where(
-                    v => v.gi.group == ParameterIdExtension.GuiGroup.MasterPause);
+                ParameterGuiGroupIds[ParameterGuiGroup.MasterPause]
+                    .Select((id, index) => (id: id, index: index))
+                    .Where(v => allIds.Contains(v.id));
             if (masterEffects.Any() || masterPauses.Any())
             {
                 var sliders = new Dictionary<ParameterId, WPFSlider>();
@@ -422,7 +496,7 @@ namespace RucheHome.Talker.Voiceroid2
                         {
                             sliders.Add(
                                 v.id,
-                                new WPFSlider(children[v.gi.index].Content.Children[2]));
+                                new WPFSlider(children[v.index].Content.Children[2]));
                         }
                     }
                     if (masterPauses.Any())
@@ -432,7 +506,7 @@ namespace RucheHome.Talker.Voiceroid2
                         {
                             sliders.Add(
                                 v.id,
-                                new WPFSlider(children[v.gi.index].Content.Children[2]));
+                                new WPFSlider(children[v.index].Content.Children[2]));
                         }
                     }
                 }
@@ -456,11 +530,13 @@ namespace RucheHome.Talker.Voiceroid2
 
             // ボイスタブ
             var presetEffects =
-                allIdGroups.Where(
-                    v => v.gi.group == ParameterIdExtension.GuiGroup.PresetEffect);
+                ParameterGuiGroupIds[ParameterGuiGroup.PresetEffect]
+                    .Select((id, index) => (id: id, index: index))
+                    .Where(v => allIds.Contains(v.id));
             var presetEmotions =
-                allIdGroups.Where(
-                    v => v.gi.group == ParameterIdExtension.GuiGroup.PresetEmotion);
+                ParameterGuiGroupIds[ParameterGuiGroup.PresetEmotion]
+                    .Select((id, index) => (id: id, index: index))
+                    .Where(v => allIds.Contains(v.id));
             if (presetEffects.Any() || presetEmotions.Any())
             {
                 var sliders = new Dictionary<ParameterId, WPFSlider>();
@@ -478,7 +554,7 @@ namespace RucheHome.Talker.Voiceroid2
                             {
                                 sliders.Add(
                                     v.id,
-                                    new WPFSlider(children[v.gi.index].Content.Children[2]));
+                                    new WPFSlider(children[v.index].Content.Children[2]));
                             }
                         }
                         if (presetEmotions.Any())
@@ -501,9 +577,10 @@ namespace RucheHome.Talker.Voiceroid2
 
                                 // ビジュアルツリーからスライダーリストを得る
                                 var children = baseListBox.VisualTree().ByType<Slider>();
+
                                 foreach (var v in presetEmotions)
                                 {
-                                    sliders.Add(v.id, new WPFSlider(children[v.gi.index]));
+                                    sliders.Add(v.id, new WPFSlider(children[v.index]));
                                 }
                             }
                         }
@@ -911,7 +988,7 @@ namespace RucheHome.Talker.Voiceroid2
                 }
                 return (
                     0,
-                    id.GetTabItemName() + @"タブの" +
+                    (id.IsMaster() ? @"マスター" : @"ボイス") + @"タブの" +
                     id.GetInfo().DisplayName + @"の値が不正です。");
             }
 

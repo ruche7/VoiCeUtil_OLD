@@ -68,10 +68,8 @@ namespace RucheHome.Talker.AITalkEx
         /// </summary>
         static ParameterIdExtension()
         {
-            // Infos, ControlsTreeIndices に全列挙値が含まれているか確認
-            Debug.Assert(
-                AllValues.All(
-                    p => Infos.ContainsKey(p) && ControlsTreeIndices.ContainsKey(p)));
+            // Infos に全列挙値が含まれているか確認
+            Debug.Assert(AllValues.All(p => Infos.ContainsKey(p)));
 
             // 全列挙値が音声効果設定またはボイスプリセット設定であることを確認
             Debug.Assert(AllValues.All(p => p.IsEffect() || p.IsPause()));
@@ -109,24 +107,6 @@ namespace RucheHome.Talker.AITalkEx
             (self >= ParameterId.PauseShort && self <= ParameterId.PauseEnd);
 
         /// <summary>
-        /// タブページを基準とするテキストボックスの
-        /// Controls プロパティツリーインデックス配列を取得する。
-        /// </summary>
-        /// <param name="self">パラメータID。</param>
-        /// <returns>Zオーダーインデックス配列。引数値が無効ならば null 。</returns>
-        internal static int[] GetControlsTreeIndices(this ParameterId self) =>
-            ControlsTreeIndices.TryGetValue(self, out var indices) ?
-                (int[])indices.Clone() : null;
-
-        /// <summary>
-        /// タブページ名を取得する。
-        /// </summary>
-        /// <param name="self">パラメータID。</param>
-        /// <returns>タブページ名。引数値が無効ならば null 。</returns>
-        internal static string GetTabPageName(this ParameterId self) =>
-            self.IsEffect() ? @"音声効果" : (self.IsPause() ? @"ポーズ" : null);
-
-        /// <summary>
         /// パラメータ情報ディクショナリ。
         /// </summary>
         private static readonly Dictionary<ParameterId, ParameterInfo<ParameterId>> Infos =
@@ -152,26 +132,5 @@ namespace RucheHome.Talker.AITalkEx
                     ParameterId.PauseEnd, @"終了ポーズ", 0, 0, 0, 10000),
             }
             .ToDictionary(pi => pi.Id);
-
-        /// <summary>
-        /// タブページを基準とするテキストボックスの
-        /// Controls プロパティツリーインデックス配列ディクショナリ。
-        /// </summary>
-        private static readonly Dictionary<ParameterId, int[]> ControlsTreeIndices =
-            new Dictionary<ParameterId, int[]>
-            {
-                // 音声効果
-                { ParameterId.Volume, new[] { 0, 7 } },
-                { ParameterId.Speed, new[] { 0, 6 } },
-                { ParameterId.Tone, new[] { 0, 5 } },
-                { ParameterId.Intonation, new[] { 0, 4 } },
-
-                // ポーズ
-                { ParameterId.PauseShort, new[] { 0, 13, 1 } },
-                { ParameterId.PauseLong, new[] { 0, 11, 1 } },
-                { ParameterId.PauseSentence, new[] { 0, 15, 1 } },
-                { ParameterId.PauseBegin, new[] { 0, 9, 1 } },
-                { ParameterId.PauseEnd, new[] { 0, 8, 1 } },
-            };
     }
 }

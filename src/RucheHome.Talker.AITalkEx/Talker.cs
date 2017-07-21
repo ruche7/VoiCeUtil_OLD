@@ -135,6 +135,37 @@ namespace RucheHome.Talker.AITalkEx
             GetControlFromControlsTree<FormsTabControl>(mainWindow, 0, 1, 0, 1, 0);
 
         /// <summary>
+        /// パラメータを保持するタブページの情報配列。
+        /// </summary>
+        private static readonly
+        (int index, string name, Func<ParameterId, bool> idSelector)[]
+        ParameterTabPageInfos =
+            {
+                (2, @"音声効果", id => id.IsEffect()),
+                (3, @"ポーズ", id => id.IsPause()),
+            };
+
+        /// <summary>
+        /// パラメータIDごとの、タブページを基準とするテキストボックスの
+        /// Controls プロパティツリーインデックス配列ディクショナリ。
+        /// </summary>
+        private static readonly Dictionary<ParameterId, int[]> ParameterControlsTreeIndices =
+            new Dictionary<ParameterId, int[]>
+            {
+                // 音声効果
+                { ParameterId.Volume, new[] { 0, 7 } },
+                { ParameterId.Speed, new[] { 0, 6 } },
+                { ParameterId.Tone, new[] { 0, 5 } },
+                { ParameterId.Intonation, new[] { 0, 4 } },
+
+                // ポーズ
+                { ParameterId.PauseShort, new[] { 0, 13, 1 } },
+                { ParameterId.PauseLong, new[] { 0, 11, 1 } },
+                { ParameterId.PauseSentence, new[] { 0, 15, 1 } },
+                { ParameterId.PauseBegin, new[] { 0, 9, 1 } },
+                { ParameterId.PauseEnd, new[] { 0, 8, 1 } },
+            };
+        /// <summary>
         /// ウィンドウ下部のタブコントロールから、
         /// パラメータを保持するテキストボックスのディクショナリを取得する。
         /// </summary>
@@ -176,30 +207,24 @@ namespace RucheHome.Talker.AITalkEx
             try
             {
                 var allIds = targetParameterIds ?? ParameterIdExtension.AllValues;
-                var effectIds = allIds.Where(id => id.IsEffect());
-                var pauseIds = allIds.Where(id => id.IsPause());
 
-                (IEnumerable<ParameterId> ids, int tabIndex)[] tabs =
-                    new[] { (effectIds, 2), (pauseIds, 3) };
-
-                foreach (var tab in tabs)
+                foreach (var tab in ParameterTabPageInfos)
                 {
-                    if (!tab.ids.Any())
+                    // 対象パラメータID列挙取得
+                    var ids = allIds.Where(tab.idSelector);
+                    if (!ids.Any())
                     {
                         continue;
                     }
 
-                    // タブページ名取得
-                    var name = tab.ids.First().GetTabPageName();
-
                     // タブページ取得
-                    var page = FindTabPage(tabControl.AppVar, name);
+                    var page = FindTabPage(tabControl.AppVar, tab.name);
                     if (page == null)
                     {
                         // 一度も開いていない場合は取得できないので開いてみる
-                        tabControl.EmulateTabSelect(tab.tabIndex);
+                        tabControl.EmulateTabSelect(tab.index);
 
-                        page = FindTabPage(tabControl.AppVar, name);
+                        page = FindTabPage(tabControl.AppVar, tab.name);
                         if (page == null)
                         {
                             return (null, @"本体のタブページが見つかりません。");
@@ -207,17 +232,17 @@ namespace RucheHome.Talker.AITalkEx
                     }
 
                     // 各テキストボックス取得
-                    foreach (var id in tab.ids)
+                    foreach (var id in ids)
                     {
                         var textBox =
                             GetControlFromControlsTree<FormsTextBox>(
                                 page,
-                                id.GetControlsTreeIndices());
+                                ParameterControlsTreeIndices[id]);
                         if (textBox == null)
                         {
                             return (
                                 null,
-                                $@"本体の{name}タブの" +
+                                $@"本体の{tab.name}タブの" +
                                 $@"{id.GetInfo().DisplayName}入力欄が見つかりません。");
                         }
 
