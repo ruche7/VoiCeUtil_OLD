@@ -8,18 +8,18 @@ namespace RucheHome.Talker.CeVIO
     public interface ICreativeStudioOperationSetting
     {
         /// <summary>
-        /// タイムラインの選択変更を許容するか否かを取得または設定する。
+        /// トラックの選択変更を許容するか否かを取得または設定する。
         /// </summary>
         /// <remarks>
         /// <para>
-        /// トーク用タイムラインが選択されていない状態で各種操作を行おうとした際、
-        /// 自動的にトーク用タイムラインを選択してよいか否かの判断に利用される。
+        /// トーク用トラックが選択されていない状態で各種操作を行おうとした際、
+        /// 自動的にトーク用トラックを選択してよいか否かの判断に利用される。
         /// </para>
         /// <para>
         /// このプロパティ値が false であれば自動選択は行われず、操作は失敗する。
         /// </para>
         /// </remarks>
-        bool CanSelectTimeline { get; set; }
+        bool CanChangeTrack { get; set; }
 
         /// <summary>
         /// セリフグリッドに入力する際の入力対象行設定を取得または設定する。

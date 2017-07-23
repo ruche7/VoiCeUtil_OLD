@@ -256,7 +256,14 @@ namespace RucheHome.Talker.Friendly
         protected WindowsAppFriend TargetApp
         {
             get => this.targetApp;
-            private set => this.SetProperty(ref this.targetApp, value);
+            private set
+            {
+                if (value != this.targetApp)
+                {
+                    this.SetProperty(ref this.targetApp, value);
+                    this.OnTargetAppChanged();
+                }
+            }
         }
         private WindowsAppFriend targetApp = null;
 
@@ -369,9 +376,7 @@ namespace RucheHome.Talker.Friendly
         /// <summary>
         /// メインウィンドウがトップレベルである前提で、操作対象アプリの状態を調べる。
         /// </summary>
-        /// <param name="mainWindow">
-        /// メインウィンドウを表す <see cref="AppVar"/> 。必ずトップレベル。
-        /// </param>
+        /// <param name="mainWindow">メインウィンドウ。必ずトップレベル。</param>
         /// <returns>状態値。</returns>
         /// <remarks>
         /// このメソッドの戻り値によって
@@ -379,7 +384,18 @@ namespace RucheHome.Talker.Friendly
         /// プロパティ等が更新される。
         /// 状態値が <see cref="TalkerState.Fail"/> の場合は付随メッセージも利用される。
         /// </remarks>
-        protected abstract Result<TalkerState> CheckState(AppVar mainWindow);
+        protected abstract Result<TalkerState> CheckState(WindowControl mainWindow);
+
+        /// <summary>
+        /// <see cref="TargetApp"/> プロパティ値の変更時に呼び出される。
+        /// </summary>
+        /// <remarks>
+        /// 既定では何も行わない。
+        /// </remarks>
+        protected virtual void OnTargetAppChanged()
+        {
+            // 何もしない
+        }
 
         #endregion
 
@@ -513,7 +529,7 @@ namespace RucheHome.Talker.Friendly
                     WindowTitleKind.Main);
 
                 // 派生クラス処理で状態決定する
-                return this.CheckState(topWins[0].AppVar);
+                return this.CheckState(topWins[0]);
             }
             catch (FriendlyOperationException ex)
             {
@@ -622,7 +638,7 @@ namespace RucheHome.Talker.Friendly
         /// リソース破棄の実処理を行う。
         /// </summary>
         /// <param name="disposing">
-        /// Dispose メソッドから呼び出された場合は true 。
+        /// <see cref="Dispose()"/> メソッドから呼び出された場合は true 。
         /// </param>
         protected virtual void Dispose(bool disposing)
         {

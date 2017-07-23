@@ -169,18 +169,28 @@ namespace RucheHome.Talker.AITalkEx
         /// ウィンドウ下部のタブコントロールから、
         /// パラメータを保持するテキストボックスのディクショナリを取得する。
         /// </summary>
-        /// <param name="tabControl">タブコントロール。</param>
         /// <param name="targetParameterIds">
         /// 取得対象パラメータID列挙。 null ならばすべて対象。
+        /// </param>
+        /// <param name="mainWindow">
+        /// メインウィンドウ。 null ならばメソッド内で取得される。
         /// </param>
         /// <returns>
         /// テキストボックスのディクショナリ。取得できなかった場合は null 。
         /// </returns>
-        private static Result<Dictionary<ParameterId, FormsTextBox>>
-        GetTabControlParameterTextBoxes(
-            FormsTabControl tabControl,
-            IEnumerable<ParameterId> targetParameterIds = null)
+        private Result<Dictionary<ParameterId, FormsTextBox>> GetTabControlParameterTextBoxes(
+            IEnumerable<ParameterId> targetParameterIds = null,
+            AppVar mainWindow = null)
         {
+            // メインウィンドウを検索
+            var mainWin = mainWindow ?? this.FindMainWindow();
+            if (mainWin == null)
+            {
+                return (null, @"本体のウィンドウが見つかりません。");
+            }
+
+            // タブコントロールを取得
+            var tabControl = GetTabControl(mainWin);
             if (tabControl == null)
             {
                 return (null, @"本体のタブページが見つかりません。");
@@ -285,7 +295,7 @@ namespace RucheHome.Talker.AITalkEx
         /// </summary>
         private const string SaveProgressWindowTitle = @"音声保存";
 
-        #region FriendlyProcessTalkerBase<ParameterId> のオーバライド
+        #region Friendly.ProcessTalkerBase<ParameterId> のオーバライド
 
         /// <summary>
         /// ウィンドウタイトル種別を調べる。
@@ -303,13 +313,13 @@ namespace RucheHome.Talker.AITalkEx
             {
                 return WindowTitleKind.StartupOrCleanup;
             }
-            if (title == SaveFileDialogTitle || title == SaveProgressWindowTitle)
-            {
-                return WindowTitleKind.FileSaving;
-            }
             if (title.StartsWith(this.ProcessProduct))
             {
                 return WindowTitleKind.Main;
+            }
+            if (title == SaveFileDialogTitle || title == SaveProgressWindowTitle)
+            {
+                return WindowTitleKind.FileSaving;
             }
 
             return WindowTitleKind.Others;
@@ -320,11 +330,11 @@ namespace RucheHome.Talker.AITalkEx
         /// </summary>
         /// <param name="mainWindow">メインウィンドウ。必ずトップレベル。</param>
         /// <returns>状態値。</returns>
-        protected override Result<TalkerState> CheckState(AppVar mainWindow)
+        protected override Result<TalkerState> CheckState(WindowControl mainWindow)
         {
             // 音声保存ボタンを探す
             var saveButton =
-                GetMainButton(GetMainButtonsParent(mainWindow), MainButton.Save);
+                GetMainButton(GetMainButtonsParent(mainWindow.AppVar), MainButton.Save);
             if (saveButton == null)
             {
                 // ウィンドウ構築途中or破棄途中であると判断
@@ -436,22 +446,8 @@ namespace RucheHome.Talker.AITalkEx
         /// </returns>
         protected override Result<Dictionary<ParameterId, decimal>> GetParametersImpl()
         {
-            // メインウィンドウを検索
-            var mainWin = this.FindMainWindow();
-            if (mainWin == null)
-            {
-                return (null, @"本体のウィンドウが見つかりません。");
-            }
-
-            // タブコントロールを取得
-            var tabControl = GetTabControl(mainWin);
-            if (tabControl == null)
-            {
-                return (null, @"本体のタブページが見つかりません。");
-            }
-
             // パラメータテキストボックス群を取得
-            var (textBoxes, failMessage) = GetTabControlParameterTextBoxes(tabControl);
+            var (textBoxes, failMessage) = this.GetTabControlParameterTextBoxes();
             if (textBoxes == null)
             {
                 return (null, failMessage);
@@ -500,16 +496,11 @@ namespace RucheHome.Talker.AITalkEx
                 return (null, @"本体のウィンドウが見つかりません。");
             }
 
-            // タブコントロールを取得
-            var tabControl = GetTabControl(mainWin);
-            if (tabControl == null)
-            {
-                return (null, @"本体のタブページが見つかりません。");
-            }
-
             // パラメータテキストボックス群を取得
             var (textBoxes, failMessage) =
-                GetTabControlParameterTextBoxes(tabControl, parameters.Select(kv => kv.Key));
+                this.GetTabControlParameterTextBoxes(
+                    parameters.Select(kv => kv.Key),
+                    mainWin);
             if (textBoxes == null)
             {
                 return (null, failMessage);
@@ -573,11 +564,11 @@ namespace RucheHome.Talker.AITalkEx
             }
 
             // テキストボックスにフォーカスがあるうちはスライダーが更新されないので
-            // タブコントロールにフォーカスを移す
+            // ウィンドウにフォーカスを移す
             // 失敗してもよい
             try
             {
-                tabControl.SetFocus();
+                mainWin.Dynamic().Focus();
             }
             catch (Exception ex)
             {

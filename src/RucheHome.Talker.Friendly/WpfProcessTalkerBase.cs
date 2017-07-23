@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Windows;
 using Codeer.Friendly;
 using Codeer.Friendly.Dynamic;
-using Codeer.Friendly.Windows;
 using RucheHome.Diagnostics;
 
 namespace RucheHome.Talker.Friendly
@@ -50,14 +48,14 @@ namespace RucheHome.Talker.Friendly
         }
 
         /// <summary>
-        /// メインウィンドウを検索する。
+        /// メインウィンドウを取得する。
         /// </summary>
         /// <returns>メインウィンドウ。見つからなかった場合は null 。</returns>
         /// <remarks>
         /// 戻り値が有効である場合、本体側の
         /// <see cref="Window"/> オブジェクトを参照している。
         /// </remarks>
-        protected AppVar FindMainWindow()
+        protected AppVar GetMainWindow()
         {
             var app = this.TargetApp;
             if (app == null)

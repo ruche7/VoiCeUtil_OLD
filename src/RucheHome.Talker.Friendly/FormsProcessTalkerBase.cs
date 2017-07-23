@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Windows.Forms;
 using Codeer.Friendly;
 using Codeer.Friendly.Dynamic;
-using Codeer.Friendly.Windows;
 using RucheHome.Diagnostics;
 
 namespace RucheHome.Talker.Friendly

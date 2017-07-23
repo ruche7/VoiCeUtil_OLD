@@ -271,8 +271,8 @@ namespace RucheHome.Talker.Voiceroid2
         {
             ArgumentValidation.IsNotNull(processor, nameof(processor));
 
-            // メインウィンドウを検索
-            var mainWin = this.FindMainWindow();
+            // メインウィンドウを取得
+            var mainWin = this.GetMainWindow();
             if (mainWin == null)
             {
                 return (default(T), @"本体のウィンドウが見つかりません。");
@@ -360,8 +360,8 @@ namespace RucheHome.Talker.Voiceroid2
         {
             ArgumentValidation.IsNotNull(executer, nameof(executer));
 
-            // メインウィンドウを検索
-            var mainWin = this.FindMainWindow();
+            // メインウィンドウを取得
+            var mainWin = this.GetMainWindow();
             if (mainWin == null)
             {
                 return (null, @"本体のウィンドウが見つかりません。");
@@ -395,7 +395,7 @@ namespace RucheHome.Talker.Voiceroid2
         /// </summary>
         private const string SaveCompleteDialogTitle = @"情報";
 
-        #region FriendlyProcessTalkerBase<ParameterId> のオーバライド
+        #region Friendly.ProcessTalkerBase<ParameterId> のオーバライド
 
         /// <summary>
         /// ウィンドウタイトル種別を調べる。
@@ -413,16 +413,16 @@ namespace RucheHome.Talker.Voiceroid2
             {
                 return WindowTitleKind.StartupOrCleanup;
             }
+            if (title.StartsWith(this.TalkerName))
+            {
+                return WindowTitleKind.Main;
+            }
             if (
                 title == SaveOptionWindowTitle ||
                 title == SaveFileDialogTitle ||
                 title == SaveProgressWindowTitle)
             {
                 return WindowTitleKind.FileSaving;
-            }
-            if (title.StartsWith(this.TalkerName))
-            {
-                return WindowTitleKind.Main;
             }
 
             return WindowTitleKind.Others;
@@ -433,11 +433,11 @@ namespace RucheHome.Talker.Voiceroid2
         /// </summary>
         /// <param name="mainWindow">メインウィンドウ。必ずトップレベル。</param>
         /// <returns>状態値。</returns>
-        protected override Result<TalkerState> CheckState(AppVar mainWindow)
+        protected override Result<TalkerState> CheckState(WindowControl mainWindow)
         {
             // 音声保存ボタンを探す
             var saveButton =
-                GetMainButton(GetMainButtonsParent(mainWindow), MainButton.Save);
+                GetMainButton(GetMainButtonsParent(mainWindow.AppVar), MainButton.Save);
             if (saveButton == null)
             {
                 // ウィンドウ構築途中or破棄途中であると判断
@@ -635,8 +635,8 @@ namespace RucheHome.Talker.Voiceroid2
         /// <returns>文章。取得できなかった場合は null 。</returns>
         protected override Result<string> GetTextImpl()
         {
-            // メインウィンドウを検索
-            var mainWin = this.FindMainWindow();
+            // メインウィンドウを取得
+            var mainWin = this.GetMainWindow();
             if (mainWin == null)
             {
                 return (null, @"本体のウィンドウが見つかりません。");
@@ -672,8 +672,8 @@ namespace RucheHome.Talker.Voiceroid2
         /// <returns>成功したならば true 。そうでなければ false 。</returns>
         protected override Result<bool> SetTextImpl(string text)
         {
-            // メインウィンドウを検索
-            var mainWin = this.FindMainWindow();
+            // メインウィンドウを取得
+            var mainWin = this.GetMainWindow();
             if (mainWin == null)
             {
                 return (false, @"本体のウィンドウが見つかりません。");
@@ -827,8 +827,8 @@ namespace RucheHome.Talker.Voiceroid2
         /// <returns>成功したならば true 。そうでなければ false 。</returns>
         protected override Result<bool> SpeakImpl()
         {
-            // メインウィンドウを検索
-            var mainWin = this.FindMainWindow();
+            // メインウィンドウを取得
+            var mainWin = this.GetMainWindow();
             if (mainWin == null)
             {
                 return (false, @"本体のウィンドウが見つかりません。");
@@ -898,8 +898,8 @@ namespace RucheHome.Talker.Voiceroid2
         /// <returns>成功したか既に停止中ならば true 。そうでなければ false 。</returns>
         protected override Result<bool> StopImpl()
         {
-            // メインウィンドウを検索
-            var mainWin = this.FindMainWindow();
+            // メインウィンドウを取得
+            var mainWin = this.GetMainWindow();
             if (mainWin == null)
             {
                 return (false, @"本体のウィンドウが見つかりません。");
@@ -960,8 +960,8 @@ namespace RucheHome.Talker.Voiceroid2
                 waveFilePath += @".wav";
             }
 
-            // メインウィンドウを検索
-            var mainWin = this.FindMainWindow();
+            // メインウィンドウを取得
+            var mainWin = this.GetMainWindow();
             if (mainWin == null)
             {
                 return (null, @"本体のウィンドウが見つかりません。");
