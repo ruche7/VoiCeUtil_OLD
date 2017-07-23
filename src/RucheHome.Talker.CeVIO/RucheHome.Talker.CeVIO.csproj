@@ -75,6 +75,13 @@
     <Compile Include="CastSpeechInputRow.cs" />
     <Compile Include="Character.cs" />
     <Compile Include="ICreativeStudioOperationSetting.cs" />
+    <Compile Include="Internal\Controls\ControlPanel.cs" />
+    <Compile Include="Internal\Controls\ControlPanelKind.cs" />
+    <Compile Include="Internal\Controls\OperationPanel.cs" />
+    <Compile Include="Internal\Controls\PlayStopToggle.cs" />
+    <Compile Include="Internal\Controls\Root.cs" />
+    <Compile Include="Internal\Controls\SpeechDataGrid.cs" />
+    <Compile Include="Internal\Controls\TrackSelector.cs" />
     <Compile Include="ParameterId.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
