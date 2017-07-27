@@ -37,49 +37,39 @@ namespace RucheHome.Talker.CeVIO
         Intonation,
 
         /// <summary>
-        /// さとうささら : 元気
+        /// 感情 : 元気
         /// </summary>
-        SasaraActive,
+        EmotionFine,
 
         /// <summary>
-        /// さとうささら : 普通
+        /// 感情 : 普通
         /// </summary>
-        SasaraNormal,
+        EmotionNormal,
 
         /// <summary>
-        /// さとうささら : 怒り
+        /// 感情 : 怒り
         /// </summary>
-        SasaraAnger,
+        EmotionAngry,
 
         /// <summary>
-        /// さとうささら : 悲しみ
+        /// 感情 : 悲しみ
         /// </summary>
-        SasaraSorrow,
+        EmotionSad,
 
         /// <summary>
-        /// すずきつづみ : クール
+        /// 感情 : クール
         /// </summary>
-        TsuzumiCool,
+        EmotionCool,
 
         /// <summary>
-        /// すずきつづみ : 照れ
+        /// 感情 : 照れ
         /// </summary>
-        TsuzumiShy,
+        EmotionShy,
 
         /// <summary>
-        /// タカハシ : 元気
+        /// 感情 : へこみ
         /// </summary>
-        TakahashiActive,
-
-        /// <summary>
-        /// タカハシ : 普通
-        /// </summary>
-        TakahashiNormal,
-
-        /// <summary>
-        /// タカハシ : へこみ
-        /// </summary>
-        TakahashiDown,
+        EmotionDown,
     }
 
     /// <summary>
@@ -129,7 +119,7 @@ namespace RucheHome.Talker.CeVIO
         /// <param name="self">パラメータID。</param>
         /// <returns>感情関連パラメータならば true 。そうでなければ false 。</returns>
         public static bool IsEmotion(this ParameterId self) =>
-            (self >= ParameterId.SasaraActive && self <= ParameterId.TakahashiDown);
+            (self >= ParameterId.EmotionFine && self <= ParameterId.EmotionDown);
 
         /// <summary>
         /// 指定したキャラクターの感情関連パラメータであるか否かを取得する。
@@ -141,6 +131,20 @@ namespace RucheHome.Talker.CeVIO
         /// </returns>
         public static bool IsEmotionOf(this ParameterId self, Character character) =>
             (character.GetEmotionParameterIds()?.Contains(self) == true);
+
+        /// <summary>
+        /// 表示名から感情関連パラメータIDを検索する。
+        /// </summary>
+        /// <param name="displayName">表示名。</param>
+        /// <returns>感情関連パラメータID。見つからなければ null 。</returns>
+        public static ParameterId? FindEmotionByDisplayName(string displayName) =>
+            Infos
+                .Cast<KeyValuePair<ParameterId, ParameterInfo<ParameterId>>?>()
+                .FirstOrDefault(
+                    kv =>
+                        kv.Value.Key.IsEmotion() &&
+                        kv.Value.Value.DisplayName == displayName)?
+                .Key;
 
         /// <summary>
         /// パラメータ情報ディクショナリ。
@@ -159,29 +163,20 @@ namespace RucheHome.Talker.CeVIO
                 new ParameterInfo<ParameterId>(
                     ParameterId.Intonation, @"抑揚", 0, 50, 0, 100),
 
-                // さとうささら
                 new ParameterInfo<ParameterId>(
-                    ParameterId.SasaraActive, @"元気", 0, 0, 0, 100),
+                    ParameterId.EmotionFine, @"元気", 0, 0, 0, 100),
                 new ParameterInfo<ParameterId>(
-                    ParameterId.SasaraNormal, @"普通", 0, 0, 0, 100),
+                    ParameterId.EmotionNormal, @"普通", 0, 0, 0, 100),
                 new ParameterInfo<ParameterId>(
-                    ParameterId.SasaraAnger, @"怒り", 0, 0, 0, 100),
+                    ParameterId.EmotionAngry, @"怒り", 0, 0, 0, 100),
                 new ParameterInfo<ParameterId>(
-                    ParameterId.SasaraSorrow, @"悲しみ", 0, 0, 0, 100),
-
-                // すずきつづみ
+                    ParameterId.EmotionSad, @"悲しみ", 0, 0, 0, 100),
                 new ParameterInfo<ParameterId>(
-                    ParameterId.TsuzumiCool, @"クール", 0, 0, 0, 100),
+                    ParameterId.EmotionCool, @"クール", 0, 0, 0, 100),
                 new ParameterInfo<ParameterId>(
-                    ParameterId.TsuzumiShy, @"照れ", 0, 0, 0, 100),
-
-                // タカハシ
+                    ParameterId.EmotionShy, @"照れ", 0, 0, 0, 100),
                 new ParameterInfo<ParameterId>(
-                    ParameterId.TakahashiActive, @"元気", 0, 0, 0, 100),
-                new ParameterInfo<ParameterId>(
-                    ParameterId.TakahashiNormal, @"普通", 0, 0, 0, 100),
-                new ParameterInfo<ParameterId>(
-                    ParameterId.TakahashiDown, @"へこみ", 0, 0, 0, 100),
+                    ParameterId.EmotionDown, @"へこみ", 0, 0, 0, 100),
             }
             .ToDictionary(pi => pi.Id);
     }

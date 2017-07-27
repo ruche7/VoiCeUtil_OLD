@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Windows;
+using System.Windows.Media;
 using Codeer.Friendly;
 using Codeer.Friendly.Dynamic;
 using RucheHome.Diagnostics;
@@ -63,7 +64,18 @@ namespace RucheHome.Talker.CeVIO.Internal.Controls
             }
 
             // VisualTreeHelper 型オブジェクトを取得
-            var vtree = this.VisualTreeHelperGetter();
+            dynamic vtree = null;
+            try
+            {
+                vtree =
+                    this.VisualTreeHelperGetter() ??
+                    mainWin.App?.Type(typeof(VisualTreeHelper));
+            }
+            catch (Exception ex)
+            {
+                ThreadTrace.WriteException(ex);
+                vtree = null;
+            }
             if (vtree == null)
             {
                 return (null, @"本体の情報を取得できません。");

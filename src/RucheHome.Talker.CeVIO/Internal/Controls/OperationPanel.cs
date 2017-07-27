@@ -14,18 +14,29 @@ namespace RucheHome.Talker.CeVIO.Internal.Controls
         /// コンストラクタ。
         /// </summary>
         /// <param name="controlPanel">コントロールパネル取得用オブジェクト。</param>
-        public OperationPanel(ControlPanel controlPanel)
+        /// <param name="visualTreeHelperGetter">
+        /// 操作対象アプリの VisualTreeHelper 型オブジェクト取得デリゲート。
+        /// </param>
+        public OperationPanel(
+            ControlPanel controlPanel,
+            Func<dynamic> visualTreeHelperGetter)
         {
             this.ControlPanel =
                 controlPanel ?? throw new ArgumentNullException(nameof(controlPanel));
 
             this.PlayStopToggle = new PlayStopToggle(this);
+            this.ParameterSliders = new ParameterSliders(this, visualTreeHelperGetter);
         }
 
         /// <summary>
-        /// 再生/停止トグルボタン取得用オブジェクトを取得する。
+        /// 試聴/停止トグルボタン取得用オブジェクトを取得する。
         /// </summary>
         public PlayStopToggle PlayStopToggle { get; }
+
+        /// <summary>
+        /// パラメータスライダー群取得用オブジェクトを取得する。
+        /// </summary>
+        public ParameterSliders ParameterSliders { get; }
 
         /// <summary>
         /// 操作パネルを取得する。
@@ -50,7 +61,11 @@ namespace RucheHome.Talker.CeVIO.Internal.Controls
 
             try
             {
-                return (AppVar)ctrlPanel.Dynamic().Children[2].Content.Content;
+                return
+                    (AppVar)ctrlPanel.Dynamic()
+                        .Children[2]    // VoiceEditor
+                        .Content        // ScrollViewer
+                        .Content;       // Grid
             }
             catch (Exception ex)
             {

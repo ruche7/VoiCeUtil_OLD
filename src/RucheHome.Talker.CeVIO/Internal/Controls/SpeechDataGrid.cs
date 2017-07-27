@@ -71,7 +71,10 @@ namespace RucheHome.Talker.CeVIO.Internal.Controls
         /// <returns>項目。見つからなければ null 。</returns>
         private static dynamic FindCastMenuItem(WPFDataGrid dataGrid)
         {
-            var items = dataGrid.Dynamic().ContextMenu.Items[10].Items;
+            // TODO: 一度もユーザがコンテキストメニューを表示していない場合も動くようにする。
+
+            var menu = dataGrid.Dynamic().ContextMenu;
+            var items = menu.Items[10].Items;
 
             // まず決め打ち
             var castItem = items[3];

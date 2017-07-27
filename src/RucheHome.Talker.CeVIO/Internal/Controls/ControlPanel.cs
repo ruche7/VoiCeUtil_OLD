@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Windows.Media;
 using Codeer.Friendly;
 using Codeer.Friendly.Dynamic;
 using RucheHome.Diagnostics;
@@ -32,7 +33,7 @@ namespace RucheHome.Talker.CeVIO.Internal.Controls
                 throw new ArgumentNullException(nameof(canChangeTrackGetter));
 
             this.SpeechDataGrid = new SpeechDataGrid(this);
-            this.OperationPanel = new OperationPanel(this);
+            this.OperationPanel = new OperationPanel(this, visualTreeHelperGetter);
         }
 
         /// <summary>
@@ -58,19 +59,30 @@ namespace RucheHome.Talker.CeVIO.Internal.Controls
             kind = ControlPanelKind.None;
 
             // ルートコントロールを取得
-            var r = root;
-            if (r == null)
+            var rootCtrl = root;
+            if (rootCtrl == null)
             {
                 var rv = this.Root.Get();
                 if (rv.Value == null)
                 {
                     return (null, rv.Message);
                 }
-                r = rv.Value;
+                rootCtrl = rv.Value;
             }
 
             // VisualTreeHelper 型オブジェクトを取得
-            var vtree = this.VisualTreeHelperGetter();
+            dynamic vtree = null;
+            try
+            {
+                vtree =
+                    this.VisualTreeHelperGetter() ??
+                    rootCtrl.App?.Type(typeof(VisualTreeHelper));
+            }
+            catch (Exception ex)
+            {
+                ThreadTrace.WriteException(ex);
+                vtree = null;
+            }
             if (vtree == null)
             {
                 return (null, @"本体の情報を取得できません。");
@@ -79,7 +91,7 @@ namespace RucheHome.Talker.CeVIO.Internal.Controls
             try
             {
                 var editor =
-                    vtree.GetChild(vtree.GetChild(r.Dynamic().Children[3], 0), 0);
+                    vtree.GetChild(vtree.GetChild(rootCtrl.Dynamic().Children[3], 0), 0);
                 try
                 {
                     var panel = editor.Content;

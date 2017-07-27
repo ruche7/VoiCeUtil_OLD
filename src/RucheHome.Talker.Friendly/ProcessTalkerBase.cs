@@ -147,8 +147,30 @@ namespace RucheHome.Talker.Friendly
         /// <returns>コンボボックス。取得できなかった場合は null 。</returns>
         protected static NativeComboBox GetFileDialogFileNameComboBox(
             WindowControl fileDialog)
-            =>
-            GetControlFromZOrder<NativeComboBox>(fileDialog, 11, 0, 4, 0);
+        {
+            if (fileDialog != null)
+            {
+                var root = GetControlFromZOrder(fileDialog, 11, 0);
+
+                try
+                {
+                    var combo =
+                        root.GetFromWindowClass(@"ComboBox")
+                            .Where(c => c.GetFromWindowClass(@"Edit").Length > 0)
+                            .FirstOrDefault();
+                    if (combo != null)
+                    {
+                        return new NativeComboBox(combo);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ThreadTrace.WriteException(ex);
+                }
+            }
+
+            return null;
+        }
 
         /// <summary>
         /// ファイルダイアログから決定ボタンを取得する。

@@ -1571,11 +1571,16 @@ namespace RucheHome.Talker
                     }
 
                     // 空白文チェック
-                    if (
-                        !this.CanSaveBlankText &&
-                        string.IsNullOrWhiteSpace(this.GetTextImpl().Value))
+                    if (!this.CanSaveBlankText)
                     {
-                        return (null, @"空白文を音声保存することはできません。");
+                        var r = this.GetTextImpl();
+                        if (string.IsNullOrWhiteSpace(r.Value))
+                        {
+                            return (
+                                null,
+                                (r.Value == null) ?
+                                    r.Message : @"空白文を音声保存することはできません。");
+                        }
                     }
 
                     // 音声ファイル保存中状態に変更

@@ -123,10 +123,10 @@ namespace RucheHome.Talker.CeVIO
                         @"さとうささら",
                         new[]
                         {
-                            ParameterId.SasaraActive,
-                            ParameterId.SasaraNormal,
-                            ParameterId.SasaraAnger,
-                            ParameterId.SasaraSorrow,
+                            ParameterId.EmotionFine,
+                            ParameterId.EmotionNormal,
+                            ParameterId.EmotionAngry,
+                            ParameterId.EmotionSad,
                         })
                 },
                 {
@@ -135,8 +135,8 @@ namespace RucheHome.Talker.CeVIO
                         @"すずきつづみ",
                         new[]
                         {
-                            ParameterId.TsuzumiCool,
-                            ParameterId.TsuzumiShy,
+                            ParameterId.EmotionCool,
+                            ParameterId.EmotionShy,
                         })
                 },
                 {
@@ -145,9 +145,9 @@ namespace RucheHome.Talker.CeVIO
                         @"タカハシ",
                         new[]
                         {
-                            ParameterId.TakahashiActive,
-                            ParameterId.TakahashiNormal,
-                            ParameterId.TakahashiDown,
+                            ParameterId.EmotionFine,
+                            ParameterId.EmotionNormal,
+                            ParameterId.EmotionDown,
                         })
                 },
             };

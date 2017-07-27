@@ -7,7 +7,7 @@ using RucheHome.Diagnostics;
 namespace RucheHome.Talker.CeVIO.Internal.Controls
 {
     /// <summary>
-    /// 再生/停止トグルボタン取得処理を提供するクラス。
+    /// 試聴/停止トグルボタン取得処理を提供するクラス。
     /// </summary>
     internal sealed class PlayStopToggle
     {
@@ -22,7 +22,7 @@ namespace RucheHome.Talker.CeVIO.Internal.Controls
         }
 
         /// <summary>
-        /// 再生/停止トグルボタンを取得する。
+        /// 試聴/停止トグルボタンを取得する。
         /// </summary>
         /// <param name="operationPanel">
         /// 操作パネル。 null ならばメソッド内で取得される。

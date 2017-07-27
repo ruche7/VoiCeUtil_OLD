@@ -132,7 +132,7 @@ namespace RucheHome.Tests.Talker
 
         [TestMethod]
         [TestCategory(nameof(ITalker))]
-        public void Test_ITalker_SetText_GetText()
+        public virtual void Test_ITalker_SetText_GetText()
         {
             var talker = this.GetTalker();
 
@@ -337,7 +337,16 @@ namespace RucheHome.Tests.Talker
             // テキスト設定
             {
                 var r = talker.SetText(text);
-                Assert.IsTrue(r.Value, r.Message);
+
+                // そもそも空白文の設定自体できない場合がある
+                if (!r.Value)
+                {
+                    Console.WriteLine(r.Message);
+
+                    // ダイアログが出ている可能性があるので閉じる
+                    CloseAllModalsIfProcessTalker(talker);
+                    return;
+                }
             }
 
             // 音声ファイル保存

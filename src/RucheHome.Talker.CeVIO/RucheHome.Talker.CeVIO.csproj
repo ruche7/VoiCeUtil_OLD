@@ -78,12 +78,14 @@
     <Compile Include="Internal\Controls\ControlPanel.cs" />
     <Compile Include="Internal\Controls\ControlPanelKind.cs" />
     <Compile Include="Internal\Controls\OperationPanel.cs" />
+    <Compile Include="Internal\Controls\ParameterSliders.cs" />
     <Compile Include="Internal\Controls\PlayStopToggle.cs" />
     <Compile Include="Internal\Controls\Root.cs" />
     <Compile Include="Internal\Controls\SpeechDataGrid.cs" />
     <Compile Include="Internal\Controls\TrackSelector.cs" />
     <Compile Include="ParameterId.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Talker.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\RucheHome.Core\RucheHome.Core.csproj">
