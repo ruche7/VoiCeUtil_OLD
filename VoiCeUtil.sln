@@ -3,25 +3,25 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26430.16
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Talker", "src\RucheHome.Talker\RucheHome.Talker.csproj", "{44F2FF62-F248-4B1A-9F9E-1CEEFDE5E6E6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Automation.Talkers", "src\RucheHome.Automation.Talkers\RucheHome.Automation.Talkers.csproj", "{44F2FF62-F248-4B1A-9F9E-1CEEFDE5E6E6}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{87905CE9-795C-44B6-86AA-1DA5A1D2F3B9}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{2EBE5B3F-BD10-4056-B386-B251471D02E8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Talker.AITalkEx", "src\RucheHome.Talker.AITalkEx\RucheHome.Talker.AITalkEx.csproj", "{7B3AD7E7-FC97-422B-9B3B-DD5471EAFF83}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Automation.Talkers.AITalkEx", "src\RucheHome.Automation.Talkers.AITalkEx\RucheHome.Automation.Talkers.AITalkEx.csproj", "{7B3AD7E7-FC97-422B-9B3B-DD5471EAFF83}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Core", "src\RucheHome.Core\RucheHome.Core.csproj", "{33AB6685-2E0E-49E2-86FE-15385EC365C6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Windows", "src\RucheHome.Windows\RucheHome.Windows.csproj", "{2FE0815F-364A-409E-A34E-39880676A693}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Talker.Voiceroid2", "src\RucheHome.Talker.Voiceroid2\RucheHome.Talker.Voiceroid2.csproj", "{7F61A3DE-15C7-4B95-A797-718F1DD063F6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Automation.Talkers.Voiceroid2", "src\RucheHome.Automation.Talkers.Voiceroid2\RucheHome.Automation.Talkers.Voiceroid2.csproj", "{7F61A3DE-15C7-4B95-A797-718F1DD063F6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Talker.Friendly", "src\RucheHome.Talker.Friendly\RucheHome.Talker.Friendly.csproj", "{55B9ED13-F7F6-4A9A-9408-9C4449D50350}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Automation.Talkers.Friendly", "src\RucheHome.Automation.Talkers.Friendly\RucheHome.Automation.Talkers.Friendly.csproj", "{55B9ED13-F7F6-4A9A-9408-9C4449D50350}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Talker.CeVIO", "src\RucheHome.Talker.CeVIO\RucheHome.Talker.CeVIO.csproj", "{AA29CE29-4FE9-47AB-96CB-AB7B68F42FBB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Automation.Talkers.CeVIO", "src\RucheHome.Automation.Talkers.CeVIO\RucheHome.Automation.Talkers.CeVIO.csproj", "{AA29CE29-4FE9-47AB-96CB-AB7B68F42FBB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Tests.Talker", "test\RucheHome.Tests.Talker\RucheHome.Tests.Talker.csproj", "{A5F01152-B185-454A-B9B1-10E0E60B5C6D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Tests.Automation.Talkers", "test\RucheHome.Tests.Automation.Talkers\RucheHome.Tests.Automation.Talkers.csproj", "{A5F01152-B185-454A-B9B1-10E0E60B5C6D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
