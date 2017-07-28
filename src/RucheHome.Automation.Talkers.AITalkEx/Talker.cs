@@ -6,7 +6,6 @@ using System.Linq;
 using Codeer.Friendly;
 using Codeer.Friendly.Dynamic;
 using Codeer.Friendly.Windows.Grasp;
-using Ong.Friendly.FormsStandardControls;
 using RucheHome.Diagnostics;
 using RucheHome.Automation.Talkers.Friendly;
 
@@ -85,7 +84,7 @@ namespace RucheHome.Automation.Talkers.AITalkEx
         /// </summary>
         /// <param name="mainWindow">メインウィンドウ。</param>
         /// <returns>コントロール。取得できなかった場合は null 。</returns>
-        private static AppVar GetMainButtonsParent(AppVar mainWindow) =>
+        private static dynamic GetMainButtonsParent(dynamic mainWindow) =>
             GetControlFromControlsTree(mainWindow, 0, 1, 0, 0, 0, 0, 1);
 
         /// <summary>
@@ -97,9 +96,9 @@ namespace RucheHome.Automation.Talkers.AITalkEx
         /// <remarks>
         /// 前後に別ボタンが追加されることがあるため、テキスト値で目的のボタンを探す。
         /// </remarks>
-        private static FormsButton GetMainButton(AppVar parent, MainButton button) =>
+        private static dynamic GetMainButton(dynamic parent, MainButton button) =>
             MainButtonTexts.TryGetValue(button, out var text) ?
-                FindChildControlByText<FormsButton>(parent, text) : null;
+                FindChildControlByText(parent, text) : null;
 
         /// <summary>
         /// 文章入力欄コントロール群を列挙する。
@@ -109,13 +108,13 @@ namespace RucheHome.Automation.Talkers.AITalkEx
         /// <remarks>
         /// 複数の文章入力欄が存在する状態になることがあるため、すべて列挙する。
         /// </remarks>
-        private static IEnumerable<AppVar> EnumerateMainRichTextBoxes(AppVar mainWindow)
+        private static IEnumerable<dynamic> EnumerateMainRichTextBoxes(dynamic mainWindow)
         {
             var parent = GetControlFromControlsTree(mainWindow, 0, 1, 0, 0, 0, 0, 0);
             if (parent != null)
             {
                 // すべての子を調べる
-                foreach (var c in parent.Dynamic().Controls)
+                foreach (var c in parent.Controls)
                 {
                     // ウィンドウクラス名に "RichEdit" が含まれるか否かで判断
                     if (new WindowControl(c).WindowClassName.Contains(@"RichEdit"))
@@ -131,8 +130,8 @@ namespace RucheHome.Automation.Talkers.AITalkEx
         /// </summary>
         /// <param name="mainWindow">メインウィンドウ。</param>
         /// <returns>コントロール。取得できなかった場合は null 。</returns>
-        private static FormsTabControl GetTabControl(AppVar mainWindow) =>
-            GetControlFromControlsTree<FormsTabControl>(mainWindow, 0, 1, 0, 1, 0);
+        private static dynamic GetTabControl(dynamic mainWindow) =>
+            GetControlFromControlsTree(mainWindow, 0, 1, 0, 1, 0);
 
         /// <summary>
         /// パラメータを保持するタブページの情報配列。
@@ -178,9 +177,9 @@ namespace RucheHome.Automation.Talkers.AITalkEx
         /// <returns>
         /// テキストボックスのディクショナリ。取得できなかった場合は null 。
         /// </returns>
-        private Result<Dictionary<ParameterId, FormsTextBox>> GetTabControlParameterTextBoxes(
+        private Result<Dictionary<ParameterId, dynamic>> GetTabControlParameterTextBoxes(
             IEnumerable<ParameterId> targetParameterIds = null,
-            AppVar mainWindow = null)
+            dynamic mainWindow = null)
         {
             // メインウィンドウを検索
             var mainWin = mainWindow ?? this.FindMainWindow();
@@ -196,14 +195,14 @@ namespace RucheHome.Automation.Talkers.AITalkEx
                 return (null, @"本体のタブページが見つかりません。");
             }
 
-            var dict = new Dictionary<ParameterId, FormsTextBox>();
+            var dict = new Dictionary<ParameterId, dynamic>();
 
             // 現在選択中のタブアイテムインデックスを保存
             int tabIndex = -1;
             try
             {
-                tabIndex = tabControl.SelectedIndex;
-                if (tabIndex < 0 || tabControl.TabCount < 4)
+                tabIndex = (int)tabControl.SelectedIndex;
+                if (tabIndex < 0 || (int)tabControl.TabCount < 4)
                 {
                     return (null, @"本体のタブページが見つかりません");
                 }
@@ -228,13 +227,13 @@ namespace RucheHome.Automation.Talkers.AITalkEx
                     }
 
                     // タブページ取得
-                    var page = FindTabPage(tabControl.AppVar, tab.name);
+                    var page = FindTabPage(tabControl, tab.name);
                     if (page == null)
                     {
                         // 一度も開いていない場合は取得できないので開いてみる
-                        tabControl.EmulateTabSelect(tab.index);
+                        tabControl.SelectedIndex = tab.index;
 
-                        page = FindTabPage(tabControl.AppVar, tab.name);
+                        page = FindTabPage(tabControl, tab.name);
                         if (page == null)
                         {
                             return (null, @"本体のタブページが見つかりません。");
@@ -245,7 +244,7 @@ namespace RucheHome.Automation.Talkers.AITalkEx
                     foreach (var id in ids)
                     {
                         var textBox =
-                            GetControlFromControlsTree<FormsTextBox>(
+                            GetControlFromControlsTree(
                                 page,
                                 ParameterControlsTreeIndices[id]);
                         if (textBox == null)
@@ -271,10 +270,7 @@ namespace RucheHome.Automation.Talkers.AITalkEx
                 // 失敗してもよい
                 try
                 {
-                    if (tabIndex != tabControl.SelectedIndex)
-                    {
-                        tabControl.EmulateTabSelect(tabIndex);
-                    }
+                    tabControl.SelectedIndex = tabIndex;
                 }
                 catch (Exception ex)
                 {
@@ -334,7 +330,7 @@ namespace RucheHome.Automation.Talkers.AITalkEx
         {
             // 音声保存ボタンを探す
             var saveButton =
-                GetMainButton(GetMainButtonsParent(mainWindow.AppVar), MainButton.Save);
+                GetMainButton(GetMainButtonsParent(mainWindow.Dynamic()), MainButton.Save);
             if (saveButton == null)
             {
                 // ウィンドウ構築途中or破棄途中であると判断
@@ -345,7 +341,7 @@ namespace RucheHome.Automation.Talkers.AITalkEx
             }
 
             // 音声保存ボタンが無効ならば読み上げ中と判断する
-            return (saveButton.Enabled ? TalkerState.Idle : TalkerState.Speaking);
+            return ((bool)saveButton.Enabled ? TalkerState.Idle : TalkerState.Speaking);
         }
 
         #endregion
@@ -368,14 +364,14 @@ namespace RucheHome.Automation.Talkers.AITalkEx
             try
             {
                 // 文章入力欄を列挙
-                var textBoxes = EnumerateMainRichTextBoxes(mainWin);
+                var textBoxes = EnumerateMainRichTextBoxes((DynamicAppVar)mainWin);
                 if (textBoxes?.Any() != true)
                 {
                     return (null, @"本体の文章入力欄が見つかりません。");
                 }
 
                 // 先頭の文章入力欄からテキストを得る
-                return (string)textBoxes.First().Dynamic().Text;
+                return (string)textBoxes.First().Text;
             }
             catch (Exception ex)
             {
@@ -409,21 +405,16 @@ namespace RucheHome.Automation.Talkers.AITalkEx
             try
             {
                 // 文章入力欄を列挙
-                var textBoxes = EnumerateMainRichTextBoxes(mainWin);
+                var textBoxes = EnumerateMainRichTextBoxes((DynamicAppVar)mainWin);
                 if (textBoxes?.Any() != true)
                 {
                     return (false, @"本体の文章入力欄が見つかりません。");
                 }
 
                 // すべての文章入力欄にテキストを設定
-                foreach (var tb in textBoxes)
+                foreach (var textBox in textBoxes)
                 {
-                    var textBox = new FormsRichTextBox(tb);
-                    bool done =
-                        WaitAsyncAction(
-                            async => textBox.EmulateChangeText(text, async),
-                            timeout);
-                    if (!done)
+                    if (!WaitAsyncAction(async => textBox.Text(async, text), timeout))
                     {
                         return (false, @"文章設定処理がタイムアウトしました。");
                     }
@@ -459,7 +450,7 @@ namespace RucheHome.Automation.Talkers.AITalkEx
             {
                 foreach (var kv in textBoxes)
                 {
-                    if (!decimal.TryParse(kv.Value.Text, out var d))
+                    if (!decimal.TryParse((string)kv.Value.Text, out var d))
                     {
                         return (null, kv.Key.GetInfo().DisplayName + @"の値が不正です。");
                     }
@@ -500,7 +491,7 @@ namespace RucheHome.Automation.Talkers.AITalkEx
             var (textBoxes, failMessage) =
                 this.GetTabControlParameterTextBoxes(
                     parameters.Select(kv => kv.Key),
-                    mainWin);
+                    (DynamicAppVar)mainWin);
             if (textBoxes == null)
             {
                 return (null, failMessage);
@@ -547,8 +538,7 @@ namespace RucheHome.Automation.Talkers.AITalkEx
 
                 try
                 {
-                    var text = value.ToString(format);
-                    textBox.EmulateChangeText(text);
+                    textBox.Text = value.ToString(format);
                     dict.Add(id, true);
                 }
                 catch (Exception ex)
@@ -568,7 +558,7 @@ namespace RucheHome.Automation.Talkers.AITalkEx
             // 失敗してもよい
             try
             {
-                mainWin.Dynamic().Focus();
+                mainWin.Focus();
             }
             catch (Exception ex)
             {
@@ -595,9 +585,9 @@ namespace RucheHome.Automation.Talkers.AITalkEx
             // 失敗しても先へ進む
             try
             {
-                foreach (var textBox in EnumerateMainRichTextBoxes(mainWin))
+                foreach (var textBox in EnumerateMainRichTextBoxes((DynamicAppVar)mainWin))
                 {
-                    textBox.Dynamic().Select(0, 0);
+                    textBox.Select(0, 0);
                 }
             }
             catch (Exception ex)
@@ -621,14 +611,14 @@ namespace RucheHome.Automation.Talkers.AITalkEx
 
             try
             {
-                if (!play.Enabled)
+                if (!(bool)play.Enabled)
                 {
                     return (false, @"本体の再生ボタンがクリックできない状態です。");
                 }
 
                 // 再生ボタンクリック
                 var async = new Async();
-                play.EmulateClick(async);
+                play.PerformClick(async);
 
                 // フレーズ編集未保存の場合等はダイアログが出るためそれを待つ
                 // ダイアログが出ずに完了した場合は成功
@@ -677,13 +667,13 @@ namespace RucheHome.Automation.Talkers.AITalkEx
 
             try
             {
-                if (!stop.Enabled)
+                if (!(bool)stop.Enabled)
                 {
                     return (false, @"本体の停止ボタンがクリックできない状態です。");
                 }
 
                 // 停止ボタンクリック
-                stop.EmulateClick();
+                stop.PerformClick();
             }
             catch (Exception ex)
             {
@@ -727,7 +717,7 @@ namespace RucheHome.Automation.Talkers.AITalkEx
 
             // 音声保存ボタンをクリックして音声ファイル保存ダイアログを取得
             var (fileDialog, fileDialogMessage) =
-                this.SaveFileImpl_ClickSaveButton(mainWin, saveButtonAsync);
+                this.SaveFileImpl_ClickSaveButton((DynamicAppVar)mainWin, saveButtonAsync);
             if (fileDialog == null)
             {
                 return (null, fileDialogMessage);
@@ -741,7 +731,7 @@ namespace RucheHome.Automation.Talkers.AITalkEx
             }
 
             // 音声保存処理完了待ち
-            result = this.SaveFileImpl_WaitSaving(mainWin, saveButtonAsync);
+            result = this.SaveFileImpl_WaitSaving((DynamicAppVar)mainWin, saveButtonAsync);
             if (!result.Value)
             {
                 return (null, result.Message);
@@ -766,10 +756,10 @@ namespace RucheHome.Automation.Talkers.AITalkEx
         /// </param>
         /// <returns>音声ファイル保存ダイアログ。表示されなかった場合は null 。</returns>
         private Result<WindowControl> SaveFileImpl_ClickSaveButton(
-            AppVar mainWindow,
+            dynamic mainWindow,
             Async saveButtonAsync)
         {
-            Debug.Assert(mainWindow != null);
+            Debug.Assert((DynamicAppVar)mainWindow != null);
             Debug.Assert(saveButtonAsync != null);
 
             // ボタン群の親を取得
@@ -790,13 +780,13 @@ namespace RucheHome.Automation.Talkers.AITalkEx
 
             try
             {
-                if (!button.Enabled)
+                if (!(bool)button.Enabled)
                 {
                     return (null, @"本体の音声保存ボタンがクリックできない状態です。");
                 }
 
                 // 音声保存ボタンクリック
-                button.EmulateClick(saveButtonAsync);
+                button.PerformClick(saveButtonAsync);
 
                 // ファイルダイアログ(or 警告ダイアログ)を待つ
                 fileDialog = new WindowControl(mainWindow).WaitForNextModal(saveButtonAsync);
@@ -875,10 +865,10 @@ namespace RucheHome.Automation.Talkers.AITalkEx
         /// </param>
         /// <returns>成功したならば true 。そうでなければ false 。</returns>
         private Result<bool> SaveFileImpl_WaitSaving(
-            AppVar mainWindow,
+            dynamic mainWindow,
             Async saveButtonAsync)
         {
-            Debug.Assert(mainWindow != null);
+            Debug.Assert((DynamicAppVar)mainWindow != null);
             Debug.Assert(saveButtonAsync != null);
 
             try

@@ -63,9 +63,6 @@
     <Reference Include="Microsoft.VisualStudio.TestPlatform.TestFramework.Extensions, Version=14.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\..\packages\MSTest.TestFramework.1.1.18\lib\net45\Microsoft.VisualStudio.TestPlatform.TestFramework.Extensions.dll</HintPath>
     </Reference>
-    <Reference Include="Ong.Friendly.FormsStandardControls, Version=2.4.0.0, Culture=neutral, PublicKeyToken=ee7fcdb5644bd140, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\Ong.Friendly.FormsStandardControls.2.4.0\lib\net20\Ong.Friendly.FormsStandardControls.dll</HintPath>
-    </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
     <Reference Include="RM.Friendly.WPFStandardControls.3.0, Version=1.8.0.0, Culture=neutral, PublicKeyToken=1b8f25b96765ebb0, processorArchitecture=MSIL">

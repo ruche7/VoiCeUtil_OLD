@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Windows.Forms;
-using Codeer.Friendly;
 using Codeer.Friendly.Dynamic;
 using RucheHome.Diagnostics;
 
@@ -53,15 +52,15 @@ namespace RucheHome.Automation.Talkers.Friendly
         /// <param name="root">ツリーのルートとなるコントロール。</param>
         /// <param name="treeIndices">Controls プロパティツリーインデックス配列。</param>
         /// <returns>コントロール。取得できなかった場合は null 。</returns>
-        protected static AppVar GetControlFromControlsTree(
-            AppVar root,
+        protected static dynamic GetControlFromControlsTree(
+            dynamic root,
             params int[] treeIndices)
         {
             if (root != null && treeIndices != null)
             {
                 try
                 {
-                    var control = root.Dynamic();
+                    var control = root;
 
                     foreach (var index in treeIndices)
                     {
@@ -72,39 +71,7 @@ namespace RucheHome.Automation.Talkers.Friendly
                 }
                 catch (Exception ex)
                 {
-                    ThreadDebug.WriteException(ex);
-                }
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// Controls プロパティツリーを辿ることによって子孫コントロールを取得する。
-        /// </summary>
-        /// <typeparam name="TControl">
-        /// 子孫コントロール型。
-        /// <see cref="AppVar"/> インスタンスを代入可能ではない場合、
-        /// <see cref="AppVar"/> インスタンスを引数に取るコンストラクタが必要。
-        /// </typeparam>
-        /// <param name="root">ツリーのルートとなるコントロール。</param>
-        /// <param name="treeIndices">Controls プロパティツリーインデックス配列。</param>
-        /// <returns>コントロール。取得できなかった場合は null 。</returns>
-        protected static TControl GetControlFromControlsTree<TControl>(
-            AppVar root,
-            params int[] treeIndices)
-            where TControl : class
-        {
-            var v = GetControlFromControlsTree(root, treeIndices);
-            if (v != null)
-            {
-                try
-                {
-                    return CastOrCreate<TControl>(v);
-                }
-                catch (Exception ex)
-                {
-                    ThreadDebug.WriteException(ex);
+                    ThreadTrace.WriteException(ex);
                 }
             }
 
@@ -117,13 +84,13 @@ namespace RucheHome.Automation.Talkers.Friendly
         /// <param name="parent">親コントロール。</param>
         /// <param name="text">検索する Text プロパティ値。</param>
         /// <returns>コントロール。見つからなければ null 。</returns>
-        protected static AppVar FindChildControlByText(AppVar parent, string text)
+        protected static dynamic FindChildControlByText(dynamic parent, string text)
         {
             if (parent != null && text != null)
             {
                 try
                 {
-                    foreach (var c in parent.Dynamic().Controls)
+                    foreach (var c in parent.Controls)
                     {
                         if ((string)c.Text == text)
                         {
@@ -133,39 +100,7 @@ namespace RucheHome.Automation.Talkers.Friendly
                 }
                 catch (Exception ex)
                 {
-                    ThreadDebug.WriteException(ex);
-                }
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// Text プロパティ値によって子コントロールを検索する。
-        /// </summary>
-        /// <typeparam name="TControl">
-        /// 子孫コントロール型。
-        /// <see cref="AppVar"/> インスタンスを代入可能ではない場合、
-        /// <see cref="AppVar"/> インスタンスを引数に取るコンストラクタが必要。
-        /// </typeparam>
-        /// <param name="parent">親コントロール。</param>
-        /// <param name="text">検索する Text プロパティ値。</param>
-        /// <returns>コントロール。見つからなければ null 。</returns>
-        protected static TControl FindChildControlByText<TControl>(
-            AppVar parent,
-            string text)
-            where TControl : class
-        {
-            var v = FindChildControlByText(parent, text);
-            if (v != null)
-            {
-                try
-                {
-                    return CastOrCreate<TControl>(v);
-                }
-                catch (Exception ex)
-                {
-                    ThreadDebug.WriteException(ex);
+                    ThreadTrace.WriteException(ex);
                 }
             }
 
@@ -181,13 +116,13 @@ namespace RucheHome.Automation.Talkers.Friendly
         /// <remarks>
         /// 検索対象はWinFormsの TabPage のみ。
         /// </remarks>
-        protected static AppVar FindTabPage(AppVar tabControl, string name)
+        protected static dynamic FindTabPage(dynamic tabControl, string name)
         {
             if (tabControl != null && name != null)
             {
                 try
                 {
-                    foreach (var page in tabControl.Dynamic().TabPages)
+                    foreach (var page in tabControl.TabPages)
                     {
                         if ((string)page.Text == name)
                         {
@@ -212,7 +147,7 @@ namespace RucheHome.Automation.Talkers.Friendly
         /// 戻り値が有効である場合、本体側の
         /// <see cref="Form"/> オブジェクトを参照している。
         /// </remarks>
-        protected AppVar FindMainWindow()
+        protected dynamic FindMainWindow()
         {
             var app = this.TargetApp;
             if (app == null)

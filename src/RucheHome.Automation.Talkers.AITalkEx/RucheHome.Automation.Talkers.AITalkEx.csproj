@@ -51,9 +51,6 @@
       <HintPath>..\..\packages\Codeer.Friendly.Windows.NativeStandardControls.2.2.3\lib\net20\Codeer.Friendly.Windows.NativeStandardControls.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="Ong.Friendly.FormsStandardControls, Version=2.4.0.0, Culture=neutral, PublicKeyToken=ee7fcdb5644bd140, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\Ong.Friendly.FormsStandardControls.2.4.0\lib\net20\Ong.Friendly.FormsStandardControls.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.ValueTuple, Version=4.0.1.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
