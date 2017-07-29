@@ -5,14 +5,13 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using System.Windows.Media;
 using Codeer.Friendly;
 using Codeer.Friendly.Dynamic;
 using Codeer.Friendly.Windows.Grasp;
-using RM.Friendly.WPFStandardControls;
-using RucheHome.Diagnostics;
+using RucheHome.Automation.Friendly.Wpf;
 using RucheHome.Automation.Talkers.CeVIO.Internal.Controls;
 using RucheHome.Automation.Talkers.Friendly;
+using RucheHome.Diagnostics;
 
 namespace RucheHome.Automation.Talkers.CeVIO
 {
@@ -37,7 +36,7 @@ namespace RucheHome.Automation.Talkers.CeVIO
             this.Root =
                 new Root(
                     this.GetMainWindow,
-                    () => this.TargetVisualTreeHelper,
+                    () => this.TargetAppVisualTree,
                     () => this.CanChangeTrack);
         }
 
@@ -46,14 +45,14 @@ namespace RucheHome.Automation.Talkers.CeVIO
         /// </summary>
         /// <param name="mainWindow">メインウィンドウ。</param>
         /// <returns>ビジー表示中ならば true 。そうでなければ false 。</returns>
-        private static bool IsBusyIndicatorVisible(AppVar mainWindow)
+        private static bool IsBusyIndicatorVisible(dynamic mainWindow)
         {
             if (mainWindow != null)
             {
                 try
                 {
                     // Xceed.Wpf.Toolkit.BusyIndicator.IsBusy により調べる
-                    return (bool)mainWindow.Dynamic().Content.Children[1].IsBusy;
+                    return (bool)mainWindow.Content.Children[1].IsBusy;
                 }
                 catch (Exception ex)
                 {
@@ -75,15 +74,6 @@ namespace RucheHome.Automation.Talkers.CeVIO
 
             return $@"{id.GetInfo().DisplayName}の{(id.IsEmotion() ? @"感情" : @"")}値";
         }
-
-        /// <summary>
-        /// 操作対象アプリの VisualTreeHelper 型オブジェクトを取得または設定する。
-        /// </summary>
-        /// <remarks>
-        /// <see cref="Friendly.ProcessTalkerBase{TParameterId}.TargetApp"/>
-        /// プロパティの変更時に更新される。
-        /// </remarks>
-        private dynamic TargetVisualTreeHelper { get; set; } = null;
 
         /// <summary>
         /// ルートコントロール取得用オブジェクトを取得する。
@@ -116,16 +106,110 @@ namespace RucheHome.Automation.Talkers.CeVIO
         private PlayStopToggle PlayStopToggle => this.OperationPanel.PlayStopToggle;
 
         /// <summary>
+        /// 自動試聴トグルボタン取得用オブジェクトを取得する。
+        /// </summary>
+        private AutoPlayToggle AutoPlayToggle => this.OperationPanel.AutoPlayToggle;
+
+        /// <summary>
         /// パラメータスライダー群取得用オブジェクトを取得する。
         /// </summary>
         private ParameterSliders ParameterSliders => this.OperationPanel.ParameterSliders;
+
+        /// <summary>
+        /// キャスト名キャッシュを取得または設定する。
+        /// </summary>
+        /// <remarks>
+        /// <see cref="OnTargetAppChanged"/> でクリアされる。
+        /// </remarks>
+        private ReadOnlyCollection<string> CastNamesCache { get; set; } = null;
+
+        /// <summary>
+        /// キャスト名キャッシュが有効ならそのまま取得する。
+        /// そうでなければキャストコンボボックスからキャスト名キャッシュを作成する。
+        /// </summary>
+        /// <param name="castComboBox">キャストコンボボックス。</param>
+        /// <returns>キャスト名キャッシュ。作成に失敗したならば null 。</returns>
+        private Result<ReadOnlyCollection<string>> GetOrCreateCastNamesCache(
+            dynamic castComboBox)
+        {
+            var cache = this.CastNamesCache;
+            if (cache != null)
+            {
+                return cache;
+            }
+
+            var (ok, failMessage) = this.CreateCastNamesCache((DynamicAppVar)castComboBox);
+            if (!ok)
+            {
+                return (null, failMessage);
+            }
+
+            return this.CastNamesCache;
+        }
+
+        /// <summary>
+        /// キャストコンボボックスからキャスト名キャッシュを作成する。
+        /// </summary>
+        /// <param name="castComboBox">キャストコンボボックス。</param>
+        /// <returns>成功したならば true 。そうでなければ false 。</returns>
+        private Result<bool> CreateCastNamesCache(dynamic castComboBox)
+        {
+            if (castComboBox == null)
+            {
+                return (false, @"本体のキャスト一覧が見つかりません。");
+            }
+
+            // castComboBox.Items[N].Name でキャスト名を取得できるが、
+            // CeVIO定義の型を参照することになるのでやめておく。
+
+            var casts = new List<string>();
+            int selectedIndex = -1;
+
+            try
+            {
+                // 選択中インデックスを保存
+                selectedIndex = (int)castComboBox.SelectedIndex;
+
+                // 各キャストを選択して ComboBox.Text からキャスト名を取得
+                var count = (int)castComboBox.Items.Count;
+                for (int ii = 0; ii < count; ++ii)
+                {
+                    castComboBox.SelectedIndex = ii;
+                    casts.Add((string)castComboBox.Text);
+                }
+            }
+            catch (Exception ex)
+            {
+                ThreadTrace.WriteException(ex);
+                return (false, @"キャスト一覧の取得に失敗しました。");
+            }
+            finally
+            {
+                // 選択中インデックスを元に戻す
+                // 失敗してもよい
+                if (selectedIndex >= 0)
+                {
+                    try
+                    {
+                        castComboBox.SelectedIndex = selectedIndex;
+                    }
+                    catch (Exception ex)
+                    {
+                        ThreadDebug.WriteException(ex);
+                    }
+                }
+            }
+
+            this.CastNamesCache = casts.AsReadOnly();
+            return true;
+        }
 
         /// <summary>
         /// キャストやセリフの入力のために適切なセリフデータグリッド行を選択する。
         /// </summary>
         /// <param name="speechDataGrid">セリフデータグリッド。</param>
         /// <returns>成功したならば true 。そうでなければ false 。</returns>
-        private Result<bool> SelectSpeechDataGridRowForInput(WPFDataGrid speechDataGrid)
+        private Result<bool> SelectSpeechDataGridRowForInput(AppDataGrid speechDataGrid)
         {
             if (speechDataGrid == null)
             {
@@ -137,24 +221,24 @@ namespace RucheHome.Automation.Talkers.CeVIO
             case CastSpeechInputRow.Blank:
                 try
                 {
-                    var selectedIndex = speechDataGrid.CurrentItemIndex;
+                    var selectedRow = speechDataGrid.SelectedRow;
 
                     // 現在行のセリフセルが空なら現状のままでよい
-                    var cell = speechDataGrid.GetCell(selectedIndex, 1);
-                    if (string.IsNullOrWhiteSpace((string)cell.Dynamic().Content.Text))
+                    var cellText = speechDataGrid.GetCellText(selectedRow, 1);
+                    if (string.IsNullOrWhiteSpace(cellText))
                     {
                         return true;
                     }
 
                     // セリフセルが空の行を探す
-                    var count = (int)speechDataGrid.Dynamic().Items.Count;
-                    for (int ri = selectedIndex + 1; ri < count; ++ri)
+                    var rowCount = speechDataGrid.RowCount;
+                    for (int ri = selectedRow + 1; ri < rowCount; ++ri)
                     {
-                        cell = speechDataGrid.GetCell(ri, 1);
-                        if (string.IsNullOrWhiteSpace((string)cell.Dynamic().Content.Text))
+                        cellText = speechDataGrid.GetCellText(ri, 1);
+                        if (string.IsNullOrWhiteSpace(cellText))
                         {
                             // 選択
-                            speechDataGrid.Dynamic().SelectedIndex = ri;
+                            speechDataGrid.SelectedRow = ri;
                             return true;
                         }
                     }
@@ -181,15 +265,20 @@ namespace RucheHome.Automation.Talkers.CeVIO
         /// <returns>セリフ文字列。引数値が null ならば null 。</returns>
         private string MakeSpeechText(string src)
         {
+            if (src == null)
+            {
+                return null;
+            }
+
             // 改行で区切るなら半角スペース、そうでなければ空文字列に置換する
             var lineBreak = this.IsTextSeparatedByLineBreaks ? @" " : @"";
 
-            // タブ文字等は本体側で半角スペースに置換してくれるのでそのままでよい
             return
-                src?
+                src
                     .Replace("\r\n", lineBreak)
                     .Replace("\r", lineBreak)
-                    .Replace("\n", lineBreak);
+                    .Replace("\n", lineBreak)
+                    .Replace('\t', ' ');
         }
 
         /// <summary>
@@ -222,6 +311,23 @@ namespace RucheHome.Automation.Talkers.CeVIO
         /// 音声完了ダイアログのウィンドウタイトル。
         /// </summary>
         private const string SaveCompleteDialogTitle = @"CeVIO Creative Studio S";
+
+        #region Friendly.WpfProcessTalkerBase<ParameterId> のオーバライド
+
+        /// <summary>
+        /// <see cref="Friendly.ProcessTalkerBase{TParameterId}.TargetApp"/>
+        /// プロパティ値の変更時に呼び出される。
+        /// </summary>
+        protected override void OnTargetAppChanged()
+        {
+            // WpfProcessTalkerBase の処理
+            base.OnTargetAppChanged();
+
+            // キャスト名キャッシュをクリア
+            this.CastNamesCache = null;
+        }
+
+        #endregion
 
         #region Friendly.ProcessTalkerBase<ParameterId> のオーバライド
 
@@ -264,37 +370,58 @@ namespace RucheHome.Automation.Talkers.CeVIO
         /// <returns>状態値。</returns>
         protected override Result<TalkerState> CheckState(WindowControl mainWindow)
         {
+            var mainWin = mainWindow.Dynamic();
+
             // ビジー表示中なら音声保存中と判断する
-            if (IsBusyIndicatorVisible(mainWindow.AppVar))
+            if (IsBusyIndicatorVisible(mainWin))
             {
                 return TalkerState.FileSaving;
             }
 
-            var (root, _) = this.Root.Get(mainWindow.AppVar);
-            if (root != null)
+            try
             {
-                var (panel, _) = this.ControlPanel.GetAny(out var kind, root);
-                if (panel != null)
-                {
-                    // コントロールパネルがトーク用以外ならアイドル状態扱い
-                    if (kind != ControlPanelKind.Talk)
-                    {
-                        return TalkerState.Idle;
-                    }
+                // ビジュアルツリー走査用オブジェクト取得or作成
+                var vtree =
+                    (mainWindow.App == this.TargetApp) ? this.TargetAppVisualTree : null;
+                vtree = vtree ?? new AppVisualTree(mainWindow.App);
 
-                    (panel, _) = this.OperationPanel.Get(panel);
-                    if (panel != null)
+                (DynamicAppVar c, var rootMessage) =
+                    this.Root.Get(out bool compacted, (DynamicAppVar)mainWin, vtree);
+                if (c != null)
+                {
+                    (c, _) = this.ControlPanel.GetAny(out var kind, c, vtree);
+                    if (c != null)
                     {
-                        var (button, _) = this.PlayStopToggle.Get(panel);
-                        if (button != null)
+                        // コントロールパネルがトーク用以外ならアイドル状態扱い
+                        if (kind != ControlPanelKind.Talk)
                         {
-                            // 試聴/停止トグルボタンがONなら読み上げ中、OFFならアイドル状態
-                            return
-                                (button.IsChecked == true) ?
-                                    TalkerState.Speaking : TalkerState.Idle;
+                            return TalkerState.Idle;
+                        }
+
+                        (c, _) = this.OperationPanel.Get(c);
+                        if (c != null)
+                        {
+                            var (button, _) = this.PlayStopToggle.Get(c);
+                            if (button != null)
+                            {
+                                // 試聴/停止トグルボタンがONなら読み上げ中
+                                // OFFならアイドル状態
+                                return
+                                    ((bool?)button.IsChecked == true) ?
+                                        TalkerState.Speaking : TalkerState.Idle;
+                            }
                         }
                     }
                 }
+                else if (compacted)
+                {
+                    // コンパクト表示はブロッキング中扱い
+                    return (TalkerState.Blocking, rootMessage);
+                }
+            }
+            catch (Exception ex)
+            {
+                ThreadDebug.WriteException(ex);
             }
 
             // いずれかのコントロールが見つからないとここに来る
@@ -303,15 +430,6 @@ namespace RucheHome.Automation.Talkers.CeVIO
             return
                 (this.State == TalkerState.None || this.State == TalkerState.Startup) ?
                     TalkerState.Startup : TalkerState.Cleanup;
-        }
-
-        /// <summary>
-        /// <see cref="Friendly.ProcessTalkerBase{TParameterId}.TargetApp"/>
-        /// プロパティ値の変更時に呼び出される。
-        /// </summary>
-        protected override void OnTargetAppChanged()
-        {
-            this.TargetVisualTreeHelper = this.TargetApp?.Type(typeof(VisualTreeHelper));
         }
 
         #endregion
@@ -329,63 +447,42 @@ namespace RucheHome.Automation.Talkers.CeVIO
         /// <returns>有効キャラクター配列。取得できなかった場合は null 。</returns>
         protected override Result<ReadOnlyCollection<string>> GetAvailableCharactersImpl()
         {
+            // キャスト名キャッシュが有効ならそれを返す
+            var cache = this.CastNamesCache;
+            if (cache != null)
+            {
+                return cache;
+            }
+
             // セリフデータグリッドを取得
-            var (grid, failMessage) = this.SpeechDataGrid.Get();
+            var (grid, gridMessage) = this.SpeechDataGrid.Get();
             if (grid == null)
             {
-                return (null, failMessage);
+                return (null, gridMessage);
             }
 
             var casts = new List<string>();
 
-            dynamic combo = null;
-            int selectedIndex = -1;
-
+            DynamicAppVar combo = null;
             try
             {
-                // 選択行のキャストセル取得
-                var cell = grid.GetCell(grid.CurrentItemIndex, 0);
-
-                // コンボボックス取得
-                combo = cell.Dynamic().Content;
-
-                // combo の Items[N].Name でキャスト名を取得できるが、
-                // CeVIO定義の型を参照することになるのでやめておく。
-
-                // 選択中インデックスを保存
-                selectedIndex = (int)combo.SelectedIndex;
-
-                // 各キャストを選択して ComboBox.Text からキャスト名を取得
-                var count = (int)combo.Items.Count;
-                for (int ii = 0; ii < count; ++ii)
-                {
-                    combo.SelectedIndex = ii;
-                    casts.Add((string)combo.Text);
-                }
+                // 選択行のキャストセルコンボボックス取得
+                combo = grid.GetCellContent(grid.SelectedRow, 0);
             }
             catch (Exception ex)
             {
                 ThreadTrace.WriteException(ex);
-                return (null, @"キャスト名一覧の取得に失敗しました。");
-            }
-            finally
-            {
-                // コンボボックスの選択キャストを元に戻す
-                // 失敗してもよい
-                if (selectedIndex >= 0)
-                {
-                    try
-                    {
-                        combo.SelectedIndex = selectedIndex;
-                    }
-                    catch (Exception ex)
-                    {
-                        ThreadDebug.WriteException(ex);
-                    }
-                }
+                return (null, @"本体のキャスト一覧の取得に失敗しました。");
             }
 
-            return casts.AsReadOnly();
+            // キャスト名キャッシュ作成
+            var (cacheOk, cacheMessage) = this.CreateCastNamesCache(combo);
+            if (!cacheOk)
+            {
+                return (null, cacheMessage);
+            }
+
+            return this.CastNamesCache;
         }
 
         /// <summary>
@@ -403,10 +500,8 @@ namespace RucheHome.Automation.Talkers.CeVIO
 
             try
             {
-                // 選択行のキャストセル取得
-                var cell = grid.GetCell(grid.CurrentItemIndex, 0);
-
-                return (string)cell.Dynamic().Content.Text;
+                // 選択行のキャストセルテキスト取得
+                return grid.GetCellText(grid.SelectedRow, 0);
             }
             catch (Exception ex)
             {
@@ -427,88 +522,59 @@ namespace RucheHome.Automation.Talkers.CeVIO
         protected override Result<bool> SetCharacterImpl(string character)
         {
             // セリフデータグリッドを取得
-            var (grid, failMessage) = this.SpeechDataGrid.Get();
+            var (grid, gridMessage) = this.SpeechDataGrid.Get();
             if (grid == null)
             {
-                return (false, failMessage);
+                return (false, gridMessage);
             }
-
-            dynamic combo = null;
-            int selectedIndex = -1;
 
             try
             {
-                // 選択行のキャストセル取得
-                var cell = grid.GetCell(grid.CurrentItemIndex, 0);
+                // 選択行のキャストセルコンボボックス取得
+                var combo = grid.GetCellContent(grid.SelectedRow, 0);
 
                 // 既に対象キャスト選択中なら何もせず終える
                 // CastSpeechInputRow 設定が Blank の場合は SetTextImpl で帳尻合わせされる
-                if ((string)cell.Dynamic().Content.Text == character)
-                {
-                    return true;
-                }
-
-                // 適切な行を選択
-                var v = this.SelectSpeechDataGridRowForInput(grid);
-                if (!v.Value)
-                {
-                    return (false, v.Message);
-                }
-
-                // 改めて選択行のキャストセル取得
-                cell = grid.GetCell(grid.CurrentItemIndex, 0);
-
-                // コンボボックス取得
-                combo = cell.Dynamic().Content;
-
-                // 既に対象キャスト選択中なら完了
                 if ((string)combo.Text == character)
                 {
                     return true;
                 }
 
-                // combo の Items[N].Name でキャスト名を取得できるが、
-                // CeVIO定義の型を参照することになるのでやめておく。
-
-                // 選択中インデックスを保存
-                selectedIndex = (int)combo.SelectedIndex;
-
-                // 各キャストを選択して ComboBox.Text からキャスト名を取得
-                var count = (int)combo.Items.Count;
-                for (int ii = 0; ii < count; ++ii)
+                // キャスト名キャッシュを取得or作成
+                var (cache, cacheMessage) =
+                    this.GetOrCreateCastNamesCache((DynamicAppVar)combo);
+                if (cache == null)
                 {
-                    combo.SelectedIndex = ii;
-                    if ((string)combo.Text == character)
-                    {
-                        // 見つかったので完了
-                        selectedIndex = -1; // finally での戻し処理を行わせない
-                        return true;
-                    }
+                    return (false, cacheMessage);
                 }
+
+                // キャスト検索
+                var castIndex = cache.IndexOf(character);
+                if (castIndex < 0)
+                {
+                    return (false, $@"本体に {character} が登録されていません。");
+                }
+
+                // 適切な行を選択
+                var (ok, failMessage) = this.SelectSpeechDataGridRowForInput(grid);
+                if (!ok)
+                {
+                    return (false, failMessage);
+                }
+
+                // 改めて選択行のキャストセルコンボボックス取得
+                combo = grid.GetCellContent(grid.SelectedRow, 0);
+
+                // キャスト選択
+                combo.SelectedIndex = castIndex;
             }
             catch (Exception ex)
             {
                 ThreadTrace.WriteException(ex);
                 return (false, @"キャストの選択に失敗しました。");
             }
-            finally
-            {
-                // コンボボックスの選択キャストを元に戻す
-                // 失敗してもよい
-                if (selectedIndex >= 0)
-                {
-                    try
-                    {
-                        combo.SelectedIndex = selectedIndex;
-                    }
-                    catch (Exception ex)
-                    {
-                        ThreadDebug.WriteException(ex);
-                    }
-                }
-            }
 
-            return (false, $@"本体に {character} が登録されていません。");
+            return true;
         }
 
         /// <summary>
@@ -526,10 +592,8 @@ namespace RucheHome.Automation.Talkers.CeVIO
 
             try
             {
-                // 選択行のセリフセル取得
-                var cell = grid.GetCell(grid.CurrentItemIndex, 1);
-
-                return (string)cell.Dynamic().Content.Text;
+                // 選択行のセリフセルテキスト取得
+                return grid.GetCellText(grid.SelectedRow, 1);
             }
             catch (Exception ex)
             {
@@ -552,6 +616,10 @@ namespace RucheHome.Automation.Talkers.CeVIO
         {
             // セリフ文字列化
             var speechText = this.MakeSpeechText(text);
+            if (string.IsNullOrWhiteSpace(speechText))
+            {
+                return (false, @"空白文を設定することはできません。");
+            }
 
             // メインウィンドウを取得
             var mainWin = this.GetMainWindow();
@@ -571,8 +639,8 @@ namespace RucheHome.Automation.Talkers.CeVIO
             int castIndex = -1;
             try
             {
-                var cell = grid.GetCell(grid.CurrentItemIndex, 0);
-                castIndex = (int)cell.Dynamic().Content.SelectedIndex;
+                var combo = grid.GetCellContent(grid.SelectedRow, 0);
+                castIndex = (int)combo.SelectedIndex;
             }
             catch (Exception ex)
             {
@@ -589,17 +657,17 @@ namespace RucheHome.Automation.Talkers.CeVIO
 
             try
             {
-                var row = grid.CurrentItemIndex;
+                var row = grid.SelectedRow;
 
                 // 選択行のキャストインデックス設定
                 if (castIndex >= 0)
                 {
-                    grid.EmulateChangeCellComboSelect(row, 0, castIndex);
+                    grid.GetCellContent(row, 0).SelectedIndex = castIndex;
                 }
 
                 // 選択行のセリフセルに文字列設定
                 var async = new Async();
-                grid.EmulateChangeCellText(row, 1, speechText, async);
+                var result = grid.EditCellText(row, 1, speechText, async);
 
                 // ダイアログが出る可能性があるためそれを待つ
                 // ダイアログが出ずに完了した場合は成功
@@ -608,10 +676,19 @@ namespace RucheHome.Automation.Talkers.CeVIO
                 {
                     return (false, @"本体側でダイアログが表示されました。");
                 }
+
+                // 完了済みのはずだが念のため待機
+                async.WaitForCompletion();
+
+                // 処理結果を確認
+                if (!(bool)result)
+                {
+                    return (false, @"本体のセリフ一覧表を編集できません。");
+                }
             }
             catch (Exception ex)
             {
-                ThreadTrace.WriteException(ex);
+                ThreadTrace.WriteException(ex, true);
                 return (false, @"セリフの設定に失敗しました。");
             }
 
@@ -640,7 +717,7 @@ namespace RucheHome.Automation.Talkers.CeVIO
                 var id = idSlider.Key;
                 try
                 {
-                    dict.Add(id, (decimal)idSlider.Value.Value);
+                    dict.Add(id, (decimal)(double)idSlider.Value.Value);
                 }
                 catch (Exception ex)
                 {
@@ -667,65 +744,111 @@ namespace RucheHome.Automation.Talkers.CeVIO
             IEnumerable<KeyValuePair<ParameterId, decimal>> parameters)
         {
             // パラメータスライダー群を取得
-            var (sliders, failMessage) =
+            var (sliders, slidersMessage) =
                 this.ParameterSliders.Get(parameters.Select(kv => kv.Key));
             if (sliders == null)
             {
-                return (null, failMessage);
+                return (null, slidersMessage);
+            }
+
+            // 感情パラメータ値はすべて最小値にすることができないため、
+            // 大きい値から順に設定することで極力想定通りの値が設定できるようにする。
+
+            // スライダーと設定値のペアにして、感情関連を設定値の大きい順にソート
+            var idSliderValues =
+                sliders
+                    .Select(
+                        idSlider =>
+                            (
+                                id: idSlider.Key,
+                                slider: idSlider.Value,
+                                value: parameters.First(kv => kv.Key == idSlider.Key).Value
+                            ))
+                    .OrderByDescending(
+                        isv => isv.id.IsEmotion() ? isv.value : decimal.MaxValue);
+
+            // 自動試聴トグルボタンを取得
+            var (autoPlayButton, autoPlayButtonMessage) = this.AutoPlayToggle.Get();
+            if (autoPlayButton == null)
+            {
+                return (null, autoPlayButtonMessage);
             }
 
             var dict = new Dictionary<ParameterId, Result<bool>>();
+            bool? autoPlay = null;
 
-            foreach (var idSlider in sliders)
+            try
             {
-                var id = idSlider.Key;
-                var value = parameters.First(kv => kv.Key == id).Value;
-                var info = id.GetInfo();
-                var format = @"F" + info.Digits;
-
-                // 範囲チェック
-                if (value < info.MinValue)
+                // 自動試聴を無効化する
+                autoPlay = (bool?)autoPlayButton.IsChecked;
+                if (autoPlay != false)
                 {
-                    dict.Add(
-                        id,
-                        (
-                            false,
-                            MakeParameterValueName(id) + @"に " +
-                            info.MinValue.ToString(format) + @" より小さい値 " +
-                            value.ToString(format) + @" は設定できません。"
-                        ));
-                    continue;
-                }
-                if (value > info.MaxValue)
-                {
-                    dict.Add(
-                        id,
-                        (
-                            false,
-                            MakeParameterValueName(id) + @"に " +
-                            info.MaxValue.ToString(format) + @" より大きい値 " +
-                            value.ToString(format) + @" は設定できません。"
-                        ));
-                    continue;
+                    autoPlayButton.IsChecked = (bool?)false;
                 }
 
-                try
+                foreach (var (id, slider, value) in idSliderValues)
                 {
-                    idSlider.Value.EmulateChangeValue((double)value);
-                }
-                catch (Exception ex)
-                {
-                    ThreadTrace.WriteException(ex);
-                    dict.Add(
-                        id,
-                        (
-                            false,
-                            ex.Message ?? (ex.GetType().Name + @" 例外が発生しました。")
-                        ));
-                    continue;
-                }
+                    var info = id.GetInfo();
+                    var format = @"F" + info.Digits;
 
-                dict.Add(id, true);
+                    // 範囲チェック
+                    if (value < info.MinValue)
+                    {
+                        dict.Add(
+                            id,
+                            (
+                                false,
+                                MakeParameterValueName(id) + @"に " +
+                                info.MinValue.ToString(format) + @" より小さい値 " +
+                                value.ToString(format) + @" は設定できません。"
+                            ));
+                        continue;
+                    }
+                    if (value > info.MaxValue)
+                    {
+                        dict.Add(
+                            id,
+                            (
+                                false,
+                                MakeParameterValueName(id) + @"に " +
+                                info.MaxValue.ToString(format) + @" より大きい値 " +
+                                value.ToString(format) + @" は設定できません。"
+                            ));
+                        continue;
+                    }
+
+                    try
+                    {
+                        slider.Value = (double)value;
+                    }
+                    catch (Exception ex)
+                    {
+                        ThreadTrace.WriteException(ex);
+                        dict.Add(
+                            id,
+                            (
+                                false,
+                                ex.Message ?? (ex.GetType().Name + @" 例外が発生しました。")
+                            ));
+                        continue;
+                    }
+
+                    dict.Add(id, true);
+                }
+            }
+            catch (Exception ex)
+            {
+                ThreadTrace.WriteException(ex);
+                return (null, @"本体のパラメータスライダー群の操作に失敗しました。");
+            }
+            finally
+            {
+                // 自動試聴を元に戻す
+                // 失敗してもよい
+                if (autoPlay != false)
+                {
+                    autoPlayButton.IsChecked = autoPlay;
+                }
             }
 
             return dict;
@@ -762,23 +885,22 @@ namespace RucheHome.Automation.Talkers.CeVIO
 
             try
             {
-                if (!button.IsEnabled)
+                if (!(bool)button.IsEnabled)
                 {
                     return (false, @"本体の試聴/停止ボタンがクリックできない状態です。");
                 }
 
-                // WPFToggleButton.EmulateCheck だと動作はするが再生されない。
-                // WPFButtonBase.EmulateClick を使う。
+                // IsChecked = true だと見た目は変化するが再生されない。
+                // PerformClick を使う。
 
                 // 試聴/停止トグルボタンをクリック
-                // 試聴中ならば2回クリック
-                var buttonBase = new WPFButtonBase(button.AppVar);
                 var async = new Async();
-                if (button.IsChecked == true)
+                if ((bool?)button.IsChecked == true)
                 {
-                    buttonBase.EmulateClick();
+                    // 試聴中ならば一旦停止させるためにクリック
+                    PerformClick(button);
                 }
-                buttonBase.EmulateClick(async);
+                PerformClick(button, async);
 
                 // ダイアログが出る可能性があるためそれを待つ
                 // ダイアログが出ずに完了した場合は成功
@@ -812,22 +934,21 @@ namespace RucheHome.Automation.Talkers.CeVIO
 
             try
             {
-                if (!(bool)button.Dynamic().IsEnabled)
+                if (!(bool)button.IsEnabled)
                 {
                     return (false, @"本体の試聴/停止ボタンがクリックできない状態です。");
                 }
-                if (button.IsChecked == false)
+                if ((bool?)button.IsChecked == false)
                 {
                     // 既に停止しているので何もしない
                     return (true, @"停止済みです。");
                 }
 
-                // WPFToggleButton.EmulateCheck だと動作はするが停止されない。
-                // WPFButtonBase.EmulateClick を使う。
+                // IsChecked = false だと見た目は変化するが停止されない。
+                // PerformClick を使う。
 
                 // 試聴/停止トグルボタンをクリック
-                var buttonBase = new WPFButtonBase(button.AppVar);
-                buttonBase.EmulateClick();
+                PerformClick(button);
             }
             catch (Exception ex)
             {
@@ -878,7 +999,7 @@ namespace RucheHome.Automation.Talkers.CeVIO
 
             // WAV書き出しメニューをクリックして音声ファイル保存ダイアログを取得
             var (fileDialog, fileDialogMessage) =
-                this.SaveFileImpl_ClickSaveMenu(mainWin, grid, saveMenuAsync);
+                this.SaveFileImpl_ClickSaveMenu((DynamicAppVar)mainWin, grid, saveMenuAsync);
             if (fileDialog == null)
             {
                 return (null, fileDialogMessage);
@@ -892,7 +1013,7 @@ namespace RucheHome.Automation.Talkers.CeVIO
             }
 
             // 音声保存処理完了待ち
-            result = this.SaveFileImpl_WaitSaving(mainWin, saveMenuAsync);
+            result = this.SaveFileImpl_WaitSaving((DynamicAppVar)mainWin, saveMenuAsync);
             if (!result.Value)
             {
                 return (null, result.Message);
@@ -918,7 +1039,7 @@ namespace RucheHome.Automation.Talkers.CeVIO
         /// そのまま音声保存しようとすると連続書き出しになってしまうため、
         /// 一旦別の行を選択することで追加の行選択状態を解除する。
         /// </remarks>
-        private Result<WPFDataGrid> SaveFileImpl_SelectSingleDataGridRow()
+        private Result<AppDataGrid> SaveFileImpl_SelectSingleDataGridRow()
         {
             // セリフデータグリッドを取得
             var (grid, failMessage) = this.SpeechDataGrid.Get();
@@ -927,17 +1048,16 @@ namespace RucheHome.Automation.Talkers.CeVIO
                 return (null, failMessage);
             }
 
-            int selectedIndex = -1;
+            int selectedRow = -1;
             try
             {
-                selectedIndex = grid.CurrentItemIndex;
+                selectedRow = grid.SelectedRow;
 
                 // 一旦別の行を選択して元の行に戻す
-                var g = grid.Dynamic();
-                g.SelectedIndex = (selectedIndex > 0) ? (selectedIndex - 1) : 1;
-                g.SelectedIndex = selectedIndex;
+                grid.SelectedRow = (selectedRow > 0) ? (selectedRow - 1) : 1;
+                grid.SelectedRow = selectedRow;
 
-                selectedIndex = -1;
+                selectedRow = -1;
             }
             catch (Exception ex)
             {
@@ -948,11 +1068,11 @@ namespace RucheHome.Automation.Talkers.CeVIO
             {
                 // 元の行に戻す
                 // 失敗してもよい
-                if (selectedIndex >= 0)
+                if (selectedRow >= 0)
                 {
                     try
                     {
-                        grid.Dynamic().SelectedIndex = selectedIndex;
+                        grid.SelectedRow = selectedRow;
                     }
                     catch (Exception ex)
                     {
@@ -974,11 +1094,11 @@ namespace RucheHome.Automation.Talkers.CeVIO
         /// </param>
         /// <returns>音声ファイル保存ダイアログ。表示されなかった場合は null 。</returns>
         private Result<WindowControl> SaveFileImpl_ClickSaveMenu(
-            AppVar mainWindow,
-            WPFDataGrid speechDataGrid,
+            dynamic mainWindow,
+            AppDataGrid speechDataGrid,
             Async saveMenuAsync)
         {
-            Debug.Assert(mainWindow != null);
+            Debug.Assert((DynamicAppVar)mainWindow != null);
             Debug.Assert(speechDataGrid != null);
             Debug.Assert(saveMenuAsync != null);
 
@@ -987,16 +1107,15 @@ namespace RucheHome.Automation.Talkers.CeVIO
             try
             {
                 // WAVE書き出しメニューアイテムを取得
-                var menuItem =
-                    new WPFMenuItem(speechDataGrid.Dynamic().ContextMenu.Items[12]);
+                var menuItem = speechDataGrid.Control.ContextMenu.Items[12];
 
-                if (!menuItem.IsEnabled)
+                if (!(bool)menuItem.IsEnabled)
                 {
                     return (null, @"本体のWAV書き出しメニューがクリックできない状態です。");
                 }
 
                 // WAVE書き出しメニュークリック
-                menuItem.EmulateClick(saveMenuAsync);
+                PerformClick(menuItem, saveMenuAsync);
 
                 // ファイルダイアログを待つ
                 fileDialog = new WindowControl(mainWindow).WaitForNextModal(saveMenuAsync);
@@ -1081,9 +1200,9 @@ namespace RucheHome.Automation.Talkers.CeVIO
         /// WAV書き出しメニュークリック処理に用いた非同期オブジェクト。
         /// </param>
         /// <returns>成功したならば true 。そうでなければ false 。</returns>
-        private Result<bool> SaveFileImpl_WaitSaving(AppVar mainWindow, Async saveMenuAsync)
+        private Result<bool> SaveFileImpl_WaitSaving(dynamic mainWindow, Async saveMenuAsync)
         {
-            Debug.Assert(mainWindow != null);
+            Debug.Assert((DynamicAppVar)mainWindow != null);
             Debug.Assert(saveMenuAsync != null);
 
             try
@@ -1115,18 +1234,18 @@ namespace RucheHome.Automation.Talkers.CeVIO
                 // 失敗してもよい
                 try
                 {
-                    var vtree = this.TargetVisualTreeHelper;
+                    var vtree = this.TargetAppVisualTree;
 
-                    var border = vtree.GetChild(completeDialog, 0);
+                    var border = vtree.GetDescendant(completeDialog, 0);
                     var buttonParent =
                         border
                             .Child          // StackPanel
                             .Children[1]    // Border
                             .Child          // StackPanel
                             .Children[1];   // Control
-                    var button = new WPFButtonBase(vtree.GetChild(buttonParent, 0));
+                    var button = vtree.GetDescendant(buttonParent, 0);
 
-                    button.EmulateClick();
+                    PerformClick(button);
                 }
                 catch (Exception ex)
                 {

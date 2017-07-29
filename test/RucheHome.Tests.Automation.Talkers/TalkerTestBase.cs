@@ -18,6 +18,15 @@ namespace RucheHome.Tests.Automation.Talkers
     public abstract class TalkerTestBase<TTalker>
         where TTalker : ITalker
     {
+        /// <summary>
+        /// コンストラクタ。
+        /// </summary>
+        /// <param name="kind">Talker インスタンス種別。</param>
+        public TalkerTestBase(TalkerKind kind)
+        {
+            this.TalkerKind = kind;
+        }
+
         #region テストメソッド群
 
         [TestMethod]
@@ -62,12 +71,11 @@ namespace RucheHome.Tests.Automation.Talkers
 
         [TestMethod]
         [TestCategory(nameof(ITalker))]
-        public void Test_ITalker_FailStateMessage()
+        public void Test_ITalker_StateMessage()
         {
             var talker = this.GetTalker();
 
-            var failStateMessage = talker.FailStateMessage;
-            Assert.IsNull(failStateMessage, failStateMessage);
+            Console.WriteLine(talker.StateMessage);
         }
 
         [TestMethod]
@@ -136,7 +144,7 @@ namespace RucheHome.Tests.Automation.Talkers
         {
             var talker = this.GetTalker();
 
-            var text = "テキスト設定テストです。\nテストテストテスト。";
+            var text = "テキスト設定テストです。\nテスト\tテスト\tテスト。";
 
             // テキスト設定
             {
@@ -148,7 +156,12 @@ namespace RucheHome.Tests.Automation.Talkers
             {
                 var r = talker.GetText();
                 Assert.IsNotNull(r.Value, r.Message);
-                Assert.AreEqual(r.Value, text);
+
+                // CeVIO用 Talker は改行やタブ文字を置換するので等価にはならない
+                if (this.TalkerKind != TalkerKind.CeVIO)
+                {
+                    Assert.AreEqual(r.Value, text);
+                }
             }
         }
 
@@ -156,22 +169,6 @@ namespace RucheHome.Tests.Automation.Talkers
         [TestCategory(nameof(ITalker))]
         public void Test_ITalker_GetParameters_SetParameters()
         {
-            // パラメータ群を出力するローカルメソッド
-            void writeParameters(IEnumerable<KeyValuePair<object, decimal>> parameters)
-            {
-                if (parameters == null)
-                {
-                    Console.WriteLine(@"{0}", null);
-                }
-                else
-                {
-                    foreach (var kv in parameters)
-                    {
-                        Console.WriteLine(@"{0} : {1}", kv.Key, kv.Value);
-                    }
-                }
-            }
-
             var talker = this.GetTalker();
             var infos = this.GetParameterInfos();
 
@@ -180,7 +177,7 @@ namespace RucheHome.Tests.Automation.Talkers
             // パラメータ群取得
             {
                 var r = talker.GetParameters();
-                writeParameters(r.Value);
+                PrintParameters(r.Value);
                 Assert.IsNotNull(r.Value, r.Message);
                 CollectionAssert.IsSubsetOf(r.Value.Keys, infos.Keys);
 
@@ -203,14 +200,20 @@ namespace RucheHome.Tests.Automation.Talkers
             // パラメータ群取得(最小許容値)
             {
                 var r = talker.GetParameters();
-                writeParameters(r.Value);
+                PrintParameters(r.Value);
                 Assert.IsNotNull(r.Value, r.Message);
                 CollectionAssert.IsSubsetOf(r.Value.Keys, infos.Keys);
-                CollectionAssert.AreEqual(
-                    r.Value.Values,
-                    r.Value.Keys
-                        .Select(id => infos.First(kv => id.Equals(kv.Key)).Value.MinValue)
-                        .ToArray());
+
+                // CeVIOは感情値をすべて最小値にはできないため等価にならない
+                if (this.TalkerKind != TalkerKind.CeVIO)
+                {
+                    CollectionAssert.AreEqual(
+                        r.Value.Values,
+                        r.Value.Keys
+                            .Select(
+                                id => infos.First(kv => id.Equals(kv.Key)).Value.MinValue)
+                            .ToArray());
+                }
             }
 
             // 最大許容値設定
@@ -229,7 +232,7 @@ namespace RucheHome.Tests.Automation.Talkers
             // パラメータ群取得(最大許容値)
             {
                 var r = talker.GetParameters();
-                writeParameters(r.Value);
+                PrintParameters(r.Value);
                 Assert.IsNotNull(r.Value, r.Message);
                 CollectionAssert.IsSubsetOf(r.Value.Keys, infos.Keys);
                 CollectionAssert.AreEqual(
@@ -338,15 +341,17 @@ namespace RucheHome.Tests.Automation.Talkers
             {
                 var r = talker.SetText(text);
 
-                // そもそも空白文の設定自体できない場合がある
-                if (!r.Value)
+                // CeVIO用 Talker はそもそも空白文の設定自体できない
+                if (this.TalkerKind == TalkerKind.CeVIO)
                 {
-                    Console.WriteLine(r.Message);
+                    Assert.IsFalse(r.Value, r.Message);
 
                     // ダイアログが出ている可能性があるので閉じる
                     CloseAllModalsIfProcessTalker(talker);
                     return;
                 }
+
+                Assert.IsTrue(r.Value, r.Message);
             }
 
             // 音声ファイル保存
@@ -380,6 +385,26 @@ namespace RucheHome.Tests.Automation.Talkers
         /// WM_CLOSE メッセージID値。
         /// </summary>
         private const int WM_CLOSE = 0x0010;
+
+        /// <summary>
+        /// パラメータ群を出力する。
+        /// </summary>
+        /// <param name="parameters">パラメータ群。</param>
+        protected static void PrintParameters<TParameterId>(
+            IEnumerable<KeyValuePair<TParameterId, decimal>> parameters)
+        {
+            if (parameters == null)
+            {
+                Console.WriteLine(@"{0}", null);
+            }
+            else
+            {
+                foreach (var kv in parameters)
+                {
+                    Console.WriteLine(@"{0} : {1}", kv.Key, kv.Value);
+                }
+            }
+        }
 
         /// <summary>
         /// もし <see cref="IProcessTalker"/> 実装クラスならば、
@@ -479,6 +504,11 @@ namespace RucheHome.Tests.Automation.Talkers
                 File.Delete(txtPath);
             }
         }
+
+        /// <summary>
+        /// Talker インスタンス種別を取得する。
+        /// </summary>
+        protected TalkerKind TalkerKind { get; }
 
         /// <summary>
         /// テスト用の Talker インスタンスを取得する。

@@ -1,7 +1,6 @@
 ﻿using System;
-using System.Windows.Media;
-using Codeer.Friendly;
 using Codeer.Friendly.Dynamic;
+using RucheHome.Automation.Friendly.Wpf;
 using RucheHome.Diagnostics;
 
 namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
@@ -15,25 +14,25 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         /// コンストラクタ。
         /// </summary>
         /// <param name="root">ルートコントロール取得用オブジェクト。</param>
-        /// <param name="visualTreeHelperGetter">
-        /// 操作対象アプリの VisualTreeHelper 型オブジェクト取得デリゲート。
+        /// <param name="appVisualTreeGetter">
+        /// ビジュアルツリー走査用オブジェクト取得デリゲート。
         /// </param>
         /// <param name="canChangeTrackGetter">トラック選択変更可否取得デリゲート。</param>
         public ControlPanel(
             Root root,
-            Func<dynamic> visualTreeHelperGetter,
+            Func<AppVisualTree> appVisualTreeGetter,
             Func<bool> canChangeTrackGetter)
         {
             this.Root = root ?? throw new ArgumentNullException(nameof(root));
-            this.VisualTreeHelperGetter =
-                visualTreeHelperGetter ??
-                throw new ArgumentNullException(nameof(visualTreeHelperGetter));
+            this.AppVisualTreeGetter =
+                appVisualTreeGetter ??
+                throw new ArgumentNullException(nameof(appVisualTreeGetter));
             this.CanChangeTrackGetter =
                 canChangeTrackGetter ??
                 throw new ArgumentNullException(nameof(canChangeTrackGetter));
 
-            this.SpeechDataGrid = new SpeechDataGrid(this);
-            this.OperationPanel = new OperationPanel(this, visualTreeHelperGetter);
+            this.SpeechDataGrid = new SpeechDataGrid(this, appVisualTreeGetter);
+            this.OperationPanel = new OperationPanel(this, appVisualTreeGetter);
         }
 
         /// <summary>
@@ -53,8 +52,14 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         /// <param name="root">
         /// ルートコントロール。 null ならばメソッド内で取得される。
         /// </param>
+        /// <param name="appVisualTree">
+        /// ビジュアルツリー走査用オブジェクト。 null ならばメソッド内で取得される。
+        /// </param>
         /// <returns>コントロール。見つからないならば null 。</returns>
-        public Result<AppVar> GetAny(out ControlPanelKind kind, AppVar root = null)
+        public Result<dynamic> GetAny(
+            out ControlPanelKind kind,
+            dynamic root = null,
+            AppVisualTree appVisualTree = null)
         {
             kind = ControlPanelKind.None;
 
@@ -70,19 +75,8 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
                 rootCtrl = rv.Value;
             }
 
-            // VisualTreeHelper 型オブジェクトを取得
-            dynamic vtree = null;
-            try
-            {
-                vtree =
-                    this.VisualTreeHelperGetter() ??
-                    rootCtrl.App?.Type(typeof(VisualTreeHelper));
-            }
-            catch (Exception ex)
-            {
-                ThreadTrace.WriteException(ex);
-                vtree = null;
-            }
+            // ビジュアルツリー走査用オブジェクトを取得
+            var vtree = appVisualTree ?? this.AppVisualTreeGetter();
             if (vtree == null)
             {
                 return (null, @"本体の情報を取得できません。");
@@ -90,8 +84,7 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
 
             try
             {
-                var editor =
-                    vtree.GetChild(vtree.GetChild(rootCtrl.Dynamic().Children[3], 0), 0);
+                var editor = vtree.GetDescendant(rootCtrl.Children[3], 0, 0);
                 try
                 {
                     var panel = editor.Content;
@@ -99,13 +92,13 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
                     kind =
                         ((int)panel.Children.Count < 4) ?
                             ControlPanelKind.None : ControlPanelKind.Talk;
-                    return (AppVar)panel;
+                    return (panel, null);
                 }
                 catch
                 {
                     // ソング用は階層構造が異なる
                     kind = ControlPanelKind.Song;
-                    return (AppVar)editor.Child.Content;
+                    return (editor.Child.Content, null);
                 }
             }
             catch (Exception ex)
@@ -123,26 +116,32 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         /// <param name="root">
         /// ルートコントロール。 null ならばメソッド内で取得される。
         /// </param>
+        /// <param name="appVisualTree">
+        /// ビジュアルツリー走査用オブジェクト。 null ならばメソッド内で取得される。
+        /// </param>
         /// <returns>コントロール。見つからないか取得できない状態ならば null 。</returns>
-        public Result<AppVar> GetTalk(AppVar root = null)
+        public Result<dynamic> GetTalk(
+            dynamic root = null,
+            AppVisualTree appVisualTree = null)
         {
             // ルートコントロールを取得
-            var r = root;
-            if (r == null)
+            var rootCtrl = root;
+            if (rootCtrl == null)
             {
                 var rv = this.Root.Get();
                 if (rv.Value == null)
                 {
                     return (null, rv.Message);
                 }
-                r = rv.Value;
+                rootCtrl = rv.Value;
             }
 
             // コントロールパネル取得
-            var (panel, failMessage) = this.GetAny(out var kind, r);
+            var (panel, panelMessage) =
+                this.GetAny(out var kind, (DynamicAppVar)rootCtrl, appVisualTree);
             if (panel == null)
             {
-                return (null, failMessage);
+                return (null, panelMessage);
             }
 
             // 既にトーク用トラック選択中ならそのまま返す
@@ -158,12 +157,12 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
             }
 
             // トラックセレクタ取得
-            var tv = this.Root.TrackSelector.Get(r);
-            if (tv.Value == null)
+            var (trackSelector, trackSelectorMessage) =
+                this.Root.TrackSelector.Get((DynamicAppVar)rootCtrl);
+            if (trackSelector == null)
             {
-                return (null, tv.Message);
+                return (null, trackSelectorMessage);
             }
-            var trackSelector = tv.Value;
 
             // トーク用トラックを選択する
             int? selectedIndex = null;
@@ -172,9 +171,9 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
                 // selector の Items[N].Category でトーク用/ソング用を判別できるが、
                 // CeVIO定義の型を参照することになるのでやめておく。
 
-                selectedIndex = trackSelector.SelectedIndex;
+                selectedIndex = (int)trackSelector.SelectedIndex;
 
-                var count = trackSelector.ItemCount;
+                var count = (int)trackSelector.Items.Count;
                 for (int ii = 0; ii < count; ++ii)
                 {
                     // 元々選択していたものはトーク用ではないのでスキップ
@@ -184,19 +183,20 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
                     }
 
                     // トラック選択変更
-                    trackSelector.EmulateChangeSelectedIndex(ii);
+                    trackSelector.SelectedIndex = ii;
 
                     // 改めてコントロールパネル取得
-                    (panel, failMessage) = this.GetAny(out kind, r);
+                    (panel, panelMessage) =
+                        this.GetAny(out kind, (DynamicAppVar)rootCtrl, appVisualTree);
                     if (panel == null)
                     {
-                        return (null, failMessage);
+                        return (null, panelMessage);
                     }
 
                     if (kind == ControlPanelKind.Talk)
                     {
                         selectedIndex = null; // finally での戻し処理を行わせない
-                        return panel;
+                        return (panel, null);
                     }
                 }
             }
@@ -212,7 +212,7 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
                 {
                     try
                     {
-                        trackSelector.EmulateChangeSelectedIndex(selectedIndex.Value);
+                        trackSelector.SelectedIndex = selectedIndex.Value;
                     }
                     catch (Exception ex)
                     {
@@ -230,9 +230,9 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         private Root Root { get; }
 
         /// <summary>
-        /// 操作対象アプリの VisualTreeHelper 型オブジェクト取得デリゲートを取得する。
+        /// ビジュアルツリー走査用オブジェクト取得デリゲートを取得する。
         /// </summary>
-        private Func<dynamic> VisualTreeHelperGetter { get; }
+        private Func<AppVisualTree> AppVisualTreeGetter { get; }
 
         /// <summary>
         /// トラック選択変更可否取得デリゲートを取得する。

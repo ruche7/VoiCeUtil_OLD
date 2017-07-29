@@ -1,6 +1,5 @@
 ﻿using System;
-using Codeer.Friendly;
-using Codeer.Friendly.Dynamic;
+using RucheHome.Automation.Friendly.Wpf;
 using RucheHome.Diagnostics;
 
 namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
@@ -14,24 +13,30 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         /// コンストラクタ。
         /// </summary>
         /// <param name="controlPanel">コントロールパネル取得用オブジェクト。</param>
-        /// <param name="visualTreeHelperGetter">
-        /// 操作対象アプリの VisualTreeHelper 型オブジェクト取得デリゲート。
+        /// <param name="appVisualTreeGetter">
+        /// ビジュアルツリー走査用オブジェクト取得デリゲート。
         /// </param>
         public OperationPanel(
             ControlPanel controlPanel,
-            Func<dynamic> visualTreeHelperGetter)
+            Func<AppVisualTree> appVisualTreeGetter)
         {
             this.ControlPanel =
                 controlPanel ?? throw new ArgumentNullException(nameof(controlPanel));
 
             this.PlayStopToggle = new PlayStopToggle(this);
-            this.ParameterSliders = new ParameterSliders(this, visualTreeHelperGetter);
+            this.AutoPlayToggle = new AutoPlayToggle(this);
+            this.ParameterSliders = new ParameterSliders(this, appVisualTreeGetter);
         }
 
         /// <summary>
         /// 試聴/停止トグルボタン取得用オブジェクトを取得する。
         /// </summary>
         public PlayStopToggle PlayStopToggle { get; }
+
+        /// <summary>
+        /// 自動試聴トグルボタン取得用オブジェクトを取得する。
+        /// </summary>
+        public AutoPlayToggle AutoPlayToggle { get; }
 
         /// <summary>
         /// パラメータスライダー群取得用オブジェクトを取得する。
@@ -45,7 +50,7 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         /// コントロールパネル。 null ならばメソッド内で取得される。
         /// </param>
         /// <returns>コントロール。見つからないか取得できない状態ならば null 。</returns>
-        public Result<AppVar> Get(AppVar controlPanel = null)
+        public Result<dynamic> Get(dynamic controlPanel = null)
         {
             // コントロールパネルを取得
             var ctrlPanel = controlPanel;
@@ -62,7 +67,7 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
             try
             {
                 return
-                    (AppVar)ctrlPanel.Dynamic()
+                    ctrlPanel
                         .Children[2]    // VoiceEditor
                         .Content        // ScrollViewer
                         .Content;       // Grid

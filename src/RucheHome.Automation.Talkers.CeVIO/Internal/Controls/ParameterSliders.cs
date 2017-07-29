@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Windows.Media;
-using Codeer.Friendly;
-using Codeer.Friendly.Dynamic;
-using RM.Friendly.WPFStandardControls;
+using RucheHome.Automation.Friendly.Wpf;
 using RucheHome.Diagnostics;
 
 namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
@@ -18,18 +15,18 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         /// コンストラクタ。
         /// </summary>
         /// <param name="operationPanel">操作パネル取得用オブジェクト。</param>
-        /// <param name="visualTreeHelperGetter">
-        /// 操作対象アプリの VisualTreeHelper 型オブジェクト取得デリゲート。
+        /// <param name="appVisualTreeGetter">
+        /// ビジュアルツリー走査用オブジェクト取得デリゲート。
         /// </param>
         public ParameterSliders(
             OperationPanel operationPanel,
-            Func<dynamic> visualTreeHelperGetter)
+            Func<AppVisualTree> appVisualTreeGetter)
         {
             this.OperationPanel =
                 operationPanel ?? throw new ArgumentNullException(nameof(operationPanel));
-            this.VisualTreeHelperGetter =
-                visualTreeHelperGetter ??
-                throw new ArgumentNullException(nameof(visualTreeHelperGetter));
+            this.AppVisualTreeGetter =
+                appVisualTreeGetter ??
+                throw new ArgumentNullException(nameof(appVisualTreeGetter));
         }
 
         /// <summary>
@@ -41,44 +38,18 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         /// <param name="operationPanel">
         /// 操作パネル。 null ならばメソッド内で取得される。
         /// </param>
+        /// <param name="appVisualTree">
+        /// ビジュアルツリー走査用オブジェクト。 null ならばメソッド内で取得される。
+        /// </param>
         /// <returns>
         /// スライダーのディクショナリ。見つからないか取得できない状態ならば null 。
         /// </returns>
-        public Result<Dictionary<ParameterId, WPFSlider>> Get(
+        public Result<Dictionary<ParameterId, dynamic>> Get(
             IEnumerable<ParameterId> targetParameterIds = null,
-            AppVar operationPanel = null)
+            dynamic operationPanel = null,
+            AppVisualTree appVisualTree = null)
         {
-            // 操作パネルを取得
-            var opePanel = operationPanel;
-            if (opePanel == null)
-            {
-                var ov = this.OperationPanel.Get();
-                if (ov.Value == null)
-                {
-                    return (null, ov.Message);
-                }
-                opePanel = ov.Value;
-            }
-
-            // VisualTreeHelper 型オブジェクトを取得
-            dynamic vtree = null;
-            try
-            {
-                vtree =
-                    this.VisualTreeHelperGetter() ??
-                    opePanel.App?.Type(typeof(VisualTreeHelper));
-            }
-            catch (Exception ex)
-            {
-                ThreadTrace.WriteException(ex);
-                vtree = null;
-            }
-            if (vtree == null)
-            {
-                return (null, @"本体の情報を取得できません。");
-            }
-
-            var dict = new Dictionary<ParameterId, WPFSlider>();
+            var dict = new Dictionary<ParameterId, dynamic>();
 
             var effectIdIndices =
                 (targetParameterIds == null) ?
@@ -90,10 +61,29 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
 
             if (effectIdIndices.Any() || emotionIds.Any())
             {
+                // 操作パネルを取得
+                var opePanel = operationPanel;
+                if (opePanel == null)
+                {
+                    var ov = this.OperationPanel.Get();
+                    if (ov.Value == null)
+                    {
+                        return (null, ov.Message);
+                    }
+                    opePanel = ov.Value;
+                }
+
+                // ビジュアルツリー走査用オブジェクトを取得
+                var vtree = appVisualTree ?? this.AppVisualTreeGetter();
+                if (vtree == null)
+                {
+                    return (null, @"本体の情報を取得できません。");
+                }
+
                 try
                 {
                     var panelChildren =
-                        opePanel.Dynamic()
+                        opePanel
                             .Children[1]    // Border
                             .Child          // DockPanel
                             .Children[0]    // StackPanel
@@ -102,25 +92,26 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
                     // 音声効果
                     if (effectIdIndices.Any())
                     {
-                        var border = vtree.GetChild(panelChildren[0], 0);
-                        var panel = vtree.GetChild(border.Child, 0);
+                        var border = vtree.GetDescendant(panelChildren[0], 0);
+                        var panel = vtree.GetDescendant(border.Child, 0);
 
                         foreach (var ii in effectIdIndices)
                         {
-                            var sliderPanel = vtree.GetChild(panel.Children[ii.index], 0);
-                            dict.Add(ii.id, new WPFSlider(sliderPanel.Children[1]));
+                            var sliderPanel =
+                                vtree.GetDescendant(panel.Children[ii.index], 0);
+                            dict.Add(ii.id, sliderPanel.Children[1]);
                         }
                     }
 
                     // 感情
                     if (emotionIds.Any())
                     {
-                        var border = vtree.GetChild(panelChildren[2], 0);
-                        var panel = vtree.GetChild(border.Child, 0);
+                        var border = vtree.GetDescendant(panelChildren[2], 0);
+                        var panel = vtree.GetDescendant(border.Child, 0);
 
                         foreach (var c in panel.Children)
                         {
-                            var sliderPanel = vtree.GetChild(c, 0);
+                            var sliderPanel = vtree.GetDescendant(c, 0);
 
                             // 感情名からパラメータID検索
                             var name = (string)sliderPanel.Children[0].Child.Text;
@@ -128,7 +119,7 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
 
                             if (id.HasValue && emotionIds.Contains(id.Value))
                             {
-                                dict.Add(id.Value, new WPFSlider(sliderPanel.Children[1]));
+                                dict.Add(id.Value, sliderPanel.Children[1]);
                             }
                         }
                     }
@@ -158,8 +149,8 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         private OperationPanel OperationPanel { get; }
 
         /// <summary>
-        /// 操作対象アプリの VisualTreeHelper 型オブジェクト取得デリゲートを取得する。
+        /// ビジュアルツリー走査用オブジェクト取得デリゲートを取得する。
         /// </summary>
-        private Func<dynamic> VisualTreeHelperGetter { get; }
+        private Func<AppVisualTree> AppVisualTreeGetter { get; }
     }
 }

@@ -14,6 +14,13 @@ namespace RucheHome.Tests.Automation.Talkers.CeVIO
     public class TalkerTest : ProcessTalkerTestBase<Talker>
     {
         /// <summary>
+        /// コンストラクタ。
+        /// </summary>
+        public TalkerTest() : base(TalkerKind.CeVIO)
+        {
+        }
+
+        /// <summary>
         /// テスト用の Talker インスタンスを取得または設定する。
         /// </summary>
         private static Talker TestTalker { get; set; } = null;
@@ -70,7 +77,7 @@ namespace RucheHome.Tests.Automation.Talkers.CeVIO
 
             try
             {
-                var text = "テキスト設定テストです。\nテストテストテスト。";
+                var text = "テキスト設定テストです。\nテスト\tテスト\tテスト。";
 
                 // 改行削除設定
                 talker.IsTextSeparatedByLineBreaks = false;
@@ -85,7 +92,7 @@ namespace RucheHome.Tests.Automation.Talkers.CeVIO
                 {
                     var r = talker.GetText();
                     Assert.IsNotNull(r.Value, r.Message);
-                    Assert.AreEqual(r.Value, text.Replace("\n", @""));
+                    Assert.AreEqual(r.Value, text.Replace("\n", @"").Replace('\t', ' '));
                 }
 
                 // 改行⇒半角スペース置換設定
@@ -101,13 +108,103 @@ namespace RucheHome.Tests.Automation.Talkers.CeVIO
                 {
                     var r = talker.GetText();
                     Assert.IsNotNull(r.Value, r.Message);
-                    Assert.AreEqual(r.Value, text.Replace("\n", @" "));
+                    Assert.AreEqual(r.Value, text.Replace("\n", @" ").Replace('\t', ' '));
                 }
             }
             finally
             {
                 // 設定を元に戻しておく
                 talker.IsTextSeparatedByLineBreaks = orgSetting;
+            }
+        }
+
+        [TestMethod]
+        [TestCategory(nameof(CeVIO) + @"." + nameof(Talker))]
+        public void Test_CeVIO_Talker_SetEmotionParameters()
+        {
+            var talker = this.GetTalker();
+            var infos = this.GetParameterInfos();
+
+            Dictionary<ParameterId, decimal> orgValues = null;
+
+            // パラメータ群取得
+            {
+                var r = talker.GetParameters();
+                PrintParameters(r.Value);
+                Assert.IsNotNull(r.Value, r.Message);
+                CollectionAssert.IsSubsetOf(r.Value.Keys, infos.Keys);
+
+                // 感情関連のみ抜き出す
+                orgValues =
+                    r.Value
+                        .Where(kv => kv.Key.IsEmotion())
+                        .ToDictionary(kv => kv.Key, kv => kv.Value);
+            }
+
+            // パラメータIDと最小許容値との Dictionary を作成
+            var emotionIdMins =
+                orgValues.Keys.ToDictionary(id => id, id => id.GetInfo().MinValue);
+            Assert.IsTrue(emotionIdMins.Count > 0);
+
+            for (int pi = 0; pi < emotionIdMins.Count; ++pi)
+            {
+                // どれか1要素だけ 最小値+1 にした KeyValuePair リスト作成
+                var parameters = emotionIdMins.ToList();
+                var param = parameters[pi];
+                parameters[pi] =
+                    new KeyValuePair<ParameterId, decimal>(param.Key, param.Value + 1);
+
+                // パラメータ群設定
+                {
+                    var r = talker.SetParameters(parameters);
+                    Assert.IsNotNull(r.Value, r.Message);
+                    CollectionAssert.IsSubsetOf(r.Value.Keys, infos.Keys);
+                    foreach (var kv in r.Value)
+                    {
+                        Assert.IsTrue(kv.Value.Value, $@"{kv.Key} : {kv.Value.Message}");
+                    }
+                }
+
+                // パラメータ群取得
+                {
+                    var r = talker.GetParameters();
+                    PrintParameters(r.Value);
+                    Assert.IsNotNull(r.Value, r.Message);
+                    CollectionAssert.IsSubsetOf(r.Value.Keys, infos.Keys);
+
+                    // 感情関連だけ取り出す
+                    var dests = r.Value.Where(kv => kv.Key.IsEmotion());
+
+                    // 最小値+1 にした項目以外が最小値になっていればOK
+                    foreach (var dest in dests)
+                    {
+                        var id = dest.Key;
+                        var minValue = id.GetInfo().MinValue;
+
+                        var srcValue = parameters.First(kv => kv.Key == id).Value;
+                        if (srcValue == minValue)
+                        {
+                            // 最小値にした項目
+                            Assert.AreEqual(dest.Value, minValue);
+                        }
+                        else
+                        {
+                            // 最小値+1 にした項目
+                            Assert.AreNotEqual(dest.Value, minValue);
+                        }
+                    }
+                }
+            }
+
+            // 初期値設定
+            {
+                var r = talker.SetParameters(orgValues);
+                Assert.IsNotNull(r.Value, r.Message);
+                CollectionAssert.IsSubsetOf(r.Value.Keys, infos.Keys);
+                foreach (var kv in r.Value)
+                {
+                    Assert.IsTrue(kv.Value.Value, $@"{kv.Key} : {kv.Value.Message}");
+                }
             }
         }
 

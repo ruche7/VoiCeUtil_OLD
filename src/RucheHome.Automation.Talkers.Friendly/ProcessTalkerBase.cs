@@ -149,14 +149,17 @@ namespace RucheHome.Automation.Talkers.Friendly
         {
             if (fileDialog != null)
             {
-                var root = GetControlFromZOrder(fileDialog, 11, 0);
-
                 try
                 {
+                    var root = fileDialog.IdentifyFromZIndex(11, 0);
+
+                    // 直下に Edit を持つ ComboBox を探す
                     var combo =
-                        root.GetFromWindowClass(@"ComboBox")
+                        root
+                            .GetFromWindowClass(@"ComboBox")
                             .Where(c => c.GetFromWindowClass(@"Edit").Length > 0)
                             .FirstOrDefault();
+
                     if (combo != null)
                     {
                         return new NativeComboBox(combo);
@@ -289,74 +292,6 @@ namespace RucheHome.Automation.Talkers.Friendly
         private WindowsAppFriend targetApp = null;
 
         /// <summary>
-        /// 引数値が型 T およびその派生型ならばキャストし、
-        /// そうでなければ第1引数に引数値をとる T のコンストラクタ呼び出しを行う。
-        /// </summary>
-        /// <typeparam name="T">キャストまたは生成する型。</typeparam>
-        /// <param name="value">生成元の値。</param>
-        /// <returns>キャストまたは生成された値。</returns>
-        internal protected static T CastOrCreate<T>(object value) =>
-            (value != null && typeof(T).IsInstanceOfType(value)) ?
-                (T)value : (T)Activator.CreateInstance(typeof(T), value);
-
-        /// <summary>
-        /// Zオーダーインデックスを辿ることによって子孫コントロールを取得する。
-        /// </summary>
-        /// <param name="root">ツリーのルートとなるコントロール。</param>
-        /// <param name="zIndices">Zオーダーインデックス配列。</param>
-        /// <returns>コントロール。取得できなかった場合は null 。</returns>
-        private static WindowControl GetControlFromZOrder(
-            WindowControl root,
-            params int[] zIndices)
-        {
-            if (root != null && zIndices != null)
-            {
-                try
-                {
-                    return root.IdentifyFromZIndex(zIndices);
-                }
-                catch (Exception ex)
-                {
-                    ThreadDebug.WriteException(ex);
-                }
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// Zオーダーインデックスを辿ることによって子孫コントロールを取得する。
-        /// </summary>
-        /// <typeparam name="TControl">
-        /// 子孫コントロール型。
-        /// <see cref="WindowControl"/> インスタンスを代入可能ではない場合、
-        /// <see cref="WindowControl"/> インスタンスを引数に取るコンストラクタが必要。
-        /// </typeparam>
-        /// <param name="root">ツリーのルートとなるコントロール。</param>
-        /// <param name="zIndices">Zオーダーインデックス配列。</param>
-        /// <returns>コントロール。取得できなかった場合は null 。</returns>
-        private static TControl GetControlFromZOrder<TControl>(
-            WindowControl root,
-            params int[] zIndices)
-            where TControl : class
-        {
-            var c = GetControlFromZOrder(root, zIndices);
-            if (c != null)
-            {
-                try
-                {
-                    return CastOrCreate<TControl>(c);
-                }
-                catch (Exception ex)
-                {
-                    ThreadDebug.WriteException(ex);
-                }
-            }
-
-            return null;
-        }
-
-        /// <summary>
         /// 操作対象プロセスからアプリインスタンスを生成する。
         /// </summary>
         /// <param name="process">操作対象プロセス。</param>
@@ -401,9 +336,9 @@ namespace RucheHome.Automation.Talkers.Friendly
         /// <returns>状態値。</returns>
         /// <remarks>
         /// このメソッドの戻り値によって
-        /// <see cref="Talkers.ProcessTalkerBase{TParameterId}.State"/>
-        /// プロパティ等が更新される。
-        /// 状態値が <see cref="TalkerState.Fail"/> の場合は付随メッセージも利用される。
+        /// <see cref="Talkers.ProcessTalkerBase{TParameterId}.State"/> 等が更新される。
+        /// 付随メッセージも
+        /// <see cref="Talkers.ProcessTalkerBase{TParameterId}.StateMessage"/> に利用される。
         /// </remarks>
         protected abstract Result<TalkerState> CheckState(WindowControl mainWindow);
 

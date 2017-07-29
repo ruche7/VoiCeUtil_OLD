@@ -5,15 +5,13 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using System.Windows.Controls;
 using Codeer.Friendly;
 using Codeer.Friendly.Dynamic;
 using Codeer.Friendly.Windows.Grasp;
 using Codeer.Friendly.Windows.NativeStandardControls;
-using RM.Friendly.WPFStandardControls;
-using RucheHome.Diagnostics;
 using RucheHome.Automation.Talkers.Friendly;
 using RucheHome.Automation.Talkers.Voiceroid2.Internal;
+using RucheHome.Diagnostics;
 
 namespace RucheHome.Automation.Talkers.Voiceroid2
 {
@@ -82,7 +80,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
         /// <param name="root">コントロール。</param>
         /// <param name="func">Func デリゲート。</param>
         /// <returns>Func デリゲートの戻り値。 root が null ならば default(T) 。</returns>
-        private static T GetByFunc<T>(AppVar root, Func<dynamic, T> func)
+        private static T GetByFunc<T>(dynamic root, Func<dynamic, T> func)
         {
             Debug.Assert(func != null);
 
@@ -90,7 +88,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
             {
                 try
                 {
-                    return func(root.Dynamic());
+                    return func(root);
                 }
                 catch (Exception ex)
                 {
@@ -106,9 +104,9 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
         /// </summary>
         /// <param name="mainWindow">メインウィンドウ。</param>
         /// <returns>コントロール。取得できなかった場合は null 。</returns>
-        private static AppVar GetMainButtonsParent(AppVar mainWindow) =>
+        private static dynamic GetMainButtonsParent(dynamic mainWindow) =>
             GetByFunc(
-                mainWindow,
+                (DynamicAppVar)mainWindow,
                 win =>
                     win
                         .Content
@@ -125,7 +123,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
         /// <param name="parent">ボタン群の親コントロール。</param>
         /// <param name="button">ボタン種別。</param>
         /// <returns>コントロール。取得できなかった場合は null 。</returns>
-        private static WPFButtonBase GetMainButton(AppVar parent, MainButton button)
+        private static dynamic GetMainButton(dynamic parent, MainButton button)
         {
             if (parent == null)
             {
@@ -140,10 +138,10 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
 
             try
             {
-                var children = parent.Dynamic().Children;
+                var children = parent.Children;
                 if (index < (int)children.Count)
                 {
-                    return new WPFButtonBase(children[index]);
+                    return children[index];
                 }
             }
             catch (Exception ex)
@@ -159,75 +157,18 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
         /// </summary>
         /// <param name="mainWindow">メインウィンドウ。</param>
         /// <returns>コントロール。取得できなかった場合は null 。</returns>
-        private static WPFTextBox GetMainTextBox(AppVar mainWindow) =>
+        private static dynamic GetMainTextBox(dynamic mainWindow) =>
             GetByFunc(
-                mainWindow,
+                (DynamicAppVar)mainWindow,
                 win =>
-                    new WPFTextBox(
-                        win
-                            .Content
-                            .Children[1]
-                            .Children[0]
-                            .Children[2]
-                            .Children[0]
-                            .Content
-                            .Children[0]));
-
-        /// <summary>
-        /// ボイスプリセット一覧タブコントロールを取得する。
-        /// </summary>
-        /// <param name="mainWindow">メインウィンドウ。</param>
-        /// <returns>コントロール。取得できなかった場合は null 。</returns>
-        private static WPFTabControl GetPresetTabControl(AppVar mainWindow) =>
-            GetByFunc(
-                mainWindow,
-                win => new WPFTabControl(win.Content.Children[1].Children[0].Children[0]));
-
-        /// <summary>
-        /// ボイスプリセット一覧リストビューを取得する。
-        /// </summary>
-        /// <param name="presetTabControl">ボイスプリセット一覧タブコントロール。</param>
-        /// <param name="index">タブインデックス。</param>
-        /// <returns>コントロール。取得できなかった場合は null 。</returns>
-        private static WPFListView GetPresetListView(
-            WPFTabControl presetTabControl,
-            int index)
-            =>
-            (presetTabControl == null || index < 0 || index >= 2) ?
-                null :
-                GetByFunc(
-                    presetTabControl.AppVar,
-                    tc => new WPFListView(tc.Items[index].Content.Content.Children[0]));
-
-        /// <summary>
-        /// ボイスプリセット一覧リストビューアイテムからボイスプリセット名を取得する。
-        /// </summary>
-        /// <param name="presetListViewItem">
-        /// ボイスプリセット一覧リストビューアイテム。
-        /// </param>
-        /// <returns>ボイスプリセット名。取得できなかった場合は null 。</returns>
-        /// <remarks>
-        /// ビジュアルツリーから走査するため、リストビューが表示状態であること。
-        /// </remarks>
-        private static string GetPresetName(WPFListViewItem presetListViewItem)
-        {
-            // Content.PresetName から取得するのが手っ取り早いのだが、
-            // VOICEROID2定義の型を操作することになるのでやめておく。
-
-            try
-            {
-                var blocks = presetListViewItem.VisualTree().ByType<TextBlock>();
-                if (blocks.Count >= 2)
-                {
-                    return blocks[1].Dynamic().Text;
-                }
-            }
-            catch (Exception ex)
-            {
-                ThreadTrace.WriteException(ex);
-            }
-            return null;
-        }
+                    win
+                        .Content
+                        .Children[1]
+                        .Children[0]
+                        .Children[2]
+                        .Children[0]
+                        .Content
+                        .Children[0]);
 
         /// <summary>
         /// パラメータIDに対応するタブアイテム名を取得する。
@@ -238,6 +179,141 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
             parameterId.IsMaster() ? @"マスター" : parameterId.IsPreset() ? @"ボイス" : @"";
 
         /// <summary>
+        /// ボイスプリセット一覧タブコントロールを取得する。
+        /// </summary>
+        /// <param name="mainWindow">
+        /// メインウィンドウ。 null ならばメソッド内で取得される。
+        /// </param>
+        /// <returns>コントロール。取得できなかった場合は null 。</returns>
+        private Result<dynamic> GetPresetTabControl(dynamic mainWindow = null)
+        {
+            // メインウィンドウを取得
+            var mainWin = mainWindow ?? this.GetMainWindow();
+            if (mainWin == null)
+            {
+                return (null, @"本体のウィンドウが見つかりません。");
+            }
+
+            // タブコントロールを取得
+            var tabControl =
+                GetByFunc(
+                    (DynamicAppVar)mainWin,
+                    win => win.Content.Children[1].Children[0].Children[0]);
+            if (tabControl == null)
+            {
+                return (null, @"本体のボイスプリセットタブページが見つかりません。");
+            }
+
+            return (tabControl, null);
+        }
+
+        /// <summary>
+        /// ボイスプリセット一覧リストビューとそのアイテム群の親コントロールを取得する。
+        /// </summary>
+        /// <param name="presetTabControl">ボイスプリセット一覧タブコントロール。</param>
+        /// <param name="tabItemIndex">タブアイテムインデックス。</param>
+        /// <returns>
+        /// リストビューとそのアイテム群の親コントロール。
+        /// 取得できなかった場合は (null, null) 。
+        /// </returns>
+        /// <remarks>
+        /// ビジュアルツリーを走査するため、必要に応じて選択タブアイテムを変更する。
+        /// </remarks>
+        private Result<(dynamic listView, dynamic itemsParent)> GetPresetListView(
+            dynamic presetTabControl,
+            int tabItemIndex)
+        {
+            // 失敗時の戻り値を作成するローカルメソッド
+            Result<(dynamic listView, dynamic itemsParent)> makeFailResult(string message) =>
+                new Result<(dynamic listView, dynamic itemsParent)>((null, null), message);
+
+            // ビジュアルツリー走査用オブジェクトを取得
+            var vtree = this.TargetAppVisualTree;
+            if (vtree == null)
+            {
+                return makeFailResult(@"本体の情報を取得できません。");
+            }
+
+            // 対象タブアイテムを選択
+            try
+            {
+                if (
+                    presetTabControl == null ||
+                    tabItemIndex < 0 ||
+                    tabItemIndex >= (int)presetTabControl.Items.Count)
+                {
+                    return
+                        makeFailResult(
+                            @"本体のボイスプリセットタブページが見つかりません。");
+                }
+
+                presetTabControl.SelectedIndex = tabItemIndex;
+            }
+            catch (Exception ex)
+            {
+                ThreadTrace.WriteException(ex);
+                return
+                    makeFailResult(
+                        @"本体のボイスプリセットタブページを操作できませんでした。");
+            }
+
+            try
+            {
+                var listView =
+                    presetTabControl.Items[tabItemIndex].Content.Content.Children[0];
+                var chrome = vtree.GetDescendant(listView, 0);
+                var presenter = chrome.Child.Content;
+                var itemsParent = vtree.GetDescendant(presenter, 0);
+
+                return
+                    new Result<(dynamic listView, dynamic itemsParent)>(
+                        (listView, itemsParent));
+            }
+            catch (Exception ex)
+            {
+                ThreadTrace.WriteException(ex);
+            }
+            return makeFailResult(@"本体のボイスプリセット一覧が見つかりません。");
+        }
+
+        /// <summary>
+        /// ボイスプリセット一覧リストビューアイテムからボイスプリセット名を取得する。
+        /// </summary>
+        /// <param name="presetListViewItem">
+        /// ボイスプリセット一覧リストビューアイテム。
+        /// </param>
+        /// <returns>ボイスプリセット名。取得できなかった場合は null 。</returns>
+        /// <remarks>
+        /// ビジュアルツリーを走査するため、リストビューが表示状態であること。
+        /// </remarks>
+        private string GetPresetName(dynamic presetListViewItem)
+        {
+            // Content.PresetName から取得するのが手っ取り早いのだが、
+            // VOICEROID2定義の型を参照することになるのでやめておく。
+
+            // ビジュアルツリー走査用オブジェクトを取得
+            var vtree = this.TargetAppVisualTree;
+            if (vtree == null)
+            {
+                return null;
+            }
+
+            try
+            {
+                var border = vtree.GetDescendant(presetListViewItem, 0);
+                var presenter = border.Child.Child.Children[1];
+                var block = vtree.GetDescendant(presenter, 1, 0);
+
+                return (string)block.Text;
+            }
+            catch (Exception ex)
+            {
+                ThreadTrace.WriteException(ex);
+            }
+            return null;
+        }
+
+        /// <summary>
         /// ボイスプリセットタブコントロールに対する処理を行うデリゲート型。
         /// </summary>
         /// <typeparam name="T">処理結果値の型。</typeparam>
@@ -246,7 +322,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
         /// <param name="selectedIndex">現在選択中のタブアイテムインデックス。</param>
         /// <returns>処理結果。</returns>
         private delegate Result<T> PresetTabControlDelegate<T>(
-            WPFTabControl presetTabControl,
+            dynamic presetTabControl,
             int tabItemCount,
             int selectedIndex);
 
@@ -271,27 +347,20 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
         {
             ArgumentValidation.IsNotNull(processor, nameof(processor));
 
-            // メインウィンドウを取得
-            var mainWin = this.GetMainWindow();
-            if (mainWin == null)
-            {
-                return (default(T), @"本体のウィンドウが見つかりません。");
-            }
-
             // タブコントロールを取得
-            var tabControl = GetPresetTabControl(mainWin);
+            var (tabControl, failMessage) = this.GetPresetTabControl();
             if (tabControl == null)
             {
-                return (default(T), @"本体のボイスプリセットタブページが見つかりません。");
+                return (default(T), failMessage);
             }
 
             // 現在選択中のタブアイテムインデックスとタブアイテム数を保存
-            int tabIndex = 0, tabItemCount = 0;
+            int selectedIndex = 0, tabItemCount = 0;
             try
             {
-                tabIndex = tabControl.SelectedIndex;
-                tabItemCount = tabControl.ItemCount;
-                if (tabIndex < 0 || tabItemCount <= 0)
+                selectedIndex = (int)tabControl.SelectedIndex;
+                tabItemCount = (int)tabControl.Items.Count;
+                if (selectedIndex < 0 || tabItemCount <= 0)
                 {
                     return (default(T), @"本体のボイスプリセットタブページが見つかりません");
                 }
@@ -307,7 +376,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
             bool? rollback = false;
             try
             {
-                var result = processor(tabControl, tabItemCount, tabIndex);
+                var result = processor(tabControl, tabItemCount, selectedIndex);
                 rollback = tabSelectionRollbackDecider?.Invoke(result, null);
 
                 return result;
@@ -322,16 +391,16 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
             {
                 // 戻り処理有効ならば元のタブアイテムを選択する
                 // 失敗してもよい
-                try
+                if (rollback != false)
                 {
-                    if (rollback != false && tabIndex != tabControl.SelectedIndex)
+                    try
                     {
-                        tabControl.EmulateChangeSelectedIndex(tabIndex);
+                        tabControl.SelectedIndex = selectedIndex;
                     }
-                }
-                catch (Exception ex)
-                {
-                    ThreadDebug.WriteException(ex);
+                    catch (Exception ex)
+                    {
+                        ThreadDebug.WriteException(ex);
+                    }
                 }
             }
         }
@@ -367,7 +436,19 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
                 return (null, @"本体のウィンドウが見つかりません。");
             }
 
-            return ParameterSliderProcessor.Execute(mainWin, executer, targetParameterIds);
+            // ビジュアルツリー走査用オブジェクトを取得
+            var vtree = this.TargetAppVisualTree;
+            if (vtree == null)
+            {
+                return (null, @"本体の情報を取得できません。");
+            }
+
+            return
+                ParameterSliderProcessor.Execute(
+                    mainWin,
+                    vtree,
+                    executer,
+                    targetParameterIds);
         }
 
         /// <summary>
@@ -437,7 +518,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
         {
             // 音声保存ボタンを探す
             var saveButton =
-                GetMainButton(GetMainButtonsParent(mainWindow.AppVar), MainButton.Save);
+                GetMainButton(GetMainButtonsParent(mainWindow.Dynamic()), MainButton.Save);
             if (saveButton == null)
             {
                 // ウィンドウ構築途中or破棄途中であると判断
@@ -448,7 +529,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
             }
 
             // 音声保存ボタンが無効ならば読み上げ中と判断する
-            return (saveButton.IsEnabled ? TalkerState.Idle : TalkerState.Speaking);
+            return ((bool)saveButton.IsEnabled ? TalkerState.Idle : TalkerState.Speaking);
         }
 
         #endregion
@@ -463,7 +544,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
         {
             // ボイスプリセット名一覧取得を行うローカルメソッド
             Result<ReadOnlyCollection<string>> getAvailableCharacters(
-                WPFTabControl tabControl,
+                dynamic tabControl,
                 int tabItemCount,
                 int _)
             {
@@ -472,20 +553,22 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
                 for (int ti = 0; ti < tabItemCount; ++ti)
                 {
                     // タブアイテム選択
-                    tabControl.EmulateChangeSelectedIndex(ti);
+                    tabControl.SelectedIndex = ti;
 
-                    // リストビュー取得
-                    var listView = GetPresetListView(tabControl, ti);
-                    if (listView == null)
+                    // リストビューアイテム群の親コントロール取得
+                    var ((_, itemsParent), failMessage) =
+                        this.GetPresetListView((DynamicAppVar)tabControl, ti);
+                    if (itemsParent == null)
                     {
-                        return (null, @"本体のボイスプリセット一覧が見つかりません。");
+                        return (null, failMessage);
                     }
 
                     // リストビューアイテムを走査
-                    var listItemCount = listView.ItemCount;
+                    var listItems = itemsParent.Children;
+                    var listItemCount = (int)listItems.Count;
                     for (int li = 0; li < listItemCount; ++li)
                     {
-                        var name = GetPresetName(listView.GetItem(li));
+                        string name = this.GetPresetName(listItems[li]);
                         if (name == null)
                         {
                             return (null, @"本体のボイスプリセット名を取得できません。");
@@ -517,7 +600,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
         {
             // 選択中ボイスプリセット名取得を行うローカルメソッド
             Result<string> getCharacter(
-                WPFTabControl tabControl,
+                dynamic tabControl,
                 int tabItemCount,
                 int selectedTabIndex)
             {
@@ -525,19 +608,21 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
 
                 do
                 {
-                    // 現在のタブアイテムからリストビュー取得
-                    var listView = GetPresetListView(tabControl, tabIndex);
-                    if (listView == null)
+                    // 現在のタブアイテムからリストビューアイテム群の親コントロール取得
+                    var ((listView, itemsParent), failMessage) =
+                        this.GetPresetListView((DynamicAppVar)tabControl, tabIndex);
+                    if (listView == null || itemsParent == null)
                     {
-                        return (null, @"本体のボイスプリセット一覧が見つかりません。");
+                        return (null, failMessage);
                     }
 
                     // 選択中アイテムがあるか確認
-                    var selectedIndex = listView.SelectedIndex;
+                    var selectedIndex = (int)listView.SelectedIndex;
                     if (selectedIndex >= 0)
                     {
                         // 選択中アイテムから名前を取得して返す
-                        var name = GetPresetName(listView.GetItem(selectedIndex));
+                        string name =
+                            this.GetPresetName(itemsParent.Children[selectedIndex]);
                         return (
                             name,
                             (name == null) ?
@@ -546,7 +631,6 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
 
                     // 次のタブアイテムへ
                     tabIndex = (tabIndex + 1) % tabItemCount;
-                    tabControl.EmulateChangeSelectedIndex(tabIndex);
                 }
                 while (tabIndex != selectedTabIndex);
 
@@ -577,7 +661,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
         {
             // ボイスプリセット選択を行うローカルメソッド
             Result<bool> setCharacter(
-                WPFTabControl tabControl,
+                dynamic tabControl,
                 int tabItemCount,
                 int selectedTabIndex)
             {
@@ -586,28 +670,29 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
                 do
                 {
                     // 現在のタブアイテムからリストビュー取得
-                    var listView = GetPresetListView(tabControl, tabIndex);
-                    if (listView == null)
+                    var ((listView, itemsParent), failMessage) =
+                        this.GetPresetListView((DynamicAppVar)tabControl, tabIndex);
+                    if (listView == null || itemsParent == null)
                     {
-                        return (false, @"本体のボイスプリセット一覧が見つかりません。");
+                        return (false, failMessage);
                     }
 
                     // リストビューアイテムを走査
-                    var listItemCount = listView.ItemCount;
+                    var listItems = itemsParent.Children;
+                    var listItemCount = (int)listItems.Count;
                     for (int li = 0; li < listItemCount; ++li)
                     {
-                        var name = GetPresetName(listView.GetItem(li));
+                        string name = this.GetPresetName(listItems[li]);
                         if (name == character)
                         {
                             // 見つかったので選択
-                            listView.EmulateChangeSelectedIndex(li);
+                            listView.SelectedIndex = li;
                             return true;
                         }
                     }
 
                     // 次のタブアイテムへ
                     tabIndex = (tabIndex + 1) % tabItemCount;
-                    tabControl.EmulateChangeSelectedIndex(tabIndex);
                 }
                 while (tabIndex != selectedTabIndex);
 
@@ -651,7 +736,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
 
             try
             {
-                return textBox.Text;
+                return (string)textBox.Text;
             }
             catch (Exception ex)
             {
@@ -692,11 +777,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
             try
             {
                 // 文章入力欄にテキストを設定
-                bool done =
-                    WaitAsyncAction(
-                        async => textBox.EmulateChangeText(text, async),
-                        timeout);
-                if (!done)
+                if (!WaitAsyncAction(async => textBox.Text(async, text), timeout))
                 {
                     return (false, @"文章設定処理がタイムアウトしました。");
                 }
@@ -719,11 +800,11 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
         protected override Result<Dictionary<ParameterId, decimal>> GetParametersImpl()
         {
             // パラメータ値を取得するローカルメソッド
-            Result<decimal> getParameter(ParameterId id, WPFSlider slider)
+            Result<decimal> getParameter(ParameterId id, dynamic slider)
             {
                 try
                 {
-                    return (decimal)slider.Value;
+                    return (decimal)(double)slider.Value;
                 }
                 catch (Exception ex)
                 {
@@ -765,7 +846,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
                 (new Result<bool>(value, message), null);
 
             // パラメータ値を設定するローカルメソッド
-            Result<Result<bool>> setParameter(ParameterId id, WPFSlider slider)
+            Result<Result<bool>> setParameter(ParameterId id, dynamic slider)
             {
                 var value = parameters.First(kv => kv.Key == id).Value;
                 var info = id.GetInfo();
@@ -793,7 +874,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
 
                 try
                 {
-                    slider.EmulateChangeValue((double)value);
+                    slider.Value = (double)value;
                 }
                 catch (Exception ex)
                 {
@@ -850,7 +931,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
 
             try
             {
-                if (!play.IsEnabled)
+                if (!(bool)play.IsEnabled)
                 {
                     return (false, @"本体の再生ボタンがクリックできない状態です。");
                 }
@@ -860,9 +941,9 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
                 var head = GetMainButton(parent, MainButton.Head);
                 try
                 {
-                    if (head?.IsEnabled == true)
+                    if (head != null && (bool)head.IsEnabled)
                     {
-                        head.EmulateClick();
+                        PerformClick(head);
                     }
                 }
                 catch (Exception ex)
@@ -872,7 +953,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
 
                 // 再生ボタンクリック
                 var playAsync = new Async();
-                play.EmulateClick(playAsync);
+                PerformClick(play, playAsync);
 
                 // フレーズ編集未保存の場合等はダイアログが出るためそれを待つ
                 // ダイアログが出ずに完了した場合は成功
@@ -921,13 +1002,13 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
 
             try
             {
-                if (!stop.IsEnabled)
+                if (!(bool)stop.IsEnabled)
                 {
                     return (false, @"本体の停止ボタンがクリックできない状態です。");
                 }
 
                 // 停止ボタンクリック
-                stop.EmulateClick();
+                PerformClick(stop);
             }
             catch (Exception ex)
             {
@@ -971,7 +1052,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
 
             // 音声保存ボタンをクリックして音声ファイル保存ダイアログを取得
             var (fileDialog, fileDialogMessage) =
-                this.SaveFileImpl_ClickSaveButton(mainWin, saveButtonAsync);
+                this.SaveFileImpl_ClickSaveButton((DynamicAppVar)mainWin, saveButtonAsync);
             if (fileDialog == null)
             {
                 return (null, fileDialogMessage);
@@ -1016,10 +1097,10 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
         /// </param>
         /// <returns>音声ファイル保存ダイアログ。表示されなかった場合は null 。</returns>
         private Result<WindowControl> SaveFileImpl_ClickSaveButton(
-            AppVar mainWindow,
+            dynamic mainWindow,
             Async saveButtonAsync)
         {
-            Debug.Assert(mainWindow != null);
+            Debug.Assert((DynamicAppVar)mainWindow != null);
             Debug.Assert(saveButtonAsync != null);
 
             // ボタン群の親を取得
@@ -1040,13 +1121,13 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
 
             try
             {
-                if (!button.IsEnabled)
+                if (!(bool)button.IsEnabled)
                 {
                     return (null, @"本体の音声保存ボタンがクリックできない状態です。");
                 }
 
                 // 音声保存ボタンクリック
-                button.EmulateClick(saveButtonAsync);
+                PerformClick(button, saveButtonAsync);
 
                 // ファイルダイアログ or オプションウィンドウ(or 警告ダイアログ)を待つ
                 fileDialog = new WindowControl(mainWindow).WaitForNextModal(saveButtonAsync);
@@ -1061,18 +1142,16 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
                 if (title == SaveOptionWindowTitle)
                 {
                     // OKボタン取得
-                    var optionOkButton =
-                        new WPFButtonBase(
-                            fileDialog.Dynamic().Content.Children[1].Children[0]);
+                    var okButton = fileDialog.Dynamic().Content.Children[1].Children[0];
 
-                    if (!optionOkButton.IsEnabled)
+                    if (!(bool)okButton.IsEnabled)
                     {
                         return (null, @"設定画面のOKボタンがクリックできない状態です。");
                     }
 
                     // OKボタンクリック
                     var okButtonAsync = new Async();
-                    optionOkButton.EmulateClick(okButtonAsync);
+                    PerformClick(okButton, okButtonAsync);
 
                     // ファイルダイアログを待つ
                     fileDialog = fileDialog.WaitForNextModal(okButtonAsync);

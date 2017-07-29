@@ -232,13 +232,25 @@ namespace RucheHome.Automation.Talkers
         /// <returns>エラーメッセージ。アイドル状態である場合は null 。</returns>
         protected string MakeStateErrorMessage()
         {
-            switch (this.State)
+            var state = this.State;
+            if (state == TalkerState.Idle)
+            {
+                return null;
+            }
+
+            var stateMessage = this.StateMessage;
+            if (stateMessage != null)
+            {
+                return stateMessage;
+            }
+
+            switch (state)
             {
             case TalkerState.None:
                 return @"起動していません。";
 
             case TalkerState.Fail:
-                return (this.FailStateMessage ?? @"不正な状態です。");
+                return @"不正な状態です。";
 
             case TalkerState.Startup:
                 return @"起動完了していません。";
@@ -433,29 +445,26 @@ namespace RucheHome.Automation.Talkers
         /// プロパティ群を更新し、変更通知を行うデリゲートを返す。
         /// </summary>
         /// <param name="state">状態値。</param>
-        /// <param name="failStateMessage">
-        /// 不正状態の理由を示すメッセージ。
-        /// state が <see cref="TalkerState.Fail"/> 以外の場合は無視される。
-        /// </param>
+        /// <param name="stateMessage">状態に関する付随メッセージ。</param>
         /// <param name="targetProcess">
         /// 操作対象プロセス。 state が <see cref="TalkerState.None"/> の場合は無視される。
         /// </param>
         /// <returns>プロパティ値変更通知を行うデリゲート。通知不要ならば null 。</returns>
         private Action UpdateProperties(
             TalkerState state,
-            string failStateMessage,
+            string stateMessage,
             Process targetProcess)
         {
             var stateOld = this.State;
             var aliveOld = this.IsAlive;
             var canOperateOld = this.CanOperate;
-            var messageOld = this.FailStateMessage;
+            var stateMessageOld = this.StateMessage;
             var processOld = this.TargetProcess;
             var mainWinHandleOld = this.MainWindowHandle;
 
             // まず値変更
             this.State = state;
-            this.FailStateMessage = (state == TalkerState.Fail) ? failStateMessage : null;
+            this.StateMessage = stateMessage;
             this.TargetProcess = (state == TalkerState.None) ? null : targetProcess;
 
             // 変更通知対象をリストアップ
@@ -472,9 +481,9 @@ namespace RucheHome.Automation.Talkers
             {
                 changedPropNames.Add(nameof(CanOperate));
             }
-            if (this.FailStateMessage != messageOld)
+            if (this.StateMessage != stateMessageOld)
             {
-                changedPropNames.Add(nameof(FailStateMessage));
+                changedPropNames.Add(nameof(StateMessage));
             }
             if (this.TargetProcess != processOld)
             {
@@ -542,8 +551,8 @@ namespace RucheHome.Automation.Talkers
         /// </param>
         /// <returns>状態値。</returns>
         /// <remarks>
-        /// このメソッドの戻り値によって <see cref="State"/> プロパティ等が更新される。
-        /// 状態値が <see cref="TalkerState.Fail"/> の場合は付随メッセージも利用される。
+        /// このメソッドの戻り値によって <see cref="State"/> 等が更新される。
+        /// 付随メッセージも <see cref="StateMessage"/> に利用される。
         /// </remarks>
         protected abstract Result<TalkerState> CheckState(Process process);
 
@@ -1235,16 +1244,18 @@ namespace RucheHome.Automation.Talkers
         }
 
         /// <summary>
-        /// 不正状態の理由を示すメッセージを取得する。
+        /// 現在の状態に関する付随メッセージを取得する。
         /// </summary>
         /// <remarks>
-        /// <para><see cref="Update"/> メソッド呼び出しによって更新される。</para>
         /// <para>
-        /// <see cref="State"/> が <see cref="TalkerState.Fail"/>
-        /// の場合のみメッセージが設定され、それ以外の場合は null となる。
+        /// <see cref="Update"/> メソッド呼び出しによって更新される。 null にもなりうる。
+        /// </para>
+        /// <para>
+        /// <see cref="State"/> が <see cref="TalkerState.Idle"/> の場合は無視される。
+        /// それ以外の場合、 <see cref="MakeStateErrorMessage"/> の戻り値に利用される。
         /// </para>
         /// </remarks>
-        public string FailStateMessage { get; private set; } = null;
+        public string StateMessage { get; private set; } = null;
 
         /// <summary>
         /// 有効キャラクターの一覧を取得する。

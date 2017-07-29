@@ -52,7 +52,7 @@ namespace RucheHome.Automation.Talkers.CeVIO
         EmotionAngry,
 
         /// <summary>
-        /// 感情 : 悲しみ
+        /// 感情 : 哀しみ
         /// </summary>
         EmotionSad,
 
@@ -170,7 +170,7 @@ namespace RucheHome.Automation.Talkers.CeVIO
                 new ParameterInfo<ParameterId>(
                     ParameterId.EmotionAngry, @"怒り", 0, 0, 0, 100),
                 new ParameterInfo<ParameterId>(
-                    ParameterId.EmotionSad, @"悲しみ", 0, 0, 0, 100),
+                    ParameterId.EmotionSad, @"哀しみ", 0, 0, 0, 100),
                 new ParameterInfo<ParameterId>(
                     ParameterId.EmotionCool, @"クール", 0, 0, 0, 100),
                 new ParameterInfo<ParameterId>(

@@ -15,6 +15,13 @@ namespace RucheHome.Tests.Automation.Talkers.AITalkEx
     public class TalkerTest : ProcessTalkerTestBase<Talker>
     {
         /// <summary>
+        /// コンストラクタ。
+        /// </summary>
+        public TalkerTest() : base(TalkerKind.AITalkEx)
+        {
+        }
+
+        /// <summary>
         /// 全 Talker インスタンス配列を取得または設定する。
         /// </summary>
         private static Talker[] AllTalkers { get; set; } = null;

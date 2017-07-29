@@ -4,10 +4,9 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows;
-using System.Windows.Controls;
-using Codeer.Friendly;
 using Codeer.Friendly.Dynamic;
-using RM.Friendly.WPFStandardControls;
+using RucheHome.Automation.Friendly.Wpf;
+using RucheHome.Automation.Talkers.Friendly;
 using RucheHome.Diagnostics;
 
 namespace RucheHome.Automation.Talkers.Voiceroid2.Internal
@@ -51,13 +50,14 @@ namespace RucheHome.Automation.Talkers.Voiceroid2.Internal
         /// 処理結果値。
         /// Message は成功ならば null 、失敗ならばエラーメッセージとすること。
         /// </returns>
-        public delegate Result<T> Executer<T>(ParameterId id, WPFSlider slider);
+        public delegate Result<T> Executer<T>(ParameterId id, dynamic slider);
 
         /// <summary>
         /// <see cref="Talker.ProcessParameterSliders{T}"/> の実処理を行う。
         /// </summary>
         /// <typeparam name="T">処理結果値の型。</typeparam>
         /// <param name="mainWindow">メインウィンドウ。</param>
+        /// <param name="visualTree">ビジュアルツリー走査用オブジェクト。</param>
         /// <param name="executer">
         /// 処理デリゲート。
         /// 戻り値の Message は成功ならば null 、失敗ならばエラーメッセージとすること。
@@ -65,19 +65,20 @@ namespace RucheHome.Automation.Talkers.Voiceroid2.Internal
         /// <param name="targetIds">処理対象パラメータID列挙。 null ならばすべて対象。</param>
         /// <returns></returns>
         public Result<Dictionary<ParameterId, T>> Execute<T>(
-            AppVar mainWindow,
+            dynamic mainWindow,
+            AppVisualTree visualTree,
             Executer<T> executer,
             IEnumerable<ParameterId> targetIds = null)
         {
             ArgumentValidation.IsNotNull(mainWindow, nameof(mainWindow));
+            ArgumentValidation.IsNotNull(visualTree, nameof(visualTree));
             ArgumentValidation.IsNotNull(executer, nameof(executer));
 
             // タブコントロールを取得
-            WPFTabControl tabControl;
+            dynamic tabControl;
             try
             {
-                tabControl =
-                    new WPFTabControl(mainWindow.Dynamic().Content.Children[1].Children[2]);
+                tabControl = mainWindow.Content.Children[1].Children[2];
             }
             catch (Exception ex)
             {
@@ -89,7 +90,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2.Internal
             dynamic tabItems;
             try
             {
-                tabItems = tabControl.Dynamic().Items;
+                tabItems = tabControl.Items;
             }
             catch (Exception ex)
             {
@@ -105,7 +106,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2.Internal
             var masterGroups = new[] { GuiGroup.MasterEffect, GuiGroup.MasterPause };
             if (masterGroups.Any(g => targetInfos[g].IdIndices.Any()))
             {
-                var sliders = new Dictionary<ParameterId, WPFSlider>();
+                var sliders = new Dictionary<ParameterId, dynamic>();
 
                 try
                 {
@@ -136,7 +137,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2.Internal
                 presetEffectTargetInfo.IdIndices.Any() ||
                 presetEmotionTargetInfo.IdIndices.Any())
             {
-                var sliders = new Dictionary<ParameterId, WPFSlider>();
+                var sliders = new Dictionary<ParameterId, dynamic>();
                 int tabIndex = -1;
 
                 try
@@ -150,12 +151,13 @@ namespace RucheHome.Automation.Talkers.Voiceroid2.Internal
                         AddLogicalSlidersTo(panelsParent, presetEffectTargetInfo, sliders);
 
                         // 現在のタブインデックスを保存
-                        tabIndex = tabControl.SelectedIndex;
+                        tabIndex = (int)tabControl.SelectedIndex;
 
                         // 感情
                         AddPresetEmotionSlidersTo(
                             tabControl,
                             panelsParent,
+                            visualTree,
                             presetEmotionTargetInfo,
                             sliders);
                     }
@@ -181,7 +183,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2.Internal
                     {
                         try
                         {
-                            tabControl.EmulateChangeSelectedIndex(tabIndex);
+                            tabControl.SelectedIndex = tabIndex;
                         }
                         catch (Exception ex)
                         {
@@ -375,7 +377,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2.Internal
         private static void AddLogicalSlidersTo(
             dynamic panelsParent,
             GuiGroupTargetInfo targetInfo,
-            IDictionary<ParameterId, WPFSlider> idSliders)
+            IDictionary<ParameterId, dynamic> idSliders)
         {
             Debug.Assert(targetInfo != null);
             Debug.Assert(idSliders != null);
@@ -385,9 +387,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2.Internal
                 var panelChildren = panelsParent[targetInfo.PanelIndex].Children;
                 foreach (var (id, index) in targetInfo.IdIndices)
                 {
-                    idSliders.Add(
-                        id,
-                        new WPFSlider(panelChildren[index].Content.Children[2]));
+                    idSliders.Add(id, panelChildren[index].Content.Children[2]);
                 }
             }
         }
@@ -402,15 +402,19 @@ namespace RucheHome.Automation.Talkers.Voiceroid2.Internal
         /// <param name="panelsParent">
         /// スライダー群の親となるパネルコントロール群の親コントロール。
         /// </param>
+        /// <param name="visualTree">ビジュアルツリー走査用オブジェクト。</param>
         /// <param name="targetInfo">処理対象情報。</param>
         /// <param name="idSliders">パラメータIDとスライダーのペア群の追加先。</param>
         private static void AddPresetEmotionSlidersTo(
-            WPFTabControl tabControl,
+            dynamic tabControl,
             dynamic panelsParent,
+            AppVisualTree visualTree,
             GuiGroupTargetInfo targetInfo,
-            IDictionary<ParameterId, WPFSlider> idSliders)
+            IDictionary<ParameterId, dynamic> idSliders)
         {
-            Debug.Assert(tabControl != null);
+            Debug.Assert((DynamicAppVar)tabControl != null);
+            Debug.Assert((DynamicAppVar)panelsParent != null);
+            Debug.Assert(visualTree != null);
             Debug.Assert(targetInfo != null);
             Debug.Assert(idSliders != null);
 
@@ -419,10 +423,10 @@ namespace RucheHome.Automation.Talkers.Voiceroid2.Internal
                 return;
             }
 
-            var baseListBox = new WPFListBox(panelsParent[targetInfo.PanelIndex]);
+            var baseListBox = panelsParent[targetInfo.PanelIndex];
 
             // 感情非対応のボイスプリセットでは非表示になっている
-            if (baseListBox.Visibility != Visibility.Visible)
+            if ((Visibility)baseListBox.Visibility != Visibility.Visible)
             {
                 return;
             }
@@ -431,17 +435,18 @@ namespace RucheHome.Automation.Talkers.Voiceroid2.Internal
             // VOICEROID2定義の型を操作することになるのでやめておく。
 
             // ビジュアルツリー走査のためにボイスタブ選択
-            if (tabControl.SelectedIndex != 1)
-            {
-                tabControl.EmulateChangeSelectedIndex(1);
-            }
+            tabControl.SelectedIndex = 1;
 
-            // ビジュアルツリーからスライダーリストを得る
-            var sliders = baseListBox.VisualTree().ByType<Slider>();
+            // ListBoxItem 群の親を取得
+            var itemsParent = visualTree.GetDescendant(baseListBox, 0, 0);
 
             foreach (var (id, index) in targetInfo.IdIndices)
             {
-                idSliders.Add(id, new WPFSlider(sliders[index]));
+                var item = itemsParent.Children[index];
+                var fader = visualTree.GetDescendant(item, 0, 0);
+                var slider = fader.Content.Children[2];
+
+                idSliders.Add(id, slider);
             }
         }
 
@@ -454,7 +459,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2.Internal
         /// <param name="results">処理結果値の追加先。</param>
         /// <returns>すべて成功したならば null 。そうでなければエラーメッセージ。</returns>
         private static string ApplyExecuter<T>(
-            IEnumerable<KeyValuePair<ParameterId, WPFSlider>> idSliders,
+            IEnumerable<KeyValuePair<ParameterId, dynamic>> idSliders,
             Executer<T> executer,
             IDictionary<ParameterId, T> results)
         {
@@ -464,7 +469,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2.Internal
 
             foreach (var kv in idSliders)
             {
-                var r = executer(kv.Key, kv.Value);
+                var r = executer(kv.Key, (DynamicAppVar)kv.Value);
                 if (r.Message != null)
                 {
                     return r.Message;

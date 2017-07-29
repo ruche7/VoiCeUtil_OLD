@@ -23,6 +23,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Automation.Talker
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Tests.Automation.Talkers", "test\RucheHome.Tests.Automation.Talkers\RucheHome.Tests.Automation.Talkers.csproj", "{A5F01152-B185-454A-B9B1-10E0E60B5C6D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Automation.Friendly", "src\RucheHome.Automation.Friendly\RucheHome.Automation.Friendly.csproj", "{1D283799-8D58-4377-BD05-383F0A2F7A73}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
@@ -61,6 +63,10 @@ Global
 		{A5F01152-B185-454A-B9B1-10E0E60B5C6D}.Debug|x86.Build.0 = Debug|x86
 		{A5F01152-B185-454A-B9B1-10E0E60B5C6D}.Release|x86.ActiveCfg = Release|x86
 		{A5F01152-B185-454A-B9B1-10E0E60B5C6D}.Release|x86.Build.0 = Release|x86
+		{1D283799-8D58-4377-BD05-383F0A2F7A73}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{1D283799-8D58-4377-BD05-383F0A2F7A73}.Debug|x86.Build.0 = Debug|Any CPU
+		{1D283799-8D58-4377-BD05-383F0A2F7A73}.Release|x86.ActiveCfg = Release|Any CPU
+		{1D283799-8D58-4377-BD05-383F0A2F7A73}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -74,5 +80,6 @@ Global
 		{55B9ED13-F7F6-4A9A-9408-9C4449D50350} = {87905CE9-795C-44B6-86AA-1DA5A1D2F3B9}
 		{AA29CE29-4FE9-47AB-96CB-AB7B68F42FBB} = {87905CE9-795C-44B6-86AA-1DA5A1D2F3B9}
 		{A5F01152-B185-454A-B9B1-10E0E60B5C6D} = {2EBE5B3F-BD10-4056-B386-B251471D02E8}
+		{1D283799-8D58-4377-BD05-383F0A2F7A73} = {87905CE9-795C-44B6-86AA-1DA5A1D2F3B9}
 	EndGlobalSection
 EndGlobal

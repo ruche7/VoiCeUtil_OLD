@@ -4,22 +4,22 @@ using RucheHome.Diagnostics;
 namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
 {
     /// <summary>
-    /// 試聴/停止トグルボタン取得処理を提供するクラス。
+    /// 自動試聴トグルボタン取得処理を提供するクラス。
     /// </summary>
-    internal sealed class PlayStopToggle
+    internal sealed class AutoPlayToggle
     {
         /// <summary>
         /// コンストラクタ。
         /// </summary>
         /// <param name="operationPanel">操作パネル取得用オブジェクト。</param>
-        public PlayStopToggle(OperationPanel operationPanel)
+        public AutoPlayToggle(OperationPanel operationPanel)
         {
             this.OperationPanel =
                 operationPanel ?? throw new ArgumentNullException(nameof(operationPanel));
         }
 
         /// <summary>
-        /// 試聴/停止トグルボタンを取得する。
+        /// 自動試聴トグルボタンを取得する。
         /// </summary>
         /// <param name="operationPanel">
         /// 操作パネル。 null ならばメソッド内で取得される。
@@ -41,13 +41,13 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
 
             try
             {
-                return opePanel.Children[0].Children[0];
+                return opePanel.Children[0].Children[2];
             }
             catch (Exception ex)
             {
                 ThreadTrace.WriteException(ex);
             }
-            return (null, @"本体の試聴/停止ボタンが見つかりません。");
+            return (null, @"本体の自動試聴ボタンが見つかりません。");
         }
 
         /// <summary>

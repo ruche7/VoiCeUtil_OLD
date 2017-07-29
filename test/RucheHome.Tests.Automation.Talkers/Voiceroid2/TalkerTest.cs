@@ -8,11 +8,18 @@ using RucheHome.Automation.Talkers.Voiceroid2;
 namespace RucheHome.Tests.Automation.Talkers.Voiceroid2
 {
     /// <summary>
-    /// <see cref="V2.Talker"/> クラスのテストクラス。
+    /// <see cref="Talker"/> クラスのテストクラス。
     /// </summary>
     [TestClass]
     public class TalkerTest : ProcessTalkerTestBase<Talker>
     {
+        /// <summary>
+        /// コンストラクタ。
+        /// </summary>
+        public TalkerTest() : base(TalkerKind.Voiceroid2)
+        {
+        }
+
         /// <summary>
         /// テスト用の Talker インスタンスを取得または設定する。
         /// </summary>

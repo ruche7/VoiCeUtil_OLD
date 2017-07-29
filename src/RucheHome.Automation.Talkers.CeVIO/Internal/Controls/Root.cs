@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Windows;
-using System.Windows.Media;
-using Codeer.Friendly;
 using Codeer.Friendly.Dynamic;
+using RucheHome.Automation.Friendly.Wpf;
 using RucheHome.Diagnostics;
 
 namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
@@ -16,25 +15,25 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         /// コンストラクタ。
         /// </summary>
         /// <param name="mainWindowGetter">メインウィンドウ取得デリゲート。</param>
-        /// <param name="visualTreeHelperGetter">
-        /// 操作対象アプリの VisualTreeHelper 型オブジェクト取得デリゲート。
+        /// <param name="appVisualTreeGetter">
+        /// ビジュアルツリー走査用オブジェクト取得デリゲート。
         /// </param>
         /// <param name="canChangeTrackGetter">トラック選択変更可否取得デリゲート。</param>
         public Root(
-            Func<AppVar> mainWindowGetter,
-            Func<dynamic> visualTreeHelperGetter,
+            Func<dynamic> mainWindowGetter,
+            Func<AppVisualTree> appVisualTreeGetter,
             Func<bool> canChangeTrackGetter)
         {
             this.MainWindowGetter =
                 mainWindowGetter ??
                 throw new ArgumentNullException(nameof(mainWindowGetter));
-            this.VisualTreeHelperGetter =
-                visualTreeHelperGetter ??
-                throw new ArgumentNullException(nameof(visualTreeHelperGetter));
+            this.AppVisualTreeGetter =
+                appVisualTreeGetter ??
+                throw new ArgumentNullException(nameof(appVisualTreeGetter));
 
             this.TrackSelector = new TrackSelector(this);
             this.ControlPanel =
-                new ControlPanel(this, visualTreeHelperGetter, canChangeTrackGetter);
+                new ControlPanel(this, appVisualTreeGetter, canChangeTrackGetter);
         }
 
         /// <summary>
@@ -53,9 +52,33 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         /// <param name="mainWindow">
         /// メインウィンドウ。 null ならばメソッド内で取得される。
         /// </param>
+        /// <param name="appVisualTree">
+        /// ビジュアルツリー走査用オブジェクト。 null ならばメソッド内で取得される。
+        /// </param>
         /// <returns>コントロール。見つからないか非表示ならば null 。</returns>
-        public Result<AppVar> Get(AppVar mainWindow = null)
+        public Result<dynamic> Get(
+            dynamic mainWindow = null,
+            AppVisualTree appVisualTree = null) =>
+            this.Get(out var _, (DynamicAppVar)mainWindow, appVisualTree);
+
+        /// <summary>
+        /// ルートコントロールを取得する。
+        /// </summary>
+        /// <param name="compacted">コンパクト表示中であるか否かの設定先。</param>
+        /// <param name="mainWindow">
+        /// メインウィンドウ。 null ならばメソッド内で取得される。
+        /// </param>
+        /// <param name="appVisualTree">
+        /// ビジュアルツリー走査用オブジェクト。 null ならばメソッド内で取得される。
+        /// </param>
+        /// <returns>コントロール。見つからないか非表示ならば null 。</returns>
+        public Result<dynamic> Get(
+            out bool compacted,
+            dynamic mainWindow = null,
+            AppVisualTree appVisualTree = null)
         {
+            compacted = false;
+
             // メインウィンドウを取得
             var mainWin = mainWindow ?? this.MainWindowGetter();
             if (mainWin == null)
@@ -63,19 +86,8 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
                 return (null, @"本体のウィンドウが見つかりません。");
             }
 
-            // VisualTreeHelper 型オブジェクトを取得
-            dynamic vtree = null;
-            try
-            {
-                vtree =
-                    this.VisualTreeHelperGetter() ??
-                    mainWin.App?.Type(typeof(VisualTreeHelper));
-            }
-            catch (Exception ex)
-            {
-                ThreadTrace.WriteException(ex);
-                vtree = null;
-            }
+            // ビジュアルツリー走査用オブジェクトを取得
+            var vtree = appVisualTree ?? this.AppVisualTreeGetter();
             if (vtree == null)
             {
                 return (null, @"本体の情報を取得できません。");
@@ -83,17 +95,18 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
 
             try
             {
-                var tabControl = mainWin.Dynamic().Content.Children[0].Children[1];
-                var sceneParent = vtree.GetChild(tabControl, 0).Children[1].Child;
-                var rootParent = vtree.GetChild(sceneParent, 0).Content.Children[0];
+                var tabControl = mainWin.Content.Children[0].Children[1];
+                var sceneParent = vtree.GetDescendant(tabControl, 0).Children[1].Child;
+                var rootParent = vtree.GetDescendant(sceneParent, 0).Content.Children[0];
 
                 // コンパクト表示中はルートの親が非表示になっている
                 if ((Visibility)rootParent.Visibility != Visibility.Visible)
                 {
+                    compacted = true;
                     return (null, @"本体がコンパクト表示中です。");
                 }
 
-                return (AppVar)rootParent.Children[0];
+                return (rootParent.Children[0], null);
             }
             catch (Exception ex)
             {
@@ -105,11 +118,11 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         /// <summary>
         /// メインウィンドウ取得デリゲートを取得する。
         /// </summary>
-        private Func<AppVar> MainWindowGetter { get; }
+        private Func<dynamic> MainWindowGetter { get; }
 
         /// <summary>
-        /// 操作対象アプリの VisualTreeHelper 型オブジェクト取得デリゲートを取得する。
+        /// ビジュアルツリー走査用オブジェクト取得デリゲートを取得する。
         /// </summary>
-        private Func<dynamic> VisualTreeHelperGetter { get; }
+        private Func<AppVisualTree> AppVisualTreeGetter { get; }
     }
 }

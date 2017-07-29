@@ -1,7 +1,4 @@
 ﻿using System;
-using Codeer.Friendly;
-using Codeer.Friendly.Dynamic;
-using RM.Friendly.WPFStandardControls;
 using RucheHome.Diagnostics;
 
 namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
@@ -27,32 +24,33 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         /// ルートコントロール。 null ならばメソッド内で取得される。
         /// </param>
         /// <returns>コントロール。見つからないならば null 。</returns>
-        public Result<WPFSelector> Get(AppVar root = null)
+        public Result<dynamic> Get(dynamic root = null)
         {
             // ルートコントロールを取得
-            var r = root;
-            if (r == null)
+            var rootCtrl = root;
+            if (rootCtrl == null)
             {
                 var rv = this.Root.Get();
                 if (rv.Value == null)
                 {
                     return (null, rv.Message);
                 }
-                r = rv.Value;
+                rootCtrl = rv.Value;
             }
 
             try
             {
-                return
-                    new WPFSelector(
-                        r.Dynamic()
-                            .Children[1]    // Grid
-                            .Children[0]    // Timetable
-                            .Content        // Grid
-                            .Children[1]    // DockPanel
-                            .Children[0]    // DockPanel
-                            .Children[1]    // ScrollViewer
-                            .Content);
+                var trackSelector =
+                    rootCtrl
+                        .Children[1]    // Grid
+                        .Children[0]    // Timetable
+                        .Content        // Grid
+                        .Children[1]    // DockPanel
+                        .Children[0]    // DockPanel
+                        .Children[1]    // ScrollViewer
+                        .Content;
+
+                return (trackSelector, null);
             }
             catch (Exception ex)
             {

@@ -1,7 +1,5 @@
 ﻿using System;
-using Codeer.Friendly;
-using Codeer.Friendly.Dynamic;
-using RM.Friendly.WPFStandardControls;
+using RucheHome.Automation.Friendly.Wpf;
 using RucheHome.Diagnostics;
 
 namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
@@ -15,10 +13,18 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         /// コンストラクタ。
         /// </summary>
         /// <param name="controlPanel">コントロールパネル取得用オブジェクト。</param>
-        public SpeechDataGrid(ControlPanel controlPanel)
+        /// <param name="appVisualTreeGetter">
+        /// ビジュアルツリー走査用オブジェクト取得デリゲート。
+        /// </param>
+        public SpeechDataGrid(
+            ControlPanel controlPanel,
+            Func<AppVisualTree> appVisualTreeGetter)
         {
             this.ControlPanel =
                 controlPanel ?? throw new ArgumentNullException(nameof(controlPanel));
+            this.AppVisualTreeGetter =
+                appVisualTreeGetter ??
+                throw new ArgumentNullException(nameof(appVisualTreeGetter));
         }
 
         /// <summary>
@@ -27,8 +33,13 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         /// <param name="controlPanel">
         /// コントロールパネル。 null ならばメソッド内で取得される。
         /// </param>
+        /// <param name="appVisualTree">
+        /// ビジュアルツリー走査用オブジェクト。 null ならばメソッド内で取得される。
+        /// </param>
         /// <returns>コントロール。見つからないか取得できない状態ならば null 。</returns>
-        public Result<WPFDataGrid> Get(AppVar controlPanel = null)
+        public Result<AppDataGrid> Get(
+            dynamic controlPanel = null,
+            AppVisualTree appVisualTree = null)
         {
             // コントロールパネルを取得
             var ctrlPanel = controlPanel;
@@ -42,16 +53,30 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
                 ctrlPanel = cv.Value;
             }
 
+            // ビジュアルツリー走査用オブジェクトを取得
+            var vtree = appVisualTree ?? this.AppVisualTreeGetter();
+            if (vtree == null)
+            {
+                return (null, @"本体の情報を取得できません。");
+            }
+
             try
             {
                 var dataGrid =
-                    new WPFDataGrid(ctrlPanel.Dynamic().Children[0].Content.Children[0]);
+                    new AppDataGrid(ctrlPanel.Children[0].Content.Children[0], vtree);
 
-                // キャスト列を表示状態にする
-                var castItem = FindCastMenuItem(dataGrid);
+                // コンテキストメニューを初期化して取得
+                var menu = InitializeContextMenu(dataGrid);
+                if (menu == null)
+                {
+                    return (null, @"本体のセリフ一覧表を初期化できません。");
+                }
+
+                // キャスト列を表示させる
+                var castItem = FindCastMenuItem(menu);
                 if (castItem == null)
                 {
-                    return (null, @"本体のセリフ一覧表が不正な状態です。");
+                    return (null, @"本体のセリフ一覧表を初期化できません。");
                 }
                 castItem.IsChecked = true;
 
@@ -65,16 +90,82 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         }
 
         /// <summary>
-        /// データグリッドのコンテキストメニューからキャスト表示切替項目を検索する。
+        /// セリフデータグリッドのコンテキストメニューを初期化して取得する。
         /// </summary>
-        /// <param name="dataGrid">データグリッド。</param>
-        /// <returns>項目。見つからなければ null 。</returns>
-        private static dynamic FindCastMenuItem(WPFDataGrid dataGrid)
+        /// <param name="dataGrid">セリフデータグリッド。</param>
+        /// <returns>コンテキストメニュー。</returns>
+        private static dynamic InitializeContextMenu(AppDataGrid dataGrid)
         {
-            // TODO: 一度もユーザがコンテキストメニューを表示していない場合も動くようにする。
+            var menu = dataGrid.Control.ContextMenu;
+            if (menu == null)
+            {
+                return null;
+            }
 
-            var menu = dataGrid.Dynamic().ContextMenu;
-            var items = menu.Items[10].Items;
+            foreach (var item in menu.Items)
+            {
+                // メニュー項目名取得
+                // Separator の場合があるので例外は握り潰す
+                string header;
+                try
+                {
+                    header = (string)item.Header;
+                }
+                catch
+                {
+                    continue;
+                }
+
+                // メニュー項目に null があるなら要初期化
+                if (header == null)
+                {
+                    // 初期化
+                    try
+                    {
+                        menu.PlacementTarget = dataGrid.Control;
+                        try
+                        {
+                            menu.IsOpen = true;
+                        }
+                        finally
+                        {
+                            menu.IsOpen = false;
+                        }
+                    }
+                    finally
+                    {
+                        menu.PlacementTarget = null;
+                    }
+
+                    // 非 null になったか確認
+                    if ((string)item.Header == null)
+                    {
+                        return null;
+                    }
+
+                    break;
+                }
+            }
+
+            return menu;
+        }
+
+        /// <summary>
+        /// セリフデータグリッドのコンテキストメニューからキャスト表示切替項目を検索する。
+        /// </summary>
+        /// <param name="contextMenu">コンテキストメニュー。</param>
+        /// <returns>項目。見つからなければ null 。</returns>
+        /// <remarks>
+        /// コンテキストメニュー未初期化の場合は取得に失敗する。
+        /// </remarks>
+        private static dynamic FindCastMenuItem(dynamic contextMenu)
+        {
+            if (contextMenu == null)
+            {
+                return null;
+            }
+
+            var items = contextMenu.Items[10].Items;
 
             // まず決め打ち
             var castItem = items[3];
@@ -104,12 +195,12 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         /// </returns>
         private static bool IsCastMenuItem(dynamic menuItem)
         {
-            // セパレータの場合があるので例外は握り潰す
+            // Separator の場合があるので例外は握り潰す
             try
             {
                 return
                     (bool)menuItem.IsCheckable &&
-                    (bool)menuItem.Header.StartsWith(@"キャスト");
+                    ((string)menuItem.Header == @"キャスト");
             }
             catch { }
             return false;
@@ -119,5 +210,10 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         /// コントロールパネル取得用オブジェクトを取得する。
         /// </summary>
         private ControlPanel ControlPanel { get; }
+
+        /// <summary>
+        /// ビジュアルツリー走査用オブジェクト取得デリゲートを取得する。
+        /// </summary>
+        private Func<AppVisualTree> AppVisualTreeGetter { get; }
     }
 }

@@ -69,13 +69,12 @@ namespace RucheHome.Automation.Talkers
         bool CanOperate { get; }
 
         /// <summary>
-        /// 不正状態の理由を示すメッセージを取得する。
+        /// 現在の状態に関する付随メッセージを取得する。
         /// </summary>
         /// <remarks>
-        /// <see cref="State"/> が <see cref="TalkerState.Fail"/>
-        /// の場合のみメッセージが設定され、それ以外の場合は null となる。
+        /// 特に付随メッセージが無いならば null を返す。
         /// </remarks>
-        string FailStateMessage { get; }
+        string StateMessage { get; }
 
         /// <summary>
         /// 有効キャラクターの一覧を取得する。

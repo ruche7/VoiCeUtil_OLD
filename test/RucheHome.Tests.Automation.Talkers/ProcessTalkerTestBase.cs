@@ -11,6 +11,14 @@ namespace RucheHome.Tests.Automation.Talkers
     public abstract class ProcessTalkerTestBase<TTalker> : TalkerTestBase<TTalker>
         where TTalker : IProcessTalker
     {
+        /// <summary>
+        /// コンストラクタ。
+        /// </summary>
+        /// <param name="kind">Talker インスタンス種別。</param>
+        public ProcessTalkerTestBase(TalkerKind kind) : base(kind)
+        {
+        }
+
         #region テストメソッド群
 
         [TestMethod]
@@ -61,6 +69,7 @@ namespace RucheHome.Tests.Automation.Talkers
                 var r = talker.ExitProcess();
                 Assert.IsTrue(r.Value != false, r.Message);
 
+                // 他のテストの影響でダイアログが出て終了できない場合がある
                 if (r.Value == null)
                 {
                     Console.WriteLine(r.Message);

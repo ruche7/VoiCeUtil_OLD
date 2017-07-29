@@ -52,15 +52,6 @@
     </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
-    <Reference Include="RM.Friendly.WPFStandardControls.3.0, Version=1.8.0.0, Culture=neutral, PublicKeyToken=1b8f25b96765ebb0, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\RM.Friendly.WPFStandardControls.1.8.0\lib\net40\RM.Friendly.WPFStandardControls.3.0.dll</HintPath>
-    </Reference>
-    <Reference Include="RM.Friendly.WPFStandardControls.3.5, Version=1.8.0.0, Culture=neutral, PublicKeyToken=133fc95b5bce0b86, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\RM.Friendly.WPFStandardControls.1.8.0\lib\net40\RM.Friendly.WPFStandardControls.3.5.dll</HintPath>
-    </Reference>
-    <Reference Include="RM.Friendly.WPFStandardControls.4.0, Version=1.8.0.0, Culture=neutral, PublicKeyToken=804da7e4293a9f15, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\RM.Friendly.WPFStandardControls.1.8.0\lib\net40\RM.Friendly.WPFStandardControls.4.0.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="Microsoft.CSharp" />
@@ -79,6 +70,10 @@
     <Compile Include="Talker.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\RucheHome.Automation.Friendly\RucheHome.Automation.Friendly.csproj">
+      <Project>{1d283799-8d58-4377-bd05-383f0a2f7a73}</Project>
+      <Name>RucheHome.Automation.Friendly</Name>
+    </ProjectReference>
     <ProjectReference Include="..\RucheHome.Core\RucheHome.Core.csproj">
       <Project>{33ab6685-2e0e-49e2-86fe-15385ec365c6}</Project>
       <Name>RucheHome.Core</Name>
