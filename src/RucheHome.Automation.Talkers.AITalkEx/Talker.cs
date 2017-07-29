@@ -6,8 +6,8 @@ using System.Linq;
 using Codeer.Friendly;
 using Codeer.Friendly.Dynamic;
 using Codeer.Friendly.Windows.Grasp;
-using RucheHome.Diagnostics;
 using RucheHome.Automation.Talkers.Friendly;
+using RucheHome.Diagnostics;
 
 namespace RucheHome.Automation.Talkers.AITalkEx
 {
@@ -34,6 +34,7 @@ namespace RucheHome.Automation.Talkers.AITalkEx
                 product.GetProcessFileName() ?? @"dummy",   // ベースクラスでの例外回避
                 product.GetProcessProduct() ?? @"dummy",    // ベースクラスでの例外回避
                 product.GetTalkerName(),
+                canSetBlankText: true,
                 canSaveBlankText: false,
                 hasCharacters: false)
         {

@@ -48,6 +48,7 @@ namespace RucheHome.Automation.Talkers.Friendly
         /// </param>
         /// <param name="processProduct">操作対象プロセスの製品名情報。</param>
         /// <param name="talkerName">名前。 null ならば processProduct を使う。</param>
+        /// <param name="canSetBlankText">空白文を設定可能ならば true 。</param>
         /// <param name="canSaveBlankText">空白文を音声ファイル保存可能ならば true 。</param>
         /// <param name="hasCharacters">キャラクター設定を保持しているならば true 。</param>
         protected ProcessTalkerBase(
@@ -55,6 +56,7 @@ namespace RucheHome.Automation.Talkers.Friendly
             string processFileName,
             string processProduct,
             string talkerName = null,
+            bool canSetBlankText = true,
             bool canSaveBlankText = false,
             bool hasCharacters = false)
             :
@@ -62,6 +64,7 @@ namespace RucheHome.Automation.Talkers.Friendly
                 processFileName,
                 processProduct,
                 talkerName,
+                canSetBlankText,
                 canSaveBlankText,
                 hasCharacters)
         {

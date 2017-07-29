@@ -29,12 +29,14 @@ namespace RucheHome.Automation.Talkers
         /// </param>
         /// <param name="processProduct">操作対象プロセスの製品名情報。</param>
         /// <param name="talkerName">名前。 null ならば processProduct を使う。</param>
+        /// <param name="canSetBlankText">空白文を設定可能ならば true 。</param>
         /// <param name="canSaveBlankText">空白文を音声ファイル保存可能ならば true 。</param>
         /// <param name="hasCharacters">キャラクター設定を保持しているならば true 。</param>
         public ProcessTalkerBase(
             string processFileName,
             string processProduct,
             string talkerName = null,
+            bool canSetBlankText = true,
             bool canSaveBlankText = false,
             bool hasCharacters = false)
         {
@@ -44,6 +46,7 @@ namespace RucheHome.Automation.Talkers
             this.ProcessFileName = processFileName;
             this.ProcessProduct = processProduct;
             this.TalkerName = talkerName ?? processProduct;
+            this.CanSetBlankText = canSetBlankText;
             this.CanSaveBlankText = canSaveBlankText;
             this.HasCharacters = hasCharacters;
 
@@ -650,8 +653,16 @@ namespace RucheHome.Automation.Talkers
         /// </param>
         /// <returns>成功したならば true 。そうでなければ false 。</returns>
         /// <remarks>
+        /// <para>
         /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装からは、
         /// <see cref="CanOperate"/> が true の時のみ呼び出される。
+        /// </para>
+        /// <para>
+        /// <see cref="CanSetBlankText"/> が
+        /// false の場合、空白文チェックを呼び出し元で実施済みだが、
+        /// <see cref="string.IsNullOrWhiteSpace"/> による簡易的なチェックであるため、
+        /// 例えば記号のみの文章の場合等に設定失敗する可能性がある。
+        /// </para>
         /// </remarks>
         protected abstract Result<bool> SetTextImpl(string text);
 
@@ -742,7 +753,7 @@ namespace RucheHome.Automation.Talkers
         /// </para>
         /// <para>
         /// <see cref="CanSaveBlankText"/> が
-        /// true の場合、空白文チェックを呼び出し元で実施済みだが、
+        /// false の場合、空白文チェックを呼び出し元で実施済みだが、
         /// <see cref="string.IsNullOrWhiteSpace"/> による簡易的なチェックであるため、
         /// 例えば記号のみの文章の場合等に保存失敗する可能性がある。
         /// </para>
@@ -1173,6 +1184,14 @@ namespace RucheHome.Automation.Talkers
         public string TalkerName { get; }
 
         /// <summary>
+        /// 空白文を設定することが可能か否かを取得する。
+        /// </summary>
+        /// <remarks>
+        /// インスタンス生成後に値が変化することはない。
+        /// </remarks>
+        public bool CanSetBlankText { get; }
+
+        /// <summary>
         /// 空白文を音声ファイル保存させることが可能か否かを取得する。
         /// </summary>
         /// <remarks>
@@ -1399,6 +1418,12 @@ namespace RucheHome.Automation.Talkers
                         @"" :
                         (text.Length > this.TextLengthLimit) ?
                             text.SubstringSurrogateSafe(0, this.TextLengthLimit) : text;
+
+                // 空白文チェック
+                if (!this.CanSetBlankText && string.IsNullOrWhiteSpace(value))
+                {
+                    return (false, @"空白文を設定することはできません。");
+                }
 
                 return this.SetTextImpl(value);
             }

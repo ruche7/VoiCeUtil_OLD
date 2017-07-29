@@ -6,7 +6,6 @@ using System.Linq;
 using System.Windows;
 using Codeer.Friendly.Dynamic;
 using RucheHome.Automation.Friendly.Wpf;
-using RucheHome.Automation.Talkers.Friendly;
 using RucheHome.Diagnostics;
 
 namespace RucheHome.Automation.Talkers.Voiceroid2.Internal

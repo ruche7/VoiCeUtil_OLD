@@ -30,8 +30,9 @@ namespace RucheHome.Automation.Talkers.CeVIO
                 @"CeVIO Creative Studio",
                 @"CeVIO Creative Studio",
                 @"CeVIO Creative Studio S",
-                false,
-                true)
+                canSetBlankText: false,
+                canSaveBlankText: false,
+                hasCharacters: true)
         {
             this.Root =
                 new Root(

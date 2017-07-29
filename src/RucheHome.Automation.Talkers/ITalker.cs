@@ -27,6 +27,14 @@ namespace RucheHome.Automation.Talkers
         int TextLengthLimit { get; }
 
         /// <summary>
+        /// 空白文を設定することが可能か否かを取得する。
+        /// </summary>
+        /// <remarks>
+        /// インスタンス生成後に値が変化することはない。
+        /// </remarks>
+        bool CanSetBlankText { get; }
+
+        /// <summary>
         /// 空白文を音声ファイル保存させることが可能か否かを取得する。
         /// </summary>
         /// <remarks>

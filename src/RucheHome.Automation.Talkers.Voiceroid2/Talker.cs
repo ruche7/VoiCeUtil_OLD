@@ -30,6 +30,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
                 @"VoiceroidEditor",
                 @"VOICEROID2 Editor",
                 @"VOICEROID2",
+                canSetBlankText: true,
                 canSaveBlankText: true,
                 hasCharacters: true)
         {
