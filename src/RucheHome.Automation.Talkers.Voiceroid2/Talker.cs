@@ -795,10 +795,14 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
         /// <summary>
         /// 現在のパラメータ一覧を取得する。
         /// </summary>
+        /// <param name="targetParameterIds">
+        /// 取得対象のパラメータID列挙。 null ならば存在する全パラメータを対象とする。
+        /// </param>
         /// <returns>
         /// パラメータIDとその値のディクショナリ。取得できなかった場合は null 。
         /// </returns>
-        protected override Result<Dictionary<ParameterId, decimal>> GetParametersImpl()
+        protected override Result<Dictionary<ParameterId, decimal>> GetParametersImpl(
+            IEnumerable<ParameterId> targetParameterIds)
         {
             // パラメータ値を取得するローカルメソッド
             Result<decimal> getParameter(ParameterId id, dynamic slider)
@@ -819,7 +823,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
 
             try
             {
-                return this.ProcessParameterSliders(getParameter);
+                return this.ProcessParameterSliders(getParameter, targetParameterIds);
             }
             catch (Exception ex)
             {

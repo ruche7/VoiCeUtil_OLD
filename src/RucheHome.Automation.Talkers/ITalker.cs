@@ -128,10 +128,14 @@ namespace RucheHome.Automation.Talkers
         /// <summary>
         /// 現在のパラメータ一覧を取得する。
         /// </summary>
+        /// <param name="targetParameterIds">
+        /// 取得対象のパラメータID列挙。 null ならば存在する全パラメータを対象とする。
+        /// </param>
         /// <returns>
         /// パラメータIDとその値のディクショナリ。取得できなかった場合は null 。
         /// </returns>
-        Result<Dictionary<object, decimal>> GetParameters();
+        Result<Dictionary<object, decimal>> GetParameters(
+            IEnumerable<object> targetParameterIds = null);
 
         /// <summary>
         /// パラメータ群を設定する。
@@ -179,5 +183,38 @@ namespace RucheHome.Automation.Talkers
         /// 音声ファイル保存の成否を確認するまでブロッキングする。
         /// </remarks>
         Result<string> SaveFile(string filePath);
+    }
+
+    /// <summary>
+    /// 固定のパラメータID型を持つ ITalker 派生インタフェース。
+    /// </summary>
+    /// <typeparam name="TParameterId">パラメータID型。</typeparam>
+    public interface ITalker<TParameterId> : ITalker
+    {
+        /// <summary>
+        /// 現在のパラメータ一覧を取得する。
+        /// </summary>
+        /// <param name="targetParameterIds">
+        /// 取得対象のパラメータID列挙。 null ならば存在する全パラメータを対象とする。
+        /// </param>
+        /// <returns>
+        /// パラメータIDとその値のディクショナリ。取得できなかった場合は null 。
+        /// </returns>
+        Result<Dictionary<TParameterId, decimal>> GetParameters(
+            IEnumerable<TParameterId> targetParameterIds);
+
+        /// <summary>
+        /// パラメータ群を設定する。
+        /// </summary>
+        /// <param name="parameters">設定するパラメータIDとその値の列挙。</param>
+        /// <returns>
+        /// 個々のパラメータIDとその設定成否を保持するディクショナリ。
+        /// 処理を行えない状態ならば null 。
+        /// </returns>
+        /// <remarks>
+        /// 設定処理自体行われなかったパラメータIDは戻り値のキーに含まれない。
+        /// </remarks>
+        Result<Dictionary<TParameterId, Result<bool>>> SetParameters(
+            IEnumerable<KeyValuePair<TParameterId, decimal>> parameters);
     }
 }

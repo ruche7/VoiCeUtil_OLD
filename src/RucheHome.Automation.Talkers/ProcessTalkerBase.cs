@@ -19,7 +19,8 @@ namespace RucheHome.Automation.Talkers
     /// <see cref="IProcessTalker"/> インタフェースの各メソッドは互いに排他制御されている。
     /// そのため、派生クラスで抽象メソッドを実装する際、それらのメソッドを呼び出さないこと。
     /// </remarks>
-    public abstract class ProcessTalkerBase<TParameterId> : BindableBase, IProcessTalker
+    public abstract class ProcessTalkerBase<TParameterId>
+        : BindableBase, IProcessTalker<TParameterId>
     {
         /// <summary>
         /// コンストラクタ。
@@ -61,102 +62,6 @@ namespace RucheHome.Automation.Talkers
         /// <para>インスタンス生成後に値が変化することはない。</para>
         /// </remarks>
         public string ProcessProduct { get; }
-
-        /// <summary>
-        /// 現在のパラメータ一覧を取得する。
-        /// </summary>
-        /// <returns>
-        /// パラメータIDとその値のディクショナリ。取得できなかった場合は null 。
-        /// </returns>
-        public Result<Dictionary<TParameterId, decimal>> GetParameters()
-        {
-            // SaveFile 処理中のデッドロック回避
-            if (this.IsPropertyChangedOnSaveFile)
-            {
-                return MakeStateErrorResult<Dictionary<TParameterId, decimal>>();
-            }
-
-            lock (this.LockObject)
-            {
-                if (!this.CanOperate)
-                {
-                    return MakeStateErrorResult<Dictionary<TParameterId, decimal>>();
-                }
-
-                return this.GetParametersImpl();
-            }
-        }
-
-        /// <summary>
-        /// パラメータ群を設定する。
-        /// </summary>
-        /// <param name="parameters">設定するパラメータIDとその値の列挙。</param>
-        /// <returns>
-        /// 個々のパラメータIDとその設定成否を保持するディクショナリ。
-        /// 処理を行えない状態ならば null 。
-        /// </returns>
-        /// <remarks>
-        /// 設定処理自体行われなかったパラメータIDは戻り値のキーに含まれない。
-        /// </remarks>
-        public Result<Dictionary<TParameterId, Result<bool>>> SetParameters(
-            IEnumerable<KeyValuePair<TParameterId, decimal>> parameters)
-        {
-            // SaveFile 処理中のデッドロック回避
-            if (this.IsPropertyChangedOnSaveFile)
-            {
-                return MakeStateErrorResult<Dictionary<TParameterId, Result<bool>>>();
-            }
-
-            lock (this.LockObject)
-            {
-                if (!this.CanOperate)
-                {
-                    return MakeStateErrorResult<Dictionary<TParameterId, Result<bool>>>();
-                }
-
-                // 引数が null なら空の結果を返す
-                if (parameters == null)
-                {
-                    return new Dictionary<TParameterId, Result<bool>>();
-                }
-
-                return this.SetParametersImpl(parameters);
-            }
-        }
-
-        /// <summary>
-        /// パラメータ群を設定する。
-        /// </summary>
-        /// <param name="parameters">設定するパラメータIDとその値の列挙。</param>
-        /// <returns>
-        /// 個々のパラメータIDとその設定成否を保持するディクショナリ。
-        /// 処理を行えない状態ならば null 。
-        /// </returns>
-        /// <remarks>
-        /// 設定処理自体行われなかったパラメータIDは戻り値のキーに含まれない。
-        /// </remarks>
-        public Result<Dictionary<TParameterId, Result<bool>>> SetParameters(
-            IEnumerable<(TParameterId id, decimal value)> parameters)
-            =>
-            this.SetParameters(
-                parameters?.Select(
-                    iv => new KeyValuePair<TParameterId, decimal>(iv.id, iv.value)));
-
-        /// <summary>
-        /// パラメータ群を設定する。
-        /// </summary>
-        /// <param name="parameters">設定するパラメータIDとその値の配列。</param>
-        /// <returns>
-        /// 個々のパラメータIDとその設定成否を保持するディクショナリ。
-        /// 処理を行えない状態ならば null 。
-        /// </returns>
-        /// <remarks>
-        /// 設定処理自体行われなかったパラメータIDは戻り値のキーに含まれない。
-        /// </remarks>
-        public Result<Dictionary<TParameterId, Result<bool>>> SetParameters(
-            params (TParameterId id, decimal value)[] parameters)
-            =>
-            this.SetParameters(parameters.AsEnumerable());
 
         /// <summary>
         /// 待機処理の標準タイムアウトミリ秒数値。
@@ -669,6 +574,9 @@ namespace RucheHome.Automation.Talkers
         /// <summary>
         /// 現在のパラメータ一覧を取得する。
         /// </summary>
+        /// <param name="targetParameterIds">
+        /// 取得対象のパラメータID列挙。 null ならば存在する全パラメータを対象とする。
+        /// </param>
         /// <returns>
         /// パラメータIDとその値のディクショナリ。取得できなかった場合は null 。
         /// </returns>
@@ -676,7 +584,8 @@ namespace RucheHome.Automation.Talkers
         /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装からは、
         /// <see cref="CanOperate"/> が true の時のみ呼び出される。
         /// </remarks>
-        protected abstract Result<Dictionary<TParameterId, decimal>> GetParametersImpl();
+        protected abstract Result<Dictionary<TParameterId, decimal>> GetParametersImpl(
+            IEnumerable<TParameterId> targetParameterIds);
 
         /// <summary>
         /// パラメータ群を設定する。
@@ -1169,6 +1078,75 @@ namespace RucheHome.Automation.Talkers
             }
 
             return result;
+        }
+
+        #endregion
+
+        #region ITalker<TParameterId> の実装
+
+        /// <summary>
+        /// 現在のパラメータ一覧を取得する。
+        /// </summary>
+        /// <param name="targetParameterIds">
+        /// 取得対象のパラメータID列挙。 null ならば存在する全パラメータを対象とする。
+        /// </param>
+        /// <returns>
+        /// パラメータIDとその値のディクショナリ。取得できなかった場合は null 。
+        /// </returns>
+        public Result<Dictionary<TParameterId, decimal>> GetParameters(
+            IEnumerable<TParameterId> targetParameterIds = null)
+        {
+            // SaveFile 処理中のデッドロック回避
+            if (this.IsPropertyChangedOnSaveFile)
+            {
+                return MakeStateErrorResult<Dictionary<TParameterId, decimal>>();
+            }
+
+            lock (this.LockObject)
+            {
+                if (!this.CanOperate)
+                {
+                    return MakeStateErrorResult<Dictionary<TParameterId, decimal>>();
+                }
+
+                return this.GetParametersImpl(targetParameterIds);
+            }
+        }
+
+        /// <summary>
+        /// パラメータ群を設定する。
+        /// </summary>
+        /// <param name="parameters">設定するパラメータIDとその値の列挙。</param>
+        /// <returns>
+        /// 個々のパラメータIDとその設定成否を保持するディクショナリ。
+        /// 処理を行えない状態ならば null 。
+        /// </returns>
+        /// <remarks>
+        /// 設定処理自体行われなかったパラメータIDは戻り値のキーに含まれない。
+        /// </remarks>
+        public Result<Dictionary<TParameterId, Result<bool>>> SetParameters(
+            IEnumerable<KeyValuePair<TParameterId, decimal>> parameters)
+        {
+            // SaveFile 処理中のデッドロック回避
+            if (this.IsPropertyChangedOnSaveFile)
+            {
+                return MakeStateErrorResult<Dictionary<TParameterId, Result<bool>>>();
+            }
+
+            lock (this.LockObject)
+            {
+                if (!this.CanOperate)
+                {
+                    return MakeStateErrorResult<Dictionary<TParameterId, Result<bool>>>();
+                }
+
+                // 引数が null なら空の列挙を渡す
+                // 処理を行えない状態の可能性があるため
+                return
+                    this.SetParametersImpl(
+                        parameters ??
+                        Enumerable.Empty<KeyValuePair<TParameterId, decimal>>());
+            }
         }
 
         #endregion
@@ -1691,12 +1669,17 @@ namespace RucheHome.Automation.Talkers
         /// <summary>
         /// 現在のパラメータ一覧を取得する。
         /// </summary>
+        /// <param name="targetParameterIds">
+        /// 取得対象のパラメータID列挙。 null ならば存在する全パラメータを対象とする。
+        /// </param>
         /// <returns>
         /// パラメータIDとその値のディクショナリ。取得できなかった場合は null 。
         /// </returns>
-        Result<Dictionary<object, decimal>> ITalker.GetParameters()
+        Result<Dictionary<object, decimal>> ITalker.GetParameters(
+            IEnumerable<object> targetParameterIds)
         {
-            var result = this.GetParameters();
+            var result = this.GetParameters(targetParameterIds?.OfType<TParameterId>());
+
             return (
                 result.Value?.ToDictionary(kv => (object)kv.Key, kv => kv.Value),
                 result.Message);
@@ -1720,7 +1703,12 @@ namespace RucheHome.Automation.Talkers
                 this.SetParameters(
                     parameters?
                         .Where(kv => kv.Key is TParameterId)
-                        .Select(kv => ((TParameterId)kv.Key, kv.Value)));
+                        .Select(
+                            kv =>
+                                new KeyValuePair<TParameterId, decimal>(
+                                    (TParameterId)kv.Key,
+                                    kv.Value)));
+
             return (
                 result.Value?.ToDictionary(kv => (object)kv.Key, kv => kv.Value),
                 result.Message);

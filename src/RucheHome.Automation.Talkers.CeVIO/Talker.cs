@@ -699,13 +699,17 @@ namespace RucheHome.Automation.Talkers.CeVIO
         /// <summary>
         /// 現在のパラメータ一覧を取得する。
         /// </summary>
+        /// <param name="targetParameterIds">
+        /// 取得対象のパラメータID列挙。 null ならば存在する全パラメータを対象とする。
+        /// </param>
         /// <returns>
         /// パラメータIDとその値のディクショナリ。取得できなかった場合は null 。
         /// </returns>
-        protected override Result<Dictionary<ParameterId, decimal>> GetParametersImpl()
+        protected override Result<Dictionary<ParameterId, decimal>> GetParametersImpl(
+            IEnumerable<ParameterId> targetParameterIds)
         {
             // パラメータスライダー群を取得
-            var (sliders, failMessage) = this.ParameterSliders.Get();
+            var (sliders, failMessage) = this.ParameterSliders.Get(targetParameterIds);
             if (sliders == null)
             {
                 return (null, failMessage);

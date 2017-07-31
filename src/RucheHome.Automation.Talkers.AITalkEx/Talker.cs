@@ -433,13 +433,18 @@ namespace RucheHome.Automation.Talkers.AITalkEx
         /// <summary>
         /// 現在のパラメータ一覧を取得する。
         /// </summary>
+        /// <param name="targetParameterIds">
+        /// 取得対象のパラメータID列挙。 null ならば存在する全パラメータを対象とする。
+        /// </param>
         /// <returns>
         /// パラメータIDとその値のディクショナリ。取得できなかった場合は null 。
         /// </returns>
-        protected override Result<Dictionary<ParameterId, decimal>> GetParametersImpl()
+        protected override Result<Dictionary<ParameterId, decimal>> GetParametersImpl(
+            IEnumerable<ParameterId> targetParameterIds)
         {
             // パラメータテキストボックス群を取得
-            var (textBoxes, failMessage) = this.GetTabControlParameterTextBoxes();
+            var (textBoxes, failMessage) =
+                this.GetTabControlParameterTextBoxes(targetParameterIds);
             if (textBoxes == null)
             {
                 return (null, failMessage);

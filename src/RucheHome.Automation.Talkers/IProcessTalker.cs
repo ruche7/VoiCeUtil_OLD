@@ -73,4 +73,12 @@ namespace RucheHome.Automation.Talkers
         /// </remarks>
         Result<bool?> ExitProcess();
     }
+
+    /// <summary>
+    /// 固定のパラメータID型を持つ IProcessTalker 派生インタフェース。
+    /// </summary>
+    /// <typeparam name="TParameterId">パラメータID型。</typeparam>
+    public interface IProcessTalker<TParameterId> : IProcessTalker, ITalker<TParameterId>
+    {
+    }
 }

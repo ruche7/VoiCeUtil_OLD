@@ -50,6 +50,7 @@
     <Compile Include="ProcessTalkerUpdater.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Result.cs" />
+    <Compile Include="TalkerExtension.cs" />
     <Compile Include="TalkerState.cs" />
   </ItemGroup>
   <ItemGroup>

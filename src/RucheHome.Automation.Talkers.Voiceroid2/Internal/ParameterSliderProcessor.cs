@@ -346,7 +346,9 @@ namespace RucheHome.Automation.Talkers.Voiceroid2.Internal
         /// <summary>
         /// GUIグループごとの処理対象情報ディクショナリを作成する。
         /// </summary>
-        /// <param name="targetIds">処理対象パラメータID列挙。 null ならばすべて対象。</param>
+        /// <param name="targetIds">
+        /// 処理対象パラメータID列挙。 null ならばすべて対象。
+        /// </param>
         /// <returns>GUIグループごとの処理対象情報ディクショナリ。</returns>
         private static Dictionary<GuiGroup, GuiGroupTargetInfo> MakeGuiGroupTargetInfos(
             IEnumerable<ParameterId> targetIds)
