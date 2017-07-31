@@ -73,14 +73,14 @@ namespace RucheHome.Tests.Automation.Talkers.CeVIO
         public override void Test_ITalker_SetText_GetText()
         {
             var talker = this.GetTalker();
-            var orgSetting = talker.IsTextSeparatedByLineBreaks;
+            var orgSetting = talker.IsTextSeparatingByLineBreaks;
 
             try
             {
                 var text = "テキスト設定テストです。\nテスト\tテスト\tテスト。";
 
                 // 改行削除設定
-                talker.IsTextSeparatedByLineBreaks = false;
+                talker.IsTextSeparatingByLineBreaks = false;
 
                 // テキスト設定
                 {
@@ -96,7 +96,7 @@ namespace RucheHome.Tests.Automation.Talkers.CeVIO
                 }
 
                 // 改行⇒半角スペース置換設定
-                talker.IsTextSeparatedByLineBreaks = true;
+                talker.IsTextSeparatingByLineBreaks = true;
 
                 // テキスト設定
                 {
@@ -114,7 +114,7 @@ namespace RucheHome.Tests.Automation.Talkers.CeVIO
             finally
             {
                 // 設定を元に戻しておく
-                talker.IsTextSeparatedByLineBreaks = orgSetting;
+                talker.IsTextSeparatingByLineBreaks = orgSetting;
             }
         }
 

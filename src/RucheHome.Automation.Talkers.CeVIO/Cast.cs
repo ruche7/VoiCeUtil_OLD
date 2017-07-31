@@ -7,9 +7,9 @@ using System.Linq;
 namespace RucheHome.Automation.Talkers.CeVIO
 {
     /// <summary>
-    /// キャラクター列挙。
+    /// キャスト列挙。
     /// </summary>
-    public enum Character
+    public enum Cast
     {
         /// <summary>
         /// さとうささら
@@ -28,15 +28,15 @@ namespace RucheHome.Automation.Talkers.CeVIO
     }
 
     /// <summary>
-    /// <see cref="Character"/> 列挙型に拡張メソッド等を提供する静的クラス。
+    /// <see cref="Cast"/> 列挙型に拡張メソッド等を提供する静的クラス。
     /// </summary>
-    public static class CharacterExtension
+    public static class CastExtension
     {
 #if DEBUG
         /// <summary>
         /// 静的コンストラクタ。
         /// </summary>
-        static CharacterExtension()
+        static CastExtension()
         {
             // Infos に全列挙値が含まれているか確認
             Debug.Assert(AllValues.All(p => Infos.ContainsKey(p)));
@@ -44,51 +44,50 @@ namespace RucheHome.Automation.Talkers.CeVIO
 #endif // DEBUG
 
         /// <summary>
-        /// 全キャラクター列挙値のコレクションを取得する。
+        /// 全キャスト列挙値のコレクションを取得する。
         /// </summary>
-        public static ReadOnlyCollection<Character> AllValues { get; } =
-            Array.AsReadOnly(((Character[])Enum.GetValues(typeof(Character))).ToArray());
+        public static ReadOnlyCollection<Cast> AllValues { get; } =
+            Array.AsReadOnly(((Cast[])Enum.GetValues(typeof(Cast))).ToArray());
 
         /// <summary>
-        /// キャラクター名を取得する。
+        /// キャスト名を取得する。
         /// </summary>
-        /// <param name="self">キャラクター。</param>
-        /// <returns>キャラクター名。引数値が無効ならば null 。</returns>
-        public static string GetName(this Character self) =>
-            Infos.TryGetValue(self, out var info) ? info.Name : null;
+        /// <param name="cast">キャスト。</param>
+        /// <returns>キャスト名。引数値が無効ならば null 。</returns>
+        public static string GetName(this Cast cast) =>
+            Infos.TryGetValue(cast, out var info) ? info.Name : null;
 
         /// <summary>
-        /// キャラクターに紐付く感情パラメータIDの一覧を取得する。
+        /// キャストに紐付く感情パラメータIDの一覧を取得する。
         /// </summary>
-        /// <param name="self">キャラクター。</param>
+        /// <param name="cast">キャスト。</param>
         /// <returns>感情パラメータIDの一覧。引数値が無効ならば null 。</returns>
-        public static ReadOnlyCollection<ParameterId> GetEmotionParameterIds(
-            this Character self)
+        public static ReadOnlyCollection<ParameterId> GetEmotionParameterIds(this Cast cast)
             =>
-            Infos.TryGetValue(self, out var info) ? info.EmotionParameterIds : null;
+            Infos.TryGetValue(cast, out var info) ? info.EmotionParameterIds : null;
 
         /// <summary>
-        /// キャラクター名からキャラクターを検索する。
+        /// キャスト名からキャストを検索する。
         /// </summary>
-        /// <param name="name">キャラクター名。</param>
-        /// <returns>キャラクター。見つからなければ null 。</returns>
-        public static Character? FindByName(string name) =>
+        /// <param name="name">キャスト名。</param>
+        /// <returns>キャスト。見つからなければ null 。</returns>
+        public static Cast? FindByName(string name) =>
             Infos
-                .Cast<KeyValuePair<Character, Info>?>()
+                .Cast<KeyValuePair<Cast, Info>?>()
                 .FirstOrDefault(kv => kv.Value.Value.Name == name)?
                 .Key;
 
         /// <summary>
-        /// キャラクター情報クラス。
+        /// キャスト情報クラス。
         /// </summary>
         private class Info
         {
             /// <summary>
             /// コンストラクタ。
             /// </summary>
-            /// <param name="name">キャラクター名。</param>
+            /// <param name="name">キャスト名。</param>
             /// <param name="emotionParameterIds">
-            /// キャラクターに紐付く感情パラメータIDの列挙。
+            /// キャストに紐付く感情パラメータIDの列挙。
             /// </param>
             public Info(string name, IEnumerable<ParameterId> emotionParameterIds)
             {
@@ -101,24 +100,24 @@ namespace RucheHome.Automation.Talkers.CeVIO
             }
 
             /// <summary>
-            /// キャラクター名を取得する。
+            /// キャスト名を取得する。
             /// </summary>
             public string Name { get; }
 
             /// <summary>
-            /// キャラクターに紐付く感情パラメータIDの一覧を取得する。
+            /// キャストに紐付く感情パラメータIDの一覧を取得する。
             /// </summary>
             public ReadOnlyCollection<ParameterId> EmotionParameterIds { get; }
         }
 
         /// <summary>
-        /// キャラクター情報ディクショナリ。
+        /// キャスト情報ディクショナリ。
         /// </summary>
-        private static readonly Dictionary<Character, Info> Infos =
-            new Dictionary<Character, Info>
+        private static readonly Dictionary<Cast, Info> Infos =
+            new Dictionary<Cast, Info>
             {
                 {
-                    Character.Sasara,
+                    Cast.Sasara,
                     new Info(
                         @"さとうささら",
                         new[]
@@ -130,7 +129,7 @@ namespace RucheHome.Automation.Talkers.CeVIO
                         })
                 },
                 {
-                    Character.Tsuzumi,
+                    Cast.Tsuzumi,
                     new Info(
                         @"すずきつづみ",
                         new[]
@@ -140,7 +139,7 @@ namespace RucheHome.Automation.Talkers.CeVIO
                         })
                 },
                 {
-                    Character.Takahashi,
+                    Cast.Takahashi,
                     new Info(
                         @"タカハシ",
                         new[]

@@ -1,11 +1,12 @@
 ﻿using System;
+using System.Collections.ObjectModel;
 
 namespace RucheHome.Automation.Talkers.CeVIO
 {
     /// <summary>
-    /// CeVIO Creative Studio S 操作用の設定を提供するインタフェース。
+    /// CeVIO Creative Studio S 特有の操作を提供するインタフェース。
     /// </summary>
-    public interface ICreativeStudioOperationSetting
+    public interface ICreativeStudioOperation
     {
         /// <summary>
         /// トラックの選択変更を許容するか否かを取得または設定する。
@@ -38,6 +39,25 @@ namespace RucheHome.Automation.Talkers.CeVIO
         /// そうでなければ改行を削除する。
         /// </para>
         /// </remarks>
-        bool IsTextSeparatedByLineBreaks { get; set; }
+        bool IsTextSeparatingByLineBreaks { get; set; }
+
+        /// <summary>
+        /// 有効キャストの一覧を取得する。
+        /// </summary>
+        /// <returns>有効キャスト配列。取得できなかった場合は null 。</returns>
+        Result<ReadOnlyCollection<Cast>> GetAvailableCasts();
+
+        /// <summary>
+        /// 現在選択されているキャストを取得する。
+        /// </summary>
+        /// <returns>キャスト。取得できなかった場合は null 。</returns>
+        Result<Cast?> GetCast();
+
+        /// <summary>
+        /// キャストを選択させる。
+        /// </summary>
+        /// <param name="cast">キャスト。</param>
+        /// <returns>成功したならば true 。そうでなければ false 。</returns>
+        Result<bool> SetCast(Cast cast);
     }
 }

@@ -129,7 +129,7 @@ namespace RucheHome.Automation.Talkers.CeVIO
         /// <returns>
         /// 指定したキャラクターの感情関連パラメータならば true 。そうでなければ false 。
         /// </returns>
-        public static bool IsEmotionOf(this ParameterId self, Character character) =>
+        public static bool IsEmotionOf(this ParameterId self, Cast character) =>
             (character.GetEmotionParameterIds()?.Contains(self) == true);
 
         /// <summary>

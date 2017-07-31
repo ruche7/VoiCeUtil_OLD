@@ -18,7 +18,7 @@ namespace RucheHome.Automation.Talkers.CeVIO
     /// <summary>
     /// CeVIO Creative Studio S プロセスを操作する <see cref="IProcessTalker"/> 実装クラス。
     /// </summary>
-    public class Talker : WpfProcessTalkerBase<ParameterId>, ICreativeStudioOperationSetting
+    public class Talker : WpfProcessTalkerBase<ParameterId>, ICreativeStudioOperation
     {
         /// <summary>
         /// コンストラクタ。
@@ -260,29 +260,6 @@ namespace RucheHome.Automation.Talkers.CeVIO
         }
 
         /// <summary>
-        /// セリフグリッド挿入用のセリフ文字列を作成する。
-        /// </summary>
-        /// <param name="src">作成元となる文字列。</param>
-        /// <returns>セリフ文字列。引数値が null ならば null 。</returns>
-        private string MakeSpeechText(string src)
-        {
-            if (src == null)
-            {
-                return null;
-            }
-
-            // 改行で区切るなら半角スペース、そうでなければ空文字列に置換する
-            var lineBreak = this.IsTextSeparatedByLineBreaks ? @" " : @"";
-
-            return
-                src
-                    .Replace("\r\n", lineBreak)
-                    .Replace("\r", lineBreak)
-                    .Replace("\n", lineBreak)
-                    .Replace('\t', ' ');
-        }
-
-        /// <summary>
         /// スプラッシュスクリーンのウィンドウタイトル。
         /// </summary>
         private const string SplashScreenWindowTitle =
@@ -440,7 +417,7 @@ namespace RucheHome.Automation.Talkers.CeVIO
         /// <summary>
         /// 文章の最大許容文字数を取得する。
         /// </summary>
-        public override int TextLengthLimit { get; } = 200;
+        public override int TextLengthLimit { get; } = TextFormatter.TextLengthLimit;
 
         /// <summary>
         /// 有効キャラクターの一覧を取得する。
@@ -615,8 +592,8 @@ namespace RucheHome.Automation.Talkers.CeVIO
         /// <returns>成功したならば true 。そうでなければ false 。</returns>
         protected override Result<bool> SetTextImpl(string text)
         {
-            // セリフ文字列化
-            var speechText = this.MakeSpeechText(text);
+            // 文章を整形
+            var speechText = TextFormatter.Format(text, this.IsTextSeparatingByLineBreaks);
             if (string.IsNullOrWhiteSpace(speechText))
             {
                 return (false, @"空白文を設定することはできません。");
@@ -1297,7 +1274,7 @@ namespace RucheHome.Automation.Talkers.CeVIO
 
         #endregion
 
-        #region ICreativeStudioOperationSetting の実装
+        #region ICreativeStudioOperation の実装
 
         /// <summary>
         /// トラックの選択変更を許容するか否かを取得または設定する。
@@ -1344,12 +1321,70 @@ namespace RucheHome.Automation.Talkers.CeVIO
         /// そうでなければ改行を削除する。
         /// </para>
         /// </remarks>
-        public bool IsTextSeparatedByLineBreaks
+        public bool IsTextSeparatingByLineBreaks
         {
             get => this.textSeparatedByLineBreaks;
             set => this.SetProperty(ref this.textSeparatedByLineBreaks, value);
         }
         private bool textSeparatedByLineBreaks = false;
+
+        /// <summary>
+        /// 有効キャストの一覧を取得する。
+        /// </summary>
+        /// <returns>有効キャスト配列。取得できなかった場合は null 。</returns>
+        public Result<ReadOnlyCollection<Cast>> GetAvailableCasts()
+        {
+            var (names, failMessage) = this.GetAvailableCharacters();
+            if (names == null)
+            {
+                return (null, failMessage);
+            }
+
+            return
+                Array.AsReadOnly(
+                    names
+                        .Select(name => CastExtension.FindByName(name))
+                        .Where(cast => cast.HasValue)
+                        .Select(cast => cast.Value)
+                        .ToArray());
+        }
+
+        /// <summary>
+        /// 現在選択されているキャストを取得する。
+        /// </summary>
+        /// <returns>キャスト。取得できなかった場合は null 。</returns>
+        public Result<Cast?> GetCast()
+        {
+            var (name, failMessage) = this.GetCharacter();
+            if (name == null)
+            {
+                return (null, failMessage);
+            }
+
+            var cast = CastExtension.FindByName(name);
+            if (!cast.HasValue)
+            {
+                return (null, @"非対応のキャストが選択されています。");
+            }
+
+            return cast.Value;
+        }
+
+        /// <summary>
+        /// キャストを選択させる。
+        /// </summary>
+        /// <param name="cast">キャスト。</param>
+        /// <returns>成功したならば true 。そうでなければ false 。</returns>
+        public Result<bool> SetCast(Cast cast)
+        {
+            var name = cast.GetName();
+            if (name == null)
+            {
+                return (false, @"不正なキャストは設定できません。");
+            }
+
+            return this.SetCharacter(name);
+        }
 
         #endregion
     }
