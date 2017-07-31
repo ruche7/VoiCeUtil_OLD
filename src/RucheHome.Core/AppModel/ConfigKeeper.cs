@@ -2,7 +2,7 @@
 using System.IO;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
-using System.Threading;
+using RucheHome.Diagnostics;
 
 namespace RucheHome.AppModel
 {
@@ -18,13 +18,19 @@ namespace RucheHome.AppModel
         /// <param name="subDirectory">
         /// ベースディレクトリを基準位置とするサブディレクトリパス。
         /// 絶対パスであったり、空白文字のみであってはならない。
-        /// 空文字列または null を指定すると、ベースディレクトリパスをそのまま用いる。
+        /// 空文字列を指定するとベースディレクトリパスをそのまま用いる。
+        /// null を指定するとプロセス名を用いる。
         /// </param>
         /// <param name="baseDirectory">
         /// ベースディレクトリパス。
         /// 空文字列や空白文字のみであってはならない。
-        /// 相対パスを指定すると、ローカルアプリケーションフォルダを基準位置とする。
-        /// null を指定すると、プロセスの AssemblyCompanyAttribute 属性を利用する。
+        /// 相対パスを指定するとローカルアプリケーションフォルダを基準位置とする。
+        /// null を指定するとプロセスの AssemblyCompanyAttribute 属性を利用する。
+        /// </param>
+        /// <param name="fileName">
+        /// ファイル名。
+        /// 空文字列や空白文字のみであってはならない。
+        /// null を指定すると (typeof(T).FullName + ".config") を用いる。
         /// </param>
         /// <param name="serializer">
         /// シリアライザ。既定のシリアライザを用いるならば null 。
@@ -32,14 +38,16 @@ namespace RucheHome.AppModel
         public ConfigKeeper(
             string subDirectory = null,
             string baseDirectory = null,
+            string fileName = null,
             XmlObjectSerializer serializer = null)
         {
-            this.Value = default(T);
-
             var dir = new ConfigDirectoryPath(subDirectory, baseDirectory);
-            var fileName = typeof(T).FullName + @".config";
-            this.FilePath = Path.Combine(dir.Value, fileName);
 
+            var file = fileName ?? (typeof(T).FullName + @".config");
+            ArgumentValidation.IsNotNullOrWhiteSpace(file, nameof(fileName));
+
+            this.Value = default(T);
+            this.FilePath = Path.Combine(dir.Value, file);
             this.Serializer = serializer ?? (new DataContractJsonSerializer(typeof(T)));
         }
 
@@ -70,31 +78,26 @@ namespace RucheHome.AppModel
                 return false;
             }
 
-            if (Interlocked.Exchange(ref this.ioLock, 1) != 0)
+            lock (this.LockObject)
             {
-                return false;
-            }
-
-            try
-            {
-                // 読み取り
-                using (var stream = File.OpenRead(this.FilePath))
+                try
                 {
-                    var value = this.Serializer.ReadObject(stream);
-                    if (!(value is T))
+                    // 読み取り
+                    using (var stream = File.OpenRead(this.FilePath))
                     {
-                        return false;
+                        var value = this.Serializer.ReadObject(stream);
+                        if (!(value is T))
+                        {
+                            return false;
+                        }
+                        this.Value = (T)value;
                     }
-                    this.Value = (T)value;
                 }
-            }
-            catch
-            {
-                return false;
-            }
-            finally
-            {
-                Interlocked.Exchange(ref this.ioLock, 0);
+                catch (Exception ex)
+                {
+                    ThreadDebug.WriteException(ex);
+                    return false;
+                }
             }
 
             return true;
@@ -106,41 +109,36 @@ namespace RucheHome.AppModel
         /// <returns>成功したならば true 。失敗したならば false 。</returns>
         public bool Save()
         {
-            if (Interlocked.Exchange(ref this.ioLock, 1) != 0)
+            lock (this.LockObject)
             {
-                return false;
-            }
-
-            try
-            {
-                // 親ディレクトリ作成
-                var dirPath = Path.GetDirectoryName(Path.GetFullPath(this.FilePath));
-                if (!Directory.Exists(dirPath))
+                try
                 {
-                    Directory.CreateDirectory(dirPath);
-                }
+                    // 親ディレクトリ作成
+                    var dirPath = Path.GetDirectoryName(Path.GetFullPath(this.FilePath));
+                    if (!Directory.Exists(dirPath))
+                    {
+                        Directory.CreateDirectory(dirPath);
+                    }
 
-                // 書き出し
-                using (var stream = File.Create(this.FilePath))
-                {
-                    this.Serializer.WriteObject(stream, this.Value);
+                    // 書き出し
+                    using (var stream = File.Create(this.FilePath))
+                    {
+                        this.Serializer.WriteObject(stream, this.Value);
+                    }
                 }
-            }
-            catch
-            {
-                return false;
-            }
-            finally
-            {
-                Interlocked.Exchange(ref this.ioLock, 0);
+                catch (Exception ex)
+                {
+                    ThreadDebug.WriteException(ex);
+                    return false;
+                }
             }
 
             return true;
         }
 
         /// <summary>
-        /// I/O処理排他ロック用。
+        /// I/O処理排他制御用オブジェクト。
         /// </summary>
-        private int ioLock = 0;
+        private object LockObject = new object();
     }
 }
