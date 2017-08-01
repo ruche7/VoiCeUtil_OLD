@@ -38,14 +38,22 @@ namespace RucheHome.Automation.Talkers.CeVIO
         /// </list>
         /// <para>このメソッドで整形した文章であっても、入力に成功するとは限らない。</para>
         /// </remarks>
-        public static string Format(string text, bool separatingByLineBreaks) =>
-            string.IsNullOrEmpty(text) ?
-                text :
+        public static string Format(string text, bool separatingByLineBreaks)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return text;
+            }
+
+            var t =
+                (text.Length > TextLengthLimit) ?
+                    text.SubstringSurrogateSafe(0, TextLengthLimit) : text;
+
+            return
                 RegexWhiteWithoutSpace.Replace(
-                    text
-                        .SubstringSurrogateSafe(0, TextLengthLimit)
-                        .Replace(LineBreaks, separatingByLineBreaks ? OneSpace : OneEmpty),
+                    t.Replace(LineBreaks, separatingByLineBreaks ? OneSpace : OneEmpty),
                     @" ");
+        }
 
         /// <summary>
         /// 改行文字列配列。

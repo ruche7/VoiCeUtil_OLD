@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
+using RucheHome.Caches;
 
 namespace RucheHome.Automation.Talkers.CeVIO
 {
@@ -46,8 +47,7 @@ namespace RucheHome.Automation.Talkers.CeVIO
         /// <summary>
         /// 全キャスト列挙値のコレクションを取得する。
         /// </summary>
-        public static ReadOnlyCollection<Cast> AllValues { get; } =
-            Array.AsReadOnly(((Cast[])Enum.GetValues(typeof(Cast))).ToArray());
+        public static ReadOnlyCollection<Cast> AllValues => EnumCache<Cast>.Values;
 
         /// <summary>
         /// キャスト名を取得する。

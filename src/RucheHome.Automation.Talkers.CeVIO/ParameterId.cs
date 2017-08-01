@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
+using RucheHome.Caches;
 
 namespace RucheHome.Automation.Talkers.CeVIO
 {
@@ -94,8 +95,8 @@ namespace RucheHome.Automation.Talkers.CeVIO
         /// <summary>
         /// 全パラメータID値のコレクションを取得する。
         /// </summary>
-        public static ReadOnlyCollection<ParameterId> AllValues { get; } =
-            Array.AsReadOnly(((ParameterId[])Enum.GetValues(typeof(ParameterId))).ToArray());
+        public static ReadOnlyCollection<ParameterId> AllValues =>
+            EnumCache<ParameterId>.Values;
 
         /// <summary>
         /// パラメータ情報を取得する。
