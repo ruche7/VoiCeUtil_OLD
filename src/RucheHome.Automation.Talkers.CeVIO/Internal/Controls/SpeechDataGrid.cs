@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using RucheHome.Automation.Friendly.Wpf;
 using RucheHome.Diagnostics;
 
@@ -90,6 +91,11 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         }
 
         /// <summary>
+        /// コンテキストメニュー初期化処理のリトライ回数。
+        /// </summary>
+        private const int ContextMenuInitRetryCount = 10;
+
+        /// <summary>
         /// セリフデータグリッドのコンテキストメニューを初期化して取得する。
         /// </summary>
         /// <param name="dataGrid">セリフデータグリッド。</param>
@@ -99,6 +105,7 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
             var menu = dataGrid.Control.ContextMenu;
             if (menu == null)
             {
+                ThreadTrace.WriteLine(@"speechDataGrid.ContextMenu is null.");
                 return null;
             }
 
@@ -119,27 +126,50 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
                 // メニュー項目に null があるなら要初期化
                 if (header == null)
                 {
-                    // 初期化
-                    try
+                    bool initOk = false;
+
+                    // うまくいかないことがあるので何度か試す
+                    for (int retry = 0; retry <= ContextMenuInitRetryCount; ++retry)
                     {
-                        menu.PlacementTarget = dataGrid.Control;
+                        // 初期化
                         try
                         {
-                            menu.IsOpen = true;
+                            dataGrid.Focus();
+                            menu.PlacementTarget = dataGrid.Control;
+                            try
+                            {
+                                menu.IsOpen = true;
+                            }
+                            finally
+                            {
+                                menu.IsOpen = false;
+                            }
                         }
                         finally
                         {
-                            menu.IsOpen = false;
+                            menu.PlacementTarget = null;
                         }
-                    }
-                    finally
-                    {
-                        menu.PlacementTarget = null;
+
+                        // 非 null になったか確認
+                        if ((string)item.Header != null)
+                        {
+                            initOk = true;
+#if DEBUG
+                            if (retry > 0)
+                            {
+                                ThreadDebug.WriteLine(
+                                    @"Retry count of initializing ContextMenu : " + retry);
+                            }
+#endif // DEBUG
+                            break;
+                        }
+
+                        Thread.Yield();
                     }
 
-                    // 非 null になったか確認
-                    if ((string)item.Header == null)
+                    if (!initOk)
                     {
+                        ThreadTrace.WriteLine(@"item.Header is already null.");
                         return null;
                     }
 
