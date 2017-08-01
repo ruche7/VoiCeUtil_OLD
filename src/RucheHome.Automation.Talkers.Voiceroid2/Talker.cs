@@ -11,6 +11,7 @@ using Codeer.Friendly.Windows.Grasp;
 using Codeer.Friendly.Windows.NativeStandardControls;
 using RucheHome.Automation.Talkers.Friendly;
 using RucheHome.Automation.Talkers.Voiceroid2.Internal;
+using RucheHome.Caches;
 using RucheHome.Diagnostics;
 
 namespace RucheHome.Automation.Talkers.Voiceroid2
@@ -34,45 +35,6 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
                 canSaveBlankText: true,
                 hasCharacters: true)
         {
-        }
-
-        /// <summary>
-        /// 文章入力欄下にあるボタンの種別列挙。
-        /// </summary>
-        /// <remarks>
-        /// 値がそのままロジカルツリーインデックスを表す。
-        /// </remarks>
-        private enum MainButton
-        {
-            /// <summary>
-            /// 再生
-            /// </summary>
-            Play = 0,
-
-            /// <summary>
-            /// 停止
-            /// </summary>
-            Stop = 1,
-
-            /// <summary>
-            /// 先頭
-            /// </summary>
-            Head = 2,
-
-            /// <summary>
-            /// 末尾
-            /// </summary>
-            Tail = 3,
-
-            /// <summary>
-            /// 音声保存
-            /// </summary>
-            Save = 5,
-
-            /// <summary>
-            /// 再生時間
-            /// </summary>
-            Time = 6,
         }
 
         /// <summary>
@@ -119,6 +81,45 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
                         .Children[1]);
 
         /// <summary>
+        /// 文章入力欄下にあるボタンの種別列挙。
+        /// </summary>
+        /// <remarks>
+        /// 値がそのままボタン群のインデックスを表す。
+        /// </remarks>
+        private enum MainButton
+        {
+            /// <summary>
+            /// 再生
+            /// </summary>
+            Play = 0,
+
+            /// <summary>
+            /// 停止
+            /// </summary>
+            Stop = 1,
+
+            /// <summary>
+            /// 先頭
+            /// </summary>
+            Head = 2,
+
+            /// <summary>
+            /// 末尾
+            /// </summary>
+            Tail = 3,
+
+            /// <summary>
+            /// 音声保存
+            /// </summary>
+            Save = 5,
+
+            /// <summary>
+            /// 再生時間
+            /// </summary>
+            Time = 6,
+        }
+
+        /// <summary>
         /// 文章入力欄下にあるボタンコントロールを取得する。
         /// </summary>
         /// <param name="parent">ボタン群の親コントロール。</param>
@@ -130,26 +131,19 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
             {
                 return null;
             }
-
-            var index = (int)button;
-            if (index < 0)
+            if (!EnumCache<MainButton>.HashSet.Contains(button))
             {
                 return null;
             }
 
             try
             {
-                var children = parent.Children;
-                if (index < (int)children.Count)
-                {
-                    return children[index];
-                }
+                return parent.Children[(int)button];
             }
             catch (Exception ex)
             {
                 ThreadDebug.WriteException(ex);
             }
-
             return null;
         }
 
@@ -687,6 +681,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
                         if (name == character)
                         {
                             // 見つかったので選択
+                            listView.Focus();
                             listView.SelectedIndex = li;
                             return true;
                         }
@@ -778,6 +773,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
             try
             {
                 // 文章入力欄にテキストを設定
+                textBox.Focus();
                 if (!WaitAsyncAction(async => textBox.Text(async, text), timeout))
                 {
                     return (false, @"文章設定処理がタイムアウトしました。");
@@ -879,6 +875,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
 
                 try
                 {
+                    slider.Focus();
                     slider.Value = (double)value;
                 }
                 catch (Exception ex)
@@ -1055,39 +1052,54 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
 
             var saveButtonAsync = new Async();
 
-            // 音声保存ボタンをクリックして音声ファイル保存ダイアログを取得
-            var (fileDialog, fileDialogMessage) =
-                this.SaveFileImpl_ClickSaveButton((DynamicAppVar)mainWin, saveButtonAsync);
-            if (fileDialog == null)
+            try
             {
-                return (null, fileDialogMessage);
-            }
+                // 音声保存ボタンをクリックして音声ファイル保存ダイアログを取得
+                var (fileDialog, fileDialogMessage) =
+                    this.SaveFileImpl_ClickSaveButton(
+                        (DynamicAppVar)mainWin,
+                        saveButtonAsync);
+                if (fileDialog == null)
+                {
+                    return (null, fileDialogMessage);
+                }
 
-            // 音声ファイル保存ダイアログにファイルパスを設定してOKボタンをクリック
-            var result = this.SaveFileImpl_InputFilePath(fileDialog, waveFilePath);
-            if (!result.Value)
-            {
-                return (null, result.Message);
-            }
-
-            // 音声保存処理完了待ち
-            result = this.SaveFileImpl_WaitSaving(saveButtonAsync);
-            if (!result.Value)
-            {
-                return (null, result.Message);
-            }
-
-            // ファイル保存確認
-            result = this.SaveFileImpl_CheckFileSaved(waveFilePath);
-            if (!result.Value)
-            {
-                // 連番ファイルの場合があるのでそちらも確認
-                waveFilePath = FilePath.ToSequential(waveFilePath, 0);
-                result = this.SaveFileImpl_CheckFileSaved(waveFilePath);
+                // 音声ファイル保存ダイアログにファイルパスを設定してOKボタンをクリック
+                var result = this.SaveFileImpl_InputFilePath(fileDialog, waveFilePath);
                 if (!result.Value)
                 {
                     return (null, result.Message);
                 }
+
+                // 音声保存処理完了待ち
+                result = this.SaveFileImpl_WaitSaving(saveButtonAsync);
+                if (!result.Value)
+                {
+                    return (null, result.Message);
+                }
+
+                // ファイル保存確認
+                result = this.SaveFileImpl_CheckFileSaved(waveFilePath);
+                if (!result.Value)
+                {
+                    // 連番ファイルの場合があるのでそちらも確認
+                    waveFilePath = FilePath.ToSequential(waveFilePath, 0);
+                    result = this.SaveFileImpl_CheckFileSaved(waveFilePath);
+                    if (!result.Value)
+                    {
+                        return (null, result.Message);
+                    }
+                }
+            }
+            finally
+            {
+                // 保存完了時に本体ウィンドウが非アクティブだと
+                // 再生, 音声保存, 再生時間 ボタンが無効状態のままになる。
+                // コントロールにフォーカスを設定することで有効状態に戻るため、
+                // 常に有効なはずのボイスプリセットタブコントロールに設定する。
+
+                var (tabControl, _) = this.GetPresetTabControl((DynamicAppVar)mainWin);
+                tabControl?.Focus();
             }
 
             return waveFilePath;
