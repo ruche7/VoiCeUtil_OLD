@@ -11,6 +11,7 @@ using Codeer.Friendly.Windows.Grasp;
 using RucheHome.Automation.Friendly.Wpf;
 using RucheHome.Automation.Talkers.CeVIO.Internal.Controls;
 using RucheHome.Automation.Talkers.Friendly;
+using RucheHome.Caches;
 using RucheHome.Diagnostics;
 
 namespace RucheHome.Automation.Talkers.CeVIO
@@ -239,6 +240,7 @@ namespace RucheHome.Automation.Talkers.CeVIO
                         if (string.IsNullOrWhiteSpace(cellText))
                         {
                             // 選択
+                            speechDataGrid.Focus();
                             speechDataGrid.SelectedRow = ri;
                             return true;
                         }
@@ -801,6 +803,7 @@ namespace RucheHome.Automation.Talkers.CeVIO
 
                     try
                     {
+                        slider.Focus();
                         slider.Value = (double)value;
                     }
                     catch (Exception ex)
@@ -1036,6 +1039,7 @@ namespace RucheHome.Automation.Talkers.CeVIO
                 selectedRow = grid.SelectedRow;
 
                 // 一旦別の行を選択して元の行に戻す
+                grid.Focus();
                 grid.SelectedRow = (selectedRow > 0) ? (selectedRow - 1) : 1;
                 grid.SelectedRow = selectedRow;
 
@@ -1303,8 +1307,8 @@ namespace RucheHome.Automation.Talkers.CeVIO
             get => this.castSpeechInputRow;
             set =>
                 this.SetProperty(
-                    ref castSpeechInputRow,
-                    Enum.IsDefined(value.GetType(), value) ?
+                    ref this.castSpeechInputRow,
+                    EnumCache<CastSpeechInputRow>.HashSet.Contains(value) ?
                         value : CastSpeechInputRow.Blank);
         }
         private CastSpeechInputRow castSpeechInputRow = CastSpeechInputRow.Blank;

@@ -57,6 +57,11 @@ namespace RucheHome.Automation.Friendly.Wpf
         public int ColumnCount => (int)this.Control.Columns.Count;
 
         /// <summary>
+        /// DataGrid オブジェクトにフォーカスを設定する。
+        /// </summary>
+        public void Focus() => this.Control.Focus();
+
+        /// <summary>
         /// DataGridRow オブジェクトを取得する。
         /// </summary>
         /// <param name="row">行インデックス。</param>

@@ -415,6 +415,7 @@ namespace RucheHome.Automation.Talkers.AITalkEx
                 // すべての文章入力欄にテキストを設定
                 foreach (var textBox in textBoxes)
                 {
+                    textBox.Focus();
                     if (!WaitAsyncAction(async => textBox.Text(async, text), timeout))
                     {
                         return (false, @"文章設定処理がタイムアウトしました。");
@@ -544,6 +545,7 @@ namespace RucheHome.Automation.Talkers.AITalkEx
 
                 try
                 {
+                    textBox.Focus();
                     textBox.Text = value.ToString(format);
                     dict.Add(id, true);
                 }
@@ -593,6 +595,7 @@ namespace RucheHome.Automation.Talkers.AITalkEx
             {
                 foreach (var textBox in EnumerateMainRichTextBoxes((DynamicAppVar)mainWin))
                 {
+                    textBox.Focus();
                     textBox.Select(0, 0);
                 }
             }
@@ -624,6 +627,7 @@ namespace RucheHome.Automation.Talkers.AITalkEx
 
                 // 再生ボタンクリック
                 var async = new Async();
+                play.Focus();
                 play.PerformClick(async);
 
                 // フレーズ編集未保存の場合等はダイアログが出るためそれを待つ
@@ -679,6 +683,7 @@ namespace RucheHome.Automation.Talkers.AITalkEx
                 }
 
                 // 停止ボタンクリック
+                stop.Focus();
                 stop.PerformClick();
             }
             catch (Exception ex)
@@ -792,6 +797,7 @@ namespace RucheHome.Automation.Talkers.AITalkEx
                 }
 
                 // 音声保存ボタンクリック
+                button.Focus();
                 button.PerformClick(saveButtonAsync);
 
                 // ファイルダイアログ(or 警告ダイアログ)を待つ

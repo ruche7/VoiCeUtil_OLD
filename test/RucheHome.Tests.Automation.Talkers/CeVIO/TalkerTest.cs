@@ -92,7 +92,7 @@ namespace RucheHome.Tests.Automation.Talkers.CeVIO
                 {
                     var r = talker.GetText();
                     Assert.IsNotNull(r.Value, r.Message);
-                    Assert.AreEqual(r.Value, text.Replace("\n", @"").Replace('\t', ' '));
+                    Assert.AreEqual(r.Value, TextFormatter.Format(text, false));
                 }
 
                 // 改行⇒半角スペース置換設定
@@ -108,7 +108,7 @@ namespace RucheHome.Tests.Automation.Talkers.CeVIO
                 {
                     var r = talker.GetText();
                     Assert.IsNotNull(r.Value, r.Message);
-                    Assert.AreEqual(r.Value, text.Replace("\n", @" ").Replace('\t', ' '));
+                    Assert.AreEqual(r.Value, TextFormatter.Format(text, true));
                 }
             }
             finally

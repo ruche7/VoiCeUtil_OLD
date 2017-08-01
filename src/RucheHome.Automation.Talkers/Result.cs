@@ -45,7 +45,7 @@ namespace RucheHome.Automation.Talkers
         /// </summary>
         /// <param name="src">変換元。</param>
         /// <returns>変換結果。 <see cref="Message"/> は null となる。</returns>
-        public static implicit operator Result<T>(T src) => new Result<T>(src, null);
+        public static implicit operator Result<T>(T src) => new Result<T>(src);
 
         /// <summary>
         /// ValueTuple 型からの暗黙の型変換を行う。
