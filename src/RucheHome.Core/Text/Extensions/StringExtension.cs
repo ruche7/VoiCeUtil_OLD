@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using RucheHome.Diagnostics;
 
 namespace RucheHome.Text.Extensions
@@ -9,561 +7,108 @@ namespace RucheHome.Text.Extensions
     /// <summary>
     /// String クラスおよび StringBuilder クラスに対する拡張メソッドを提供する静的クラス。
     /// </summary>
-    public static class StringExtension
+    public static partial class StringExtension
     {
         /// <summary>
-        /// サロゲートペアを分断しないように部分文字列を削除する。
+        /// 先頭と末尾の改行文字を取り除いた文字列を作成する。
         /// </summary>
         /// <param name="source">対象文字列。</param>
-        /// <param name="startIndex">削除開始位置。</param>
-        /// <param name="moveAfter">
-        /// 指定位置がサロゲートペアを分断する時、位置を後方にずらすならば true 。
-        /// 既定では前方にずらす。
-        /// </param>
-        /// <returns>部分文字列を削除した文字列。</returns>
-        public static string RemoveSurrogateSafe(
+        /// <returns>作成した文字列。</returns>
+        public static string TrimLineBreaks(this string source) =>
+            source?.Trim('\r', '\n') ?? throw new ArgumentNullException(nameof(source));
+
+        /// <summary>
+        /// 先頭の改行文字を取り除いた文字列を作成する。
+        /// </summary>
+        /// <param name="source">対象文字列。</param>
+        /// <returns>作成した文字列。</returns>
+        public static string TrimStartLineBreaks(this string source) =>
+            source?.TrimStart('\r', '\n') ?? throw new ArgumentNullException(nameof(source));
+
+        /// <summary>
+        /// 末尾の改行文字を取り除いた文字列を作成する。
+        /// </summary>
+        /// <param name="source">対象文字列。</param>
+        /// <returns>作成した文字列。</returns>
+        public static string TrimEndLineBreaks(this string source) =>
+            source?.TrimEnd('\r', '\n') ?? throw new ArgumentNullException(nameof(source));
+
+        /// <summary>
+        /// 行頭のインデントを最小幅分だけ除去した文字列を作成する。
+        /// </summary>
+        /// <param name="source">対象文字列。</param>
+        /// <param name="tabWidth">タブ文字幅。 1 以上でなければならない。</param>
+        /// <param name="newLine">改行文字列。通常は既定値 "\n" のままで問題ない。</param>
+        /// <returns>作成した文字列。</returns>
+        public static string StripIndent(
             this string source,
-            int startIndex,
-            bool moveAfter = false)
+            int tabWidth = 4,
+            string newLine = "\n")
         {
-            CorrectRangeSurrogateSafe(
-                source.Length,
-                source[startIndex],
-                ref startIndex,
-                moveAfter);
+            ArgumentValidation.IsNotNull(source, nameof(source));
+            ArgumentValidation.IsEqualsOrGreaterThan(tabWidth, 1, nameof(tabWidth));
+            ArgumentValidation.IsNotNull(newLine, nameof(newLine));
 
-            return source.Remove(startIndex);
-        }
-
-        /// <summary>
-        /// サロゲートペアを分断しないように部分文字列を削除する。
-        /// </summary>
-        /// <param name="source">対象文字列。</param>
-        /// <param name="startIndex">削除開始位置。</param>
-        /// <param name="count">削除文字数。</param>
-        /// <param name="moveAfter">
-        /// 指定位置がサロゲートペアを分断する時、位置を後方にずらすならば true 。
-        /// 既定では前方にずらす。
-        /// </param>
-        /// <returns>部分文字列を削除した文字列。</returns>
-        public static string RemoveSurrogateSafe(
-            this string source,
-            int startIndex,
-            int count,
-            bool moveAfter = false)
-        {
-            CorrectRangeSurrogateSafe(
-                source.Length,
-                i => source[i],
-                ref startIndex,
-                ref count,
-                moveAfter);
-
-            return source.Remove(startIndex, count);
-        }
-
-        /// <summary>
-        /// サロゲートペアを分断しないように部分文字列を取得する。
-        /// </summary>
-        /// <param name="source">対象文字列。</param>
-        /// <param name="startIndex">取得開始位置。</param>
-        /// <param name="moveAfter">
-        /// 指定位置がサロゲートペアを分断する時、位置を後方にずらすならば true 。
-        /// 既定では前方にずらす。
-        /// </param>
-        /// <returns>取得した部分文字列。</returns>
-        public static string SubstringSurrogateSafe(
-            this string source,
-            int startIndex,
-            bool moveAfter = false)
-        {
-            CorrectRangeSurrogateSafe(
-                source.Length,
-                source[startIndex],
-                ref startIndex,
-                moveAfter);
-
-            return source.Substring(startIndex);
-        }
-
-        /// <summary>
-        /// サロゲートペアを分断しないように部分文字列を取得する。
-        /// </summary>
-        /// <param name="source">対象文字列。</param>
-        /// <param name="startIndex">取得開始位置。</param>
-        /// <param name="count">取得文字数。</param>
-        /// <param name="moveAfter">
-        /// 指定位置がサロゲートペアを分断する時、位置を後方にずらすならば true 。
-        /// 既定では前方にずらす。
-        /// </param>
-        /// <returns>取得した部分文字列。</returns>
-        public static string SubstringSurrogateSafe(
-            this string source,
-            int startIndex,
-            int count,
-            bool moveAfter = false)
-        {
-            CorrectRangeSurrogateSafe(
-                source.Length,
-                i => source[i],
-                ref startIndex,
-                ref count,
-                moveAfter);
-
-            return source.Substring(startIndex, count);
-        }
-
-        /// <summary>
-        /// サロゲートペアを分断しないように部分文字列を削除する。
-        /// </summary>
-        /// <param name="source">対象文字列。</param>
-        /// <param name="startIndex">削除開始位置。</param>
-        /// <param name="moveAfter">
-        /// 指定位置がサロゲートペアを分断する時、位置を後方にずらすならば true 。
-        /// 既定では前方にずらす。
-        /// </param>
-        /// <returns>部分文字列を削除した文字列。</returns>
-        public static StringBuilder RemoveSurrogateSafe(
-            this StringBuilder source,
-            int startIndex,
-            bool moveAfter = false)
-        {
-            CorrectRangeSurrogateSafe(
-                source.Length,
-                source[startIndex],
-                ref startIndex,
-                moveAfter);
-
-            var length =
-                (source == null || startIndex < 0 || startIndex > source.Length) ?
-                    0 : (source.Length - startIndex);
-
-            return source.Remove(startIndex, length);
-        }
-
-        /// <summary>
-        /// サロゲートペアを分断しないように部分文字列を削除する。
-        /// </summary>
-        /// <param name="source">対象文字列。</param>
-        /// <param name="startIndex">削除開始位置。</param>
-        /// <param name="length">削除文字数。</param>
-        /// <param name="moveAfter">
-        /// 指定位置がサロゲートペアを分断する時、位置を後方にずらすならば true 。
-        /// 既定では前方にずらす。
-        /// </param>
-        /// <returns>部分文字列を削除した文字列。</returns>
-        public static StringBuilder RemoveSurrogateSafe(
-            this StringBuilder source,
-            int startIndex,
-            int length,
-            bool moveAfter = false)
-        {
-            CorrectRangeSurrogateSafe(
-                source.Length,
-                i => source[i],
-                ref startIndex,
-                ref length,
-                moveAfter);
-
-            return source.Remove(startIndex, length);
-        }
-
-        /// <summary>
-        /// サロゲートペアを分断しないように部分文字列を取得する。
-        /// </summary>
-        /// <param name="source">対象文字列。</param>
-        /// <param name="startIndex">取得開始位置。</param>
-        /// <param name="moveAfter">
-        /// 指定位置がサロゲートペアを分断する時、位置を後方にずらすならば true 。
-        /// 既定では前方にずらす。
-        /// </param>
-        /// <returns>取得した部分文字列。</returns>
-        public static string ToStringSurrogateSafe(
-            this StringBuilder source,
-            int startIndex,
-            bool moveAfter = false)
-        {
-            CorrectRangeSurrogateSafe(
-                source.Length,
-                source[startIndex],
-                ref startIndex,
-                moveAfter);
-
-            var length =
-                (source == null || startIndex < 0 || startIndex > source.Length) ?
-                    0 : (source.Length - startIndex);
-
-            return source.ToString(startIndex, length);
-        }
-
-        /// <summary>
-        /// サロゲートペアを分断しないように部分文字列を取得する。
-        /// </summary>
-        /// <param name="source">対象文字列。</param>
-        /// <param name="startIndex">取得開始位置。</param>
-        /// <param name="length">取得文字数。</param>
-        /// <param name="moveAfter">
-        /// 指定位置がサロゲートペアを分断する時、位置を後方にずらすならば true 。
-        /// 既定では前方にずらす。
-        /// </param>
-        /// <returns>取得した部分文字列。</returns>
-        public static string ToStringSurrogateSafe(
-            this StringBuilder source,
-            int startIndex,
-            int length,
-            bool moveAfter = false)
-        {
-            CorrectRangeSurrogateSafe(
-                source.Length,
-                i => source[i],
-                ref startIndex,
-                ref length,
-                moveAfter);
-
-            return source.ToString(startIndex, length);
-        }
-
-        /// <summary>
-        /// サロゲートペアを分断しないように範囲指定値を補正する。
-        /// </summary>
-        /// <param name="sourceLength">処理対象文字列の長さ。</param>
-        /// <param name="sourceCharAtStartIndex">
-        /// 処理対象文字列の startIndex の位置にある文字。
-        /// </param>
-        /// <param name="startIndex">補正対象の開始位置値。</param>
-        /// <param name="moveAfter">
-        /// 指定位置がサロゲートペアを分断する時、位置を後方にずらすならば true 。
-        /// 既定では前方にずらす。
-        /// </param>
-        private static void CorrectRangeSurrogateSafe(
-            int sourceLength,
-            char sourceCharAtStartIndex,
-            ref int startIndex,
-            bool moveAfter)
-        {
-            if (
-                startIndex > 0 &&
-                startIndex < sourceLength &&
-                char.IsLowSurrogate(sourceCharAtStartIndex))
-            {
-                // 開始位置が下位サロゲートなら範囲を移動
-                startIndex += moveAfter ? +1 : -1;
-            }
-        }
-
-        /// <summary>
-        /// サロゲートペアを分断しないように範囲指定値を補正する。
-        /// </summary>
-        /// <param name="sourceLength">処理対象文字列の長さ。</param>
-        /// <param name="sourceCharGetter">
-        /// 処理対象文字列から特定位置の文字を取得するデリゲート。
-        /// </param>
-        /// <param name="startIndex">補正対象の開始位置値。</param>
-        /// <param name="count">補正対象の文字数値。</param>
-        /// <param name="moveAfter">
-        /// 指定位置がサロゲートペアを分断する時、位置を後方にずらすならば true 。
-        /// 既定では前方にずらす。
-        /// </param>
-        private static void CorrectRangeSurrogateSafe(
-            int sourceLength,
-            Func<int, char> sourceCharGetter,
-            ref int startIndex,
-            ref int count,
-            bool moveAfter)
-        {
-            if (
-                startIndex >= 0 &&
-                count >= 0 &&
-                startIndex + count <= sourceLength)
-            {
-                if (
-                    startIndex > 0 &&
-                    startIndex < sourceLength &&
-                    char.IsLowSurrogate(sourceCharGetter(startIndex)))
-                {
-                    // 開始位置が下位サロゲートなら範囲を移動
-                    startIndex += moveAfter ? +1 : -1;
-
-                    // ++startIndex により終端位置が範囲外になるなら補正
-                    if (moveAfter && startIndex + count > sourceLength)
-                    {
-                        --count;
-                    }
-                }
-
-                if (count > 0)
-                {
-                    var end = startIndex + count;
-                    if (end < sourceLength && char.IsLowSurrogate(sourceCharGetter(end)))
-                    {
-                        // 終端位置が下位サロゲートなら範囲を移動
-                        count += moveAfter ? +1 : -1;
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// 文字列列挙による文字列の置換処理を行う。
-        /// </summary>
-        /// <param name="source">置換対象文字列。</param>
-        /// <param name="oldValues">
-        /// 置換元文字列列挙。 null や空文字列を含んでいてはならない。
-        /// </param>
-        /// <param name="newValues">
-        /// 置換先文字列列挙。 null を含んでいてはならない。
-        /// </param>
-        /// <returns>置換された文字列。</returns>
-        /// <remarks>
-        /// <para>引数 oldValues と newValues の各要素がそれぞれ対応する。</para>
-        /// <para>
-        /// newValues の要素数が oldValues の要素数より少ない場合、
-        /// 超過分の置換先文字列には newValues の末尾要素が利用される。
-        /// </para>
-        /// <para>
-        /// newValues の要素数が oldValues の要素数より多い場合、超過分は無視される。
-        /// </para>
-        /// </remarks>
-        public static string Replace(
-            this string source,
-            IEnumerable<string> oldValues,
-            IEnumerable<string> newValues)
-        {
-            // 置換処理用アイテムリスト作成
-            // 引数の正当性チェックも行われる
-            var items = MakeReplaceItems(source, oldValues, newValues);
-            if (items.Count <= 0)
+            // 改行で分割
+            var lines = source.Split(new[] { newLine }, StringSplitOptions.None);
+            if (lines.Length <= 0)
             {
                 return source;
             }
 
-            var dest = new StringBuilder();
-            int srcPos = 0;
-
-            do
-            {
-                // 最も優先度の高いアイテムを取得
-                // 優先度の高い順にソートされているため先頭取得でOK
-                var item = items[0];
-
-                // 対象アイテムまでの文字列と対象アイテムの置換先文字列を追加
-                dest.Append(source.Substring(srcPos, item.SearchResult - srcPos));
-                dest.Append(item.NewValue);
-
-                // 文字列検索基準位置を更新
-                srcPos = item.SearchResult + item.OldValue.Length;
-                if (srcPos >= source.Length)
-                {
-                    break;
-                }
-
-                // 置換処理用アイテムリスト更新
-                UpdateReplaceItems(items, source, srcPos);
-            }
-            while (items.Count > 0);
-
-            // 末尾までの文字列を追加
-            if (srcPos < source.Length)
-            {
-                dest.Append(source.Substring(srcPos));
-            }
-
-            return dest.ToString();
-        }
-
-        /// <summary>
-        /// 置換処理用アイテムクラス。
-        /// </summary>
-        private class ReplaceItem : IComparable<ReplaceItem>
-        {
-            /// <summary>
-            /// コンストラクタ。
-            /// </summary>
-            /// <param name="itemIndex">アイテムの優先度を表すインデックス値。</param>
-            /// <param name="oldValue">置換元文字列。</param>
-            /// <param name="newValue">置換先文字列。</param>
-            /// <param name="searchResult">検索結果保存値。</param>
-            public ReplaceItem(
-                int itemIndex,
-                string oldValue,
-                string newValue,
-                int searchResult = -1)
-            {
-                this.ItemIndex = itemIndex;
-                this.OldValue = oldValue;
-                this.NewValue = newValue;
-                this.SearchResult = searchResult;
-            }
-
-            /// <summary>
-            /// アイテムの優先度を表すインデックス値を取得する。
-            /// </summary>
-            public int ItemIndex { get; }
-
-            /// <summary>
-            /// 置換元文字列を取得する。
-            /// </summary>
-            public string OldValue { get; }
-
-            /// <summary>
-            /// 置換先文字列を取得する。
-            /// </summary>
-            public string NewValue { get; }
-
-            /// <summary>
-            /// 検索結果保存値を取得または設定する。
-            /// </summary>
-            public int SearchResult { get; set; }
-
-            /// <summary>
-            /// 優先度の比較処理を行う。
-            /// </summary>
-            /// <param name="other">比較対象。</param>
-            /// <returns>比較対象との優先順位を表す数値。</returns>
-            /// <remarks>
-            /// SearchResult の値が異なる場合はその値が小さいほど優先する。
-            /// そうではなく OldValue.Length の値が異なる場合はその値が大きいほど優先する。
-            /// そうでもなければ ItemIndex の値が小さいほど優先する。
-            /// 上記すべての値が等しければ優先順位は等価と判断する。
-            /// </remarks>
-            public int CompareTo(ReplaceItem other)
-            {
-                if (this.SearchResult != other.SearchResult)
-                {
-                    return this.SearchResult.CompareTo(other.SearchResult);
-                }
-                if (this.OldValue.Length != other.OldValue.Length)
-                {
-                    return (other.OldValue.Length - this.OldValue.Length);
-                }
-                return this.ItemIndex.CompareTo(other.ItemIndex);
-            }
-        }
-
-        /// <summary>
-        /// 置換処理用アイテムリストを作成する。
-        /// </summary>
-        /// <param name="source">置換対象文字列。</param>
-        /// <param name="oldValues">
-        /// 置換元文字列列挙。 null や空文字列を含んでいてはならない。
-        /// </param>
-        /// <param name="newValues">
-        /// 置換先文字列列挙。 null を含んでいてはならない。
-        /// </param>
-        /// <returns>
-        /// 置換処理用アイテムリスト。優先度の高い順にソートされている。
-        /// </returns>
-        private static List<ReplaceItem> MakeReplaceItems(
-            string source,
-            IEnumerable<string> oldValues,
-            IEnumerable<string> newValues)
-        {
-            ArgumentValidation.IsNotNull(source, nameof(source));
-            ArgumentValidation.IsNotNull(oldValues, nameof(oldValues));
-            ArgumentValidation.IsNotNull(newValues, nameof(newValues));
-
-            var newVals = newValues.ToArray();
-            if (newVals.Contains(null))
-            {
-                throw new ArgumentException(
-                    @"置換先文字列列挙内に null が含まれています。",
-                    nameof(newValues));
-            }
-            if (!oldValues.Any())
-            {
-                // 置換元が1つもないなら置換不要なので空リストを返す
-                return new List<ReplaceItem>();
-            }
-            if (newVals.Length <= 0)
-            {
-                throw new ArgumentException(
-                    @"置換先文字列列挙の要素数が 0 です。",
-                    nameof(newValues));
-            }
-
-            // アイテムリスト作成
-            var items =
-                oldValues
+            // 最小インデント幅決定
+            var lineIndents =
+                lines
                     .Select(
-                        (v, i) =>
-                        {
-                            if (v == null)
-                            {
-                                throw new ArgumentException(
-                                    @"置換元文字列列挙内に null が含まれています。",
-                                    nameof(oldValues));
-                            }
-                            if (v == "")
-                            {
-                                throw new ArgumentException(
-                                    @"置換元文字列列挙内に空文字列が含まれています。",
-                                    nameof(oldValues));
-                            }
-
-                            var searchResult = source.IndexOf(v);
-                            return
-                                (searchResult < 0) ?
-                                    null :
-                                    new ReplaceItem(
-                                        i,
-                                        v,
-                                        newVals[Math.Min(i, newVals.Length - 1)],
-                                        searchResult);
-                        })
-                    .Where(item => item != null)
-                    .ToList();
-
-            // ソートする
-            items.Sort();
-
-            return items;
-        }
-
-        /// <summary>
-        /// 置換処理用アイテムリストを更新する。
-        /// </summary>
-        /// <param name="items">置換処理用アイテムリスト。</param>
-        /// <param name="source">置換対象文字列。</param>
-        /// <param name="searchResultMin">置換元文字列の検索開始位置。</param>
-        private static void UpdateReplaceItems(
-            List<ReplaceItem> items,
-            string source,
-            int searchResultMin)
-        {
-            // 更新したアイテム数設定先
-            int updatedCount = 0;
-
-            // アイテム更新
-            // 優先度の関係上 SearchResult が小さい順に並んでいる
-            while (
-                updatedCount < items.Count &&
-                items[updatedCount].SearchResult < searchResultMin)
+                        line =>
+                            line
+                                .TakeWhile(c => c == ' ' || c == '\t')
+                                .Sum(c => (c == ' ') ? 1 : tabWidth))
+                    .Where(indent => indent > 0);
+            if (!lineIndents.Any())
             {
-                var item = items[updatedCount];
-                item.SearchResult = source.IndexOf(item.OldValue, searchResultMin);
-                ++updatedCount;
+                return source;
             }
+            var minIndent = lineIndents.Min();
 
-            // 更新したアイテムを新しい位置に挿入
-            for (int ii = 0; ii < updatedCount; ++ii)
+            // インデントを除去
+            for (int li = 0; li < lines.Length; ++li)
             {
-                var item = items[ii];
+                var line = lines[li];
 
-                // 有効なアイテムのみ挿入する
-                if (item.SearchResult >= 0)
+                int indent = 0, pos = 0;
+                for (; indent < minIndent; ++pos)
                 {
-                    var pos =
-                        items.BinarySearch(
-                            updatedCount,
-                            items.Count - updatedCount,
-                            item,
-                            null);
-                    items.Insert((pos < 0) ? ~pos : pos, item);
+                    var c = line[pos];
+                    if (c == ' ')
+                    {
+                        ++indent;
+                    }
+                    else if (c == '\t')
+                    {
+                        indent += tabWidth;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                if (pos > 0)
+                {
+                    line = line.Substring(pos);
+
+                    // タブ文字幅によって除去しすぎたならば半角スペースを補填
+                    if (indent > minIndent)
+                    {
+                        line = (new string(' ', indent - minIndent)) + line;
+                    }
+
+                    lines[li] = line;
                 }
             }
 
-            // 挿入し終えた古いアイテムを削除
-            items.RemoveRange(0, updatedCount);
+            return string.Join(newLine, lines);
         }
     }
 }
