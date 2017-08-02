@@ -87,28 +87,28 @@ namespace RucheHome.Automation.Talkers.AITalkEx
         /// <summary>
         /// プロセスの実行ファイル名(拡張子なし)を取得する。
         /// </summary>
-        /// <param name="self">製品種別。</param>
+        /// <param name="product">製品種別。</param>
         /// <returns>
         /// プロセスの実行ファイル名(拡張子なし)。引数値が無効ならば null 。
         /// </returns>
-        public static string GetProcessFileName(this Product self) =>
-            FindInfo(self)?.ProcessFileName;
+        public static string GetProcessFileName(this Product product) =>
+            FindInfo(product)?.ProcessFileName;
 
         /// <summary>
         /// プロセスの製品名情報を取得する。
         /// </summary>
-        /// <param name="self">製品種別。</param>
+        /// <param name="product">製品種別。</param>
         /// <returns>プロセスの製品名情報。引数値が無効ならば null 。</returns>
-        public static string GetProcessProduct(this Product self) =>
-            FindInfo(self)?.ProcessProduct;
+        public static string GetProcessProduct(this Product product) =>
+            FindInfo(product)?.ProcessProduct;
 
         /// <summary>
         /// 話者名を取得する。
         /// </summary>
-        /// <param name="self">製品種別。</param>
+        /// <param name="product">製品種別。</param>
         /// <returns>話者名。引数値が無効ならば null 。</returns>
-        public static string GetTalkerName(this Product self) =>
-            FindInfo(self)?.TalkerName;
+        public static string GetTalkerName(this Product product) =>
+            FindInfo(product)?.TalkerName;
 
         /// <summary>
         /// 製品情報構造体。

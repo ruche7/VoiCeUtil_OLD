@@ -111,34 +111,34 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
         /// <summary>
         /// パラメータ情報を取得する。
         /// </summary>
-        /// <param name="self">パラメータID。</param>
+        /// <param name="id">パラメータID。</param>
         /// <returns>パラメータ情報。引数値が無効ならば null 。</returns>
-        public static ParameterInfo<ParameterId> GetInfo(this ParameterId self) =>
-            Infos.TryGetValue(self, out var info) ? info : null;
+        public static ParameterInfo<ParameterId> GetInfo(this ParameterId id) =>
+            Infos.TryGetValue(id, out var info) ? info : null;
 
         /// <summary>
         /// マスター設定であるか否かを取得する。
         /// </summary>
-        /// <param name="self">パラメータID。</param>
+        /// <param name="id">パラメータID。</param>
         /// <returns>マスター設定ならば true 。そうでなければ false 。</returns>
-        public static bool IsMaster(this ParameterId self) =>
-            (self >= ParameterId.Volume && self <= ParameterId.PauseSentence);
+        public static bool IsMaster(this ParameterId id) =>
+            (id >= ParameterId.Volume && id <= ParameterId.PauseSentence);
 
         /// <summary>
         /// ボイスプリセット設定であるか否かを取得する。
         /// </summary>
-        /// <param name="self">パラメータID。</param>
+        /// <param name="id">パラメータID。</param>
         /// <returns>ボイスプリセット設定ならば true 。そうでなければ false 。</returns>
-        public static bool IsPreset(this ParameterId self) =>
-            (self >= ParameterId.PresetVolume && self <= ParameterId.PresetSorrow);
+        public static bool IsPreset(this ParameterId id) =>
+            (id >= ParameterId.PresetVolume && id <= ParameterId.PresetSorrow);
 
         /// <summary>
         /// 存在しない可能性のある設定であるか否かを取得する。
         /// </summary>
-        /// <param name="self">パラメータID。</param>
+        /// <param name="id">パラメータID。</param>
         /// <returns>存在しない可能性があるならば true 。そうでなければ false 。</returns>
-        public static bool IsOptional(this ParameterId self) =>
-            (self >= ParameterId.PresetJoy && self <= ParameterId.PresetSorrow);
+        public static bool IsOptional(this ParameterId id) =>
+            (id >= ParameterId.PresetJoy && id <= ParameterId.PresetSorrow);
 
         /// <summary>
         /// パラメータ情報ディクショナリ。

@@ -14,7 +14,7 @@ namespace RucheHome.Text.Extensions
         /// <summary>
         /// サロゲートペアを分断しないように部分文字列を削除する。
         /// </summary>
-        /// <param name="self">対象文字列。</param>
+        /// <param name="source">対象文字列。</param>
         /// <param name="startIndex">削除開始位置。</param>
         /// <param name="moveAfter">
         /// 指定位置がサロゲートペアを分断する時、位置を後方にずらすならば true 。
@@ -22,23 +22,23 @@ namespace RucheHome.Text.Extensions
         /// </param>
         /// <returns>部分文字列を削除した文字列。</returns>
         public static string RemoveSurrogateSafe(
-            this string self,
+            this string source,
             int startIndex,
             bool moveAfter = false)
         {
             CorrectRangeSurrogateSafe(
-                self.Length,
-                self[startIndex],
+                source.Length,
+                source[startIndex],
                 ref startIndex,
                 moveAfter);
 
-            return self.Remove(startIndex);
+            return source.Remove(startIndex);
         }
 
         /// <summary>
         /// サロゲートペアを分断しないように部分文字列を削除する。
         /// </summary>
-        /// <param name="self">対象文字列。</param>
+        /// <param name="source">対象文字列。</param>
         /// <param name="startIndex">削除開始位置。</param>
         /// <param name="count">削除文字数。</param>
         /// <param name="moveAfter">
@@ -47,25 +47,25 @@ namespace RucheHome.Text.Extensions
         /// </param>
         /// <returns>部分文字列を削除した文字列。</returns>
         public static string RemoveSurrogateSafe(
-            this string self,
+            this string source,
             int startIndex,
             int count,
             bool moveAfter = false)
         {
             CorrectRangeSurrogateSafe(
-                self.Length,
-                i => self[i],
+                source.Length,
+                i => source[i],
                 ref startIndex,
                 ref count,
                 moveAfter);
 
-            return self.Remove(startIndex, count);
+            return source.Remove(startIndex, count);
         }
 
         /// <summary>
         /// サロゲートペアを分断しないように部分文字列を取得する。
         /// </summary>
-        /// <param name="self">対象文字列。</param>
+        /// <param name="source">対象文字列。</param>
         /// <param name="startIndex">取得開始位置。</param>
         /// <param name="moveAfter">
         /// 指定位置がサロゲートペアを分断する時、位置を後方にずらすならば true 。
@@ -73,23 +73,23 @@ namespace RucheHome.Text.Extensions
         /// </param>
         /// <returns>取得した部分文字列。</returns>
         public static string SubstringSurrogateSafe(
-            this string self,
+            this string source,
             int startIndex,
             bool moveAfter = false)
         {
             CorrectRangeSurrogateSafe(
-                self.Length,
-                self[startIndex],
+                source.Length,
+                source[startIndex],
                 ref startIndex,
                 moveAfter);
 
-            return self.Substring(startIndex);
+            return source.Substring(startIndex);
         }
 
         /// <summary>
         /// サロゲートペアを分断しないように部分文字列を取得する。
         /// </summary>
-        /// <param name="self">対象文字列。</param>
+        /// <param name="source">対象文字列。</param>
         /// <param name="startIndex">取得開始位置。</param>
         /// <param name="count">取得文字数。</param>
         /// <param name="moveAfter">
@@ -98,25 +98,25 @@ namespace RucheHome.Text.Extensions
         /// </param>
         /// <returns>取得した部分文字列。</returns>
         public static string SubstringSurrogateSafe(
-            this string self,
+            this string source,
             int startIndex,
             int count,
             bool moveAfter = false)
         {
             CorrectRangeSurrogateSafe(
-                self.Length,
-                i => self[i],
+                source.Length,
+                i => source[i],
                 ref startIndex,
                 ref count,
                 moveAfter);
 
-            return self.Substring(startIndex, count);
+            return source.Substring(startIndex, count);
         }
 
         /// <summary>
         /// サロゲートペアを分断しないように部分文字列を削除する。
         /// </summary>
-        /// <param name="self">対象文字列。</param>
+        /// <param name="source">対象文字列。</param>
         /// <param name="startIndex">削除開始位置。</param>
         /// <param name="moveAfter">
         /// 指定位置がサロゲートペアを分断する時、位置を後方にずらすならば true 。
@@ -124,27 +124,27 @@ namespace RucheHome.Text.Extensions
         /// </param>
         /// <returns>部分文字列を削除した文字列。</returns>
         public static StringBuilder RemoveSurrogateSafe(
-            this StringBuilder self,
+            this StringBuilder source,
             int startIndex,
             bool moveAfter = false)
         {
             CorrectRangeSurrogateSafe(
-                self.Length,
-                self[startIndex],
+                source.Length,
+                source[startIndex],
                 ref startIndex,
                 moveAfter);
 
             var length =
-                (self == null || startIndex < 0 || startIndex > self.Length) ?
-                    0 : (self.Length - startIndex);
+                (source == null || startIndex < 0 || startIndex > source.Length) ?
+                    0 : (source.Length - startIndex);
 
-            return self.Remove(startIndex, length);
+            return source.Remove(startIndex, length);
         }
 
         /// <summary>
         /// サロゲートペアを分断しないように部分文字列を削除する。
         /// </summary>
-        /// <param name="self">対象文字列。</param>
+        /// <param name="source">対象文字列。</param>
         /// <param name="startIndex">削除開始位置。</param>
         /// <param name="length">削除文字数。</param>
         /// <param name="moveAfter">
@@ -153,25 +153,25 @@ namespace RucheHome.Text.Extensions
         /// </param>
         /// <returns>部分文字列を削除した文字列。</returns>
         public static StringBuilder RemoveSurrogateSafe(
-            this StringBuilder self,
+            this StringBuilder source,
             int startIndex,
             int length,
             bool moveAfter = false)
         {
             CorrectRangeSurrogateSafe(
-                self.Length,
-                i => self[i],
+                source.Length,
+                i => source[i],
                 ref startIndex,
                 ref length,
                 moveAfter);
 
-            return self.Remove(startIndex, length);
+            return source.Remove(startIndex, length);
         }
 
         /// <summary>
         /// サロゲートペアを分断しないように部分文字列を取得する。
         /// </summary>
-        /// <param name="self">対象文字列。</param>
+        /// <param name="source">対象文字列。</param>
         /// <param name="startIndex">取得開始位置。</param>
         /// <param name="moveAfter">
         /// 指定位置がサロゲートペアを分断する時、位置を後方にずらすならば true 。
@@ -179,27 +179,27 @@ namespace RucheHome.Text.Extensions
         /// </param>
         /// <returns>取得した部分文字列。</returns>
         public static string ToStringSurrogateSafe(
-            this StringBuilder self,
+            this StringBuilder source,
             int startIndex,
             bool moveAfter = false)
         {
             CorrectRangeSurrogateSafe(
-                self.Length,
-                self[startIndex],
+                source.Length,
+                source[startIndex],
                 ref startIndex,
                 moveAfter);
 
             var length =
-                (self == null || startIndex < 0 || startIndex > self.Length) ?
-                    0 : (self.Length - startIndex);
+                (source == null || startIndex < 0 || startIndex > source.Length) ?
+                    0 : (source.Length - startIndex);
 
-            return self.ToString(startIndex, length);
+            return source.ToString(startIndex, length);
         }
 
         /// <summary>
         /// サロゲートペアを分断しないように部分文字列を取得する。
         /// </summary>
-        /// <param name="self">対象文字列。</param>
+        /// <param name="source">対象文字列。</param>
         /// <param name="startIndex">取得開始位置。</param>
         /// <param name="length">取得文字数。</param>
         /// <param name="moveAfter">
@@ -208,26 +208,26 @@ namespace RucheHome.Text.Extensions
         /// </param>
         /// <returns>取得した部分文字列。</returns>
         public static string ToStringSurrogateSafe(
-            this StringBuilder self,
+            this StringBuilder source,
             int startIndex,
             int length,
             bool moveAfter = false)
         {
             CorrectRangeSurrogateSafe(
-                self.Length,
-                i => self[i],
+                source.Length,
+                i => source[i],
                 ref startIndex,
                 ref length,
                 moveAfter);
 
-            return self.ToString(startIndex, length);
+            return source.ToString(startIndex, length);
         }
 
         /// <summary>
         /// サロゲートペアを分断しないように範囲指定値を補正する。
         /// </summary>
-        /// <param name="selfLength">処理対象文字列の長さ。</param>
-        /// <param name="selfCharAtStartIndex">
+        /// <param name="sourceLength">処理対象文字列の長さ。</param>
+        /// <param name="sourceCharAtStartIndex">
         /// 処理対象文字列の startIndex の位置にある文字。
         /// </param>
         /// <param name="startIndex">補正対象の開始位置値。</param>
@@ -236,15 +236,15 @@ namespace RucheHome.Text.Extensions
         /// 既定では前方にずらす。
         /// </param>
         private static void CorrectRangeSurrogateSafe(
-            int selfLength,
-            char selfCharAtStartIndex,
+            int sourceLength,
+            char sourceCharAtStartIndex,
             ref int startIndex,
             bool moveAfter)
         {
             if (
                 startIndex > 0 &&
-                startIndex < selfLength &&
-                char.IsLowSurrogate(selfCharAtStartIndex))
+                startIndex < sourceLength &&
+                char.IsLowSurrogate(sourceCharAtStartIndex))
             {
                 // 開始位置が下位サロゲートなら範囲を移動
                 startIndex += moveAfter ? +1 : -1;
@@ -254,8 +254,8 @@ namespace RucheHome.Text.Extensions
         /// <summary>
         /// サロゲートペアを分断しないように範囲指定値を補正する。
         /// </summary>
-        /// <param name="selfLength">処理対象文字列の長さ。</param>
-        /// <param name="selfCharGetter">
+        /// <param name="sourceLength">処理対象文字列の長さ。</param>
+        /// <param name="sourceCharGetter">
         /// 処理対象文字列から特定位置の文字を取得するデリゲート。
         /// </param>
         /// <param name="startIndex">補正対象の開始位置値。</param>
@@ -265,8 +265,8 @@ namespace RucheHome.Text.Extensions
         /// 既定では前方にずらす。
         /// </param>
         private static void CorrectRangeSurrogateSafe(
-            int selfLength,
-            Func<int, char> selfCharGetter,
+            int sourceLength,
+            Func<int, char> sourceCharGetter,
             ref int startIndex,
             ref int count,
             bool moveAfter)
@@ -274,18 +274,18 @@ namespace RucheHome.Text.Extensions
             if (
                 startIndex >= 0 &&
                 count >= 0 &&
-                startIndex + count <= selfLength)
+                startIndex + count <= sourceLength)
             {
                 if (
                     startIndex > 0 &&
-                    startIndex < selfLength &&
-                    char.IsLowSurrogate(selfCharGetter(startIndex)))
+                    startIndex < sourceLength &&
+                    char.IsLowSurrogate(sourceCharGetter(startIndex)))
                 {
                     // 開始位置が下位サロゲートなら範囲を移動
                     startIndex += moveAfter ? +1 : -1;
 
                     // ++startIndex により終端位置が範囲外になるなら補正
-                    if (moveAfter && startIndex + count > selfLength)
+                    if (moveAfter && startIndex + count > sourceLength)
                     {
                         --count;
                     }
@@ -294,7 +294,7 @@ namespace RucheHome.Text.Extensions
                 if (count > 0)
                 {
                     var end = startIndex + count;
-                    if (end < selfLength && char.IsLowSurrogate(selfCharGetter(end)))
+                    if (end < sourceLength && char.IsLowSurrogate(sourceCharGetter(end)))
                     {
                         // 終端位置が下位サロゲートなら範囲を移動
                         count += moveAfter ? +1 : -1;
@@ -306,7 +306,7 @@ namespace RucheHome.Text.Extensions
         /// <summary>
         /// 文字列列挙による文字列の置換処理を行う。
         /// </summary>
-        /// <param name="self">置換対象文字列。</param>
+        /// <param name="source">置換対象文字列。</param>
         /// <param name="oldValues">
         /// 置換元文字列列挙。 null や空文字列を含んでいてはならない。
         /// </param>
@@ -325,20 +325,20 @@ namespace RucheHome.Text.Extensions
         /// </para>
         /// </remarks>
         public static string Replace(
-            this string self,
+            this string source,
             IEnumerable<string> oldValues,
             IEnumerable<string> newValues)
         {
             // 置換処理用アイテムリスト作成
             // 引数の正当性チェックも行われる
-            var items = MakeReplaceItems(self, oldValues, newValues);
+            var items = MakeReplaceItems(source, oldValues, newValues);
             if (items.Count <= 0)
             {
-                return self;
+                return source;
             }
 
             var dest = new StringBuilder();
-            int selfPos = 0;
+            int srcPos = 0;
 
             do
             {
@@ -347,25 +347,25 @@ namespace RucheHome.Text.Extensions
                 var item = items[0];
 
                 // 対象アイテムまでの文字列と対象アイテムの置換先文字列を追加
-                dest.Append(self.Substring(selfPos, item.SearchResult - selfPos));
+                dest.Append(source.Substring(srcPos, item.SearchResult - srcPos));
                 dest.Append(item.NewValue);
 
                 // 文字列検索基準位置を更新
-                selfPos = item.SearchResult + item.OldValue.Length;
-                if (selfPos >= self.Length)
+                srcPos = item.SearchResult + item.OldValue.Length;
+                if (srcPos >= source.Length)
                 {
                     break;
                 }
 
                 // 置換処理用アイテムリスト更新
-                UpdateReplaceItems(items, self, selfPos);
+                UpdateReplaceItems(items, source, srcPos);
             }
             while (items.Count > 0);
 
             // 末尾までの文字列を追加
-            if (selfPos < self.Length)
+            if (srcPos < source.Length)
             {
-                dest.Append(self.Substring(selfPos));
+                dest.Append(source.Substring(srcPos));
             }
 
             return dest.ToString();
@@ -443,7 +443,7 @@ namespace RucheHome.Text.Extensions
         /// <summary>
         /// 置換処理用アイテムリストを作成する。
         /// </summary>
-        /// <param name="self">置換対象文字列。</param>
+        /// <param name="source">置換対象文字列。</param>
         /// <param name="oldValues">
         /// 置換元文字列列挙。 null や空文字列を含んでいてはならない。
         /// </param>
@@ -454,11 +454,11 @@ namespace RucheHome.Text.Extensions
         /// 置換処理用アイテムリスト。優先度の高い順にソートされている。
         /// </returns>
         private static List<ReplaceItem> MakeReplaceItems(
-            string self,
+            string source,
             IEnumerable<string> oldValues,
             IEnumerable<string> newValues)
         {
-            ArgumentValidation.IsNotNull(self, nameof(self));
+            ArgumentValidation.IsNotNull(source, nameof(source));
             ArgumentValidation.IsNotNull(oldValues, nameof(oldValues));
             ArgumentValidation.IsNotNull(newValues, nameof(newValues));
 
@@ -500,7 +500,7 @@ namespace RucheHome.Text.Extensions
                                     nameof(oldValues));
                             }
 
-                            var searchResult = self.IndexOf(v);
+                            var searchResult = source.IndexOf(v);
                             return
                                 (searchResult < 0) ?
                                     null :
@@ -523,11 +523,11 @@ namespace RucheHome.Text.Extensions
         /// 置換処理用アイテムリストを更新する。
         /// </summary>
         /// <param name="items">置換処理用アイテムリスト。</param>
-        /// <param name="self">置換対象文字列。</param>
+        /// <param name="source">置換対象文字列。</param>
         /// <param name="searchResultMin">置換元文字列の検索開始位置。</param>
         private static void UpdateReplaceItems(
             List<ReplaceItem> items,
-            string self,
+            string source,
             int searchResultMin)
         {
             // 更新したアイテム数設定先
@@ -540,7 +540,7 @@ namespace RucheHome.Text.Extensions
                 items[updatedCount].SearchResult < searchResultMin)
             {
                 var item = items[updatedCount];
-                item.SearchResult = self.IndexOf(item.OldValue, searchResultMin);
+                item.SearchResult = source.IndexOf(item.OldValue, searchResultMin);
                 ++updatedCount;
             }
 

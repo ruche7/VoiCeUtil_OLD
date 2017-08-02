@@ -43,16 +43,16 @@ namespace RucheHome.Automation.Talkers
         /// <summary>
         /// 戻り値の型からの暗黙の型変換を行う。
         /// </summary>
-        /// <param name="src">変換元。</param>
+        /// <param name="source">変換元。</param>
         /// <returns>変換結果。 <see cref="Message"/> は null となる。</returns>
-        public static implicit operator Result<T>(T src) => new Result<T>(src);
+        public static implicit operator Result<T>(T source) => new Result<T>(source);
 
         /// <summary>
         /// ValueTuple 型からの暗黙の型変換を行う。
         /// </summary>
-        /// <param name="src">変換元の ValueTuple 。</param>
+        /// <param name="source">変換元の ValueTuple 値。</param>
         /// <returns>変換結果。</returns>
-        public static implicit operator Result<T>((T value, string message) src) =>
-            new Result<T>(src.value, src.message);
+        public static implicit operator Result<T>((T value, string message) source) =>
+            new Result<T>(source.value, source.message);
     }
 }

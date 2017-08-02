@@ -101,37 +101,37 @@ namespace RucheHome.Automation.Talkers.CeVIO
         /// <summary>
         /// パラメータ情報を取得する。
         /// </summary>
-        /// <param name="self">パラメータID。</param>
+        /// <param name="id">パラメータID。</param>
         /// <returns>パラメータ情報。引数値が無効ならば null 。</returns>
-        public static ParameterInfo<ParameterId> GetInfo(this ParameterId self) =>
-            Infos.TryGetValue(self, out var info) ? info : null;
+        public static ParameterInfo<ParameterId> GetInfo(this ParameterId id) =>
+            Infos.TryGetValue(id, out var info) ? info : null;
 
         /// <summary>
         /// 音声効果関連パラメータであるか否かを取得する。
         /// </summary>
-        /// <param name="self">パラメータID。</param>
+        /// <param name="id">パラメータID。</param>
         /// <returns>音声効果関連パラメータならば true 。そうでなければ false 。</returns>
-        public static bool IsEffect(this ParameterId self) =>
-            (self >= ParameterId.Volume && self <= ParameterId.Intonation);
+        public static bool IsEffect(this ParameterId id) =>
+            (id >= ParameterId.Volume && id <= ParameterId.Intonation);
 
         /// <summary>
         /// 感情関連パラメータであるか否かを取得する。
         /// </summary>
-        /// <param name="self">パラメータID。</param>
+        /// <param name="id">パラメータID。</param>
         /// <returns>感情関連パラメータならば true 。そうでなければ false 。</returns>
-        public static bool IsEmotion(this ParameterId self) =>
-            (self >= ParameterId.EmotionFine && self <= ParameterId.EmotionDown);
+        public static bool IsEmotion(this ParameterId id) =>
+            (id >= ParameterId.EmotionFine && id <= ParameterId.EmotionDown);
 
         /// <summary>
-        /// 指定したキャラクターの感情関連パラメータであるか否かを取得する。
+        /// 指定したキャストの感情関連パラメータであるか否かを取得する。
         /// </summary>
-        /// <param name="self">パラメータID。</param>
-        /// <param name="character">キャラクター。</param>
+        /// <param name="id">パラメータID。</param>
+        /// <param name="cast">キャスト。</param>
         /// <returns>
-        /// 指定したキャラクターの感情関連パラメータならば true 。そうでなければ false 。
+        /// 指定したキャストの感情関連パラメータならば true 。そうでなければ false 。
         /// </returns>
-        public static bool IsEmotionOf(this ParameterId self, Cast character) =>
-            (character.GetEmotionParameterIds()?.Contains(self) == true);
+        public static bool IsEmotionOf(this ParameterId id, Cast cast) =>
+            (cast.GetEmotionParameterIds()?.Contains(id) == true);
 
         /// <summary>
         /// 表示名から感情関連パラメータIDを検索する。

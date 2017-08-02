@@ -86,26 +86,26 @@ namespace RucheHome.Automation.Talkers.AITalkEx
         /// <summary>
         /// パラメータ情報を取得する。
         /// </summary>
-        /// <param name="self">パラメータID。</param>
+        /// <param name="id">パラメータID。</param>
         /// <returns>パラメータ情報。引数値が無効ならば null 。</returns>
-        public static ParameterInfo<ParameterId> GetInfo(this ParameterId self) =>
-            Infos.TryGetValue(self, out var info) ? info : null;
+        public static ParameterInfo<ParameterId> GetInfo(this ParameterId id) =>
+            Infos.TryGetValue(id, out var info) ? info : null;
 
         /// <summary>
         /// 音声効果設定であるか否かを取得する。
         /// </summary>
-        /// <param name="self">パラメータID。</param>
+        /// <param name="id">パラメータID。</param>
         /// <returns>音声効果設定ならば true 。そうでなければ false 。</returns>
-        public static bool IsEffect(this ParameterId self) =>
-            (self >= ParameterId.Volume && self <= ParameterId.Intonation);
+        public static bool IsEffect(this ParameterId id) =>
+            (id >= ParameterId.Volume && id <= ParameterId.Intonation);
 
         /// <summary>
         /// ポーズ設定であるか否かを取得する。
         /// </summary>
-        /// <param name="self">パラメータID。</param>
+        /// <param name="id">パラメータID。</param>
         /// <returns>ポーズ設定ならば true 。そうでなければ false 。</returns>
-        public static bool IsPause(this ParameterId self) =>
-            (self >= ParameterId.PauseShort && self <= ParameterId.PauseEnd);
+        public static bool IsPause(this ParameterId id) =>
+            (id >= ParameterId.PauseShort && id <= ParameterId.PauseEnd);
 
         /// <summary>
         /// パラメータ情報ディクショナリ。
