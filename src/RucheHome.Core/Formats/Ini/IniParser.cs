@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using RucheHome.Diagnostics;
 
-namespace RucheHome.Text.Ini
+namespace RucheHome.Formats.Ini
 {
     /// <summary>
     /// INIファイル形式文字列のパース処理を提供するクラス。

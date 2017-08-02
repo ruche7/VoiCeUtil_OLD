@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace RucheHome.Text.Ini
+namespace RucheHome.Formats.Ini
 {
     /// <summary>
     /// INIファイル形式が不正である場合に送出される例外クラス。

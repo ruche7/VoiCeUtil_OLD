@@ -4,7 +4,7 @@ using System.Linq;
 using System.Runtime.Serialization;
 using RucheHome.Diagnostics;
 
-namespace RucheHome.Text.Ini
+namespace RucheHome.Formats.Ini
 {
     /// <summary>
     /// INIファイル形式のアイテムを表すクラス。

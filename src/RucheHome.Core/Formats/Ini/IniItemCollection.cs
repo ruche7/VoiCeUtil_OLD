@@ -4,7 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using RucheHome.Diagnostics;
 
-namespace RucheHome.Text.Ini
+namespace RucheHome.Formats.Ini
 {
     /// <summary>
     /// INIファイル形式のアイテムコレクションクラス。

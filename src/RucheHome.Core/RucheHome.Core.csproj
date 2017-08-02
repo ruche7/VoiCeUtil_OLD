@@ -48,18 +48,18 @@
     <Compile Include="Diagnostics\ProcessDetector.cs" />
     <Compile Include="Diagnostics\ThreadDebug.cs" />
     <Compile Include="Diagnostics\ThreadTrace.cs" />
+    <Compile Include="Formats\Ini\IniFormatException.cs" />
+    <Compile Include="Formats\Ini\IniItem.cs" />
+    <Compile Include="Formats\Ini\IniItemCollection.cs" />
+    <Compile Include="Formats\Ini\IniParser.cs" />
+    <Compile Include="Formats\Ini\IniSection.cs" />
+    <Compile Include="Formats\Ini\IniSectionCollection.cs" />
     <Compile Include="ObjectModel\BindableBase.cs" />
     <Compile Include="ObjectModel\BindableCollection.cs" />
     <Compile Include="ObjectModel\BindableConfigBase.cs" />
     <Compile Include="ObjectModel\NonNullCollection.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Text\Extensions\StringExtension.cs" />
-    <Compile Include="Text\Ini\IniFormatException.cs" />
-    <Compile Include="Text\Ini\IniItem.cs" />
-    <Compile Include="Text\Ini\IniItemCollection.cs" />
-    <Compile Include="Text\Ini\IniParser.cs" />
-    <Compile Include="Text\Ini\IniSection.cs" />
-    <Compile Include="Text\Ini\IniSectionCollection.cs" />
     <Compile Include="Text\TextElementEnumerable.cs" />
     <Compile Include="Threading\SemaphoreSlimLock.cs" />
   </ItemGroup>
