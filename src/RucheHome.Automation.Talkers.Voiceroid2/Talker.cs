@@ -24,16 +24,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
         /// <summary>
         /// コンストラクタ。
         /// </summary>
-        public Talker()
-            :
-            base(
-                ClrVersion.V4,
-                @"VoiceroidEditor",
-                @"VOICEROID2 Editor",
-                @"VOICEROID2",
-                canSetBlankText: true,
-                canSaveBlankText: true,
-                hasCharacters: true)
+        public Talker() : base(ClrVersion.V4)
         {
         }
 
@@ -530,6 +521,36 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
         #endregion
 
         #region ProcessTalkerBase<ParameterId> のオーバライド
+
+        /// <summary>
+        /// 操作対象プロセスの実行ファイル名(拡張子なし)を取得する。
+        /// </summary>
+        public override string ProcessFileName { get; } = @"VoiceroidEditor";
+
+        /// <summary>
+        /// 操作対象プロセスの製品名情報を取得する。
+        /// </summary>
+        public override string ProcessProduct { get; } = @"VOICEROID2 Editor";
+
+        /// <summary>
+        /// 名前を取得する。
+        /// </summary>
+        public override string TalkerName { get; } = @"VOICEROID2";
+
+        /// <summary>
+        /// 空白文を設定することが可能か否かを取得する。
+        /// </summary>
+        public override bool CanSetBlankText { get; } = true;
+
+        /// <summary>
+        /// 空白文を音声ファイル保存させることが可能か否かを取得する。
+        /// </summary>
+        public override bool CanSaveBlankText { get; } = true;
+
+        /// <summary>
+        /// キャラクター設定を保持しているか否かを取得する。
+        /// </summary>
+        public override bool HasCharacters { get; } = true;
 
         /// <summary>
         /// 有効キャラクターの一覧を取得する。

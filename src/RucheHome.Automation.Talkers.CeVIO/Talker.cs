@@ -24,16 +24,7 @@ namespace RucheHome.Automation.Talkers.CeVIO
         /// <summary>
         /// コンストラクタ。
         /// </summary>
-        public Talker()
-            :
-            base(
-                ClrVersion.V4,
-                @"CeVIO Creative Studio",
-                @"CeVIO Creative Studio",
-                @"CeVIO Creative Studio S",
-                canSetBlankText: false,
-                canSaveBlankText: false,
-                hasCharacters: true)
+        public Talker() : base(ClrVersion.V4)
         {
             this.Root =
                 new Root(
@@ -417,9 +408,39 @@ namespace RucheHome.Automation.Talkers.CeVIO
         #region ProcessTalkerBase<ParameterId> のオーバライド
 
         /// <summary>
+        /// 操作対象プロセスの実行ファイル名(拡張子なし)を取得する。
+        /// </summary>
+        public override string ProcessFileName { get; } = @"CeVIO Creative Studio";
+
+        /// <summary>
+        /// 操作対象プロセスの製品名情報を取得する。
+        /// </summary>
+        public override string ProcessProduct { get; } = @"CeVIO Creative Studio";
+
+        /// <summary>
+        /// 名前を取得する。
+        /// </summary>
+        public override string TalkerName { get; } = @"CeVIO Creative Studio S";
+
+        /// <summary>
         /// 文章の最大許容文字数を取得する。
         /// </summary>
         public override int TextLengthLimit { get; } = TextFormatter.TextLengthLimit;
+
+        /// <summary>
+        /// 空白文を設定することが可能か否かを取得する。
+        /// </summary>
+        public override bool CanSetBlankText { get; } = false;
+
+        /// <summary>
+        /// 空白文を音声ファイル保存させることが可能か否かを取得する。
+        /// </summary>
+        public override bool CanSaveBlankText { get; } = false;
+
+        /// <summary>
+        /// キャラクター設定を保持しているか否かを取得する。
+        /// </summary>
+        public override bool HasCharacters { get; } = true;
 
         /// <summary>
         /// 有効キャラクターの一覧を取得する。

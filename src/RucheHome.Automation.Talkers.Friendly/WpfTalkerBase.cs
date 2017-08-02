@@ -23,31 +23,7 @@ namespace RucheHome.Automation.Talkers.Friendly
         /// コンストラクタ。
         /// </summary>
         /// <param name="processClrVersion">操作対象プロセスのCLRバージョン種別。</param>
-        /// <param name="processFileName">
-        /// 操作対象プロセスの実行ファイル名(拡張子なし)。
-        /// </param>
-        /// <param name="processProduct">操作対象プロセスの製品名情報。</param>
-        /// <param name="talkerName">名前。 null ならば processProduct を使う。</param>
-        /// <param name="canSetBlankText">空白文を設定可能ならば true 。</param>
-        /// <param name="canSaveBlankText">空白文を音声ファイル保存可能ならば true 。</param>
-        /// <param name="hasCharacters">キャラクター設定を保持しているならば true 。</param>
-        protected WpfTalkerBase(
-            ClrVersion processClrVersion,
-            string processFileName,
-            string processProduct,
-            string talkerName = null,
-            bool canSetBlankText = true,
-            bool canSaveBlankText = false,
-            bool hasCharacters = false)
-            :
-            base(
-                processClrVersion,
-                processFileName,
-                processProduct,
-                talkerName,
-                canSetBlankText,
-                canSaveBlankText,
-                hasCharacters)
+        protected WpfTalkerBase(ClrVersion processClrVersion) : base(processClrVersion)
         {
         }
 

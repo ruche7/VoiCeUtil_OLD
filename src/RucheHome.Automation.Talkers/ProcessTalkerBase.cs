@@ -25,43 +25,7 @@ namespace RucheHome.Automation.Talkers
         /// <summary>
         /// コンストラクタ。
         /// </summary>
-        /// <param name="processFileName">
-        /// 操作対象プロセスの実行ファイル名(拡張子なし)。
-        /// </param>
-        /// <param name="processProduct">操作対象プロセスの製品名情報。</param>
-        /// <param name="talkerName">名前。 null ならば processProduct を使う。</param>
-        /// <param name="canSetBlankText">空白文を設定可能ならば true 。</param>
-        /// <param name="canSaveBlankText">空白文を音声ファイル保存可能ならば true 。</param>
-        /// <param name="hasCharacters">キャラクター設定を保持しているならば true 。</param>
-        public ProcessTalkerBase(
-            string processFileName,
-            string processProduct,
-            string talkerName = null,
-            bool canSetBlankText = true,
-            bool canSaveBlankText = false,
-            bool hasCharacters = false)
-        {
-            ArgumentValidation.IsNotNullOrEmpty(processFileName, nameof(processFileName));
-            ArgumentValidation.IsNotNull(processProduct, nameof(processProduct));
-
-            this.ProcessFileName = processFileName;
-            this.ProcessProduct = processProduct;
-            this.TalkerName = talkerName ?? processProduct;
-            this.CanSetBlankText = canSetBlankText;
-            this.CanSaveBlankText = canSaveBlankText;
-            this.HasCharacters = hasCharacters;
-
-            this.ProcessDetector = new ProcessDetector(productName: processProduct);
-        }
-
-        /// <summary>
-        /// 操作対象プロセスの製品名情報を取得する。
-        /// </summary>
-        /// <remarks>
-        /// <para>操作対象プロセスか否かの判別に利用される。</para>
-        /// <para>インスタンス生成後に値が変化することはない。</para>
-        /// </remarks>
-        public string ProcessProduct { get; }
+        public ProcessTalkerBase() : base() { }
 
         /// <summary>
         /// 待機処理の標準タイムアウトミリ秒数値。
@@ -294,10 +258,7 @@ namespace RucheHome.Automation.Talkers
         /// <summary>
         /// プロセス検索インスタンスを取得する。
         /// </summary>
-        /// <remarks>
-        /// ProductName のみ設定された状態で初期化される。
-        /// </remarks>
-        private ProcessDetector ProcessDetector { get; }
+        private ProcessDetector ProcessDetector { get; } = new ProcessDetector();
 
         /// <summary>
         /// 状態を更新する。
@@ -308,8 +269,11 @@ namespace RucheHome.Automation.Talkers
         /// <returns>プロパティ値変更通知を行うデリゲート。通知不要ならば null 。</returns>
         private Action UpdateImpl(IEnumerable<Process> processes = null)
         {
+            this.ProcessDetector.ProductName = this.ProcessProduct;
+
             // プロセス列挙が渡された場合はファイル名を検索条件にしない
-            this.ProcessDetector.FileName = (processes == null) ? this.ProcessFileName : null;
+            this.ProcessDetector.FileName =
+                (processes == null) ? this.ProcessFileName : null;
 
             // 検索
             var process = this.ProcessDetector.Detect(processes).FirstOrDefault();
@@ -426,12 +390,67 @@ namespace RucheHome.Automation.Talkers
         #region 要オーバライド
 
         /// <summary>
+        /// 操作対象プロセスの実行ファイル名(拡張子なし)を取得する。
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <see cref="Process.GetProcessesByName(string)">Process.GetProcessesByName</see>
+        /// メソッドの引数として利用できる。
+        /// </para>
+        /// <para>インスタンス生成後に値が変化することはない。</para>
+        /// </remarks>
+        public abstract string ProcessFileName { get; }
+
+        /// <summary>
+        /// 操作対象プロセスの製品名情報を取得する。
+        /// </summary>
+        /// <remarks>
+        /// <para>操作対象プロセスか否かの判別に利用される。</para>
+        /// <para>インスタンス生成後に値が変化することはない。</para>
+        /// </remarks>
+        public abstract string ProcessProduct { get; }
+
+        /// <summary>
+        /// 名前を取得する。
+        /// </summary>
+        /// <remarks>
+        /// <para>既定では <see cref="ProcessProduct"/> を返す。</para>
+        /// <para>インスタンス生成後に値が変化することはない。</para>
+        /// </remarks>
+        public virtual string TalkerName => this.ProcessProduct;
+
+        /// <summary>
         /// 文章の最大許容文字数を取得する。
         /// </summary>
         /// <remarks>
-        /// 既定では <see cref="int.MaxValue"/> を返す。
+        /// <para>既定では <see cref="int.MaxValue"/> を返す。</para>
+        /// <para>インスタンス生成後に値が変化することはない。</para>
         /// </remarks>
         public virtual int TextLengthLimit { get; } = int.MaxValue;
+
+        /// <summary>
+        /// 空白文を設定することが可能か否かを取得する。
+        /// </summary>
+        /// <remarks>
+        /// インスタンス生成後に値が変化することはない。
+        /// </remarks>
+        public abstract bool CanSetBlankText { get; }
+
+        /// <summary>
+        /// 空白文を音声ファイル保存させることが可能か否かを取得する。
+        /// </summary>
+        /// <remarks>
+        /// インスタンス生成後に値が変化することはない。
+        /// </remarks>
+        public abstract bool CanSaveBlankText { get; }
+
+        /// <summary>
+        /// キャラクター設定を保持しているか否かを取得する。
+        /// </summary>
+        /// <remarks>
+        /// インスタンス生成後に値が変化することはない。
+        /// </remarks>
+        public abstract bool HasCharacters { get; }
 
         /// <summary>
         /// <see cref="ProcessTalkerBase{TParameterId}"/> のプロパティ値変更時に呼び出される。
@@ -728,18 +747,6 @@ namespace RucheHome.Automation.Talkers
         #endregion
 
         #region IProcessTalker の実装
-
-        /// <summary>
-        /// 操作対象プロセスの実行ファイル名(拡張子なし)を取得する。
-        /// </summary>
-        /// <remarks>
-        /// <para>
-        /// <see cref="Process.GetProcessesByName(string)">Process.GetProcessesByName</see>
-        /// メソッドの引数として利用できる。
-        /// </para>
-        /// <para>インスタンス生成後に値が変化することはない。</para>
-        /// </remarks>
-        public string ProcessFileName { get; }
 
         /// <summary>
         /// メインウィンドウハンドルを取得する。
@@ -1152,38 +1159,6 @@ namespace RucheHome.Automation.Talkers
         #endregion
 
         #region ITalker の実装
-
-        /// <summary>
-        /// 名前を取得する。
-        /// </summary>
-        /// <remarks>
-        /// インスタンス生成後に値が変化することはない。
-        /// </remarks>
-        public string TalkerName { get; }
-
-        /// <summary>
-        /// 空白文を設定することが可能か否かを取得する。
-        /// </summary>
-        /// <remarks>
-        /// インスタンス生成後に値が変化することはない。
-        /// </remarks>
-        public bool CanSetBlankText { get; }
-
-        /// <summary>
-        /// 空白文を音声ファイル保存させることが可能か否かを取得する。
-        /// </summary>
-        /// <remarks>
-        /// インスタンス生成後に値が変化することはない。
-        /// </remarks>
-        public bool CanSaveBlankText { get; }
-
-        /// <summary>
-        /// キャラクター設定を保持しているか否かを取得する。
-        /// </summary>
-        /// <remarks>
-        /// インスタンス生成後に値が変化することはない。
-        /// </remarks>
-        public bool HasCharacters { get; }
 
         /// <summary>
         /// 状態を取得する。

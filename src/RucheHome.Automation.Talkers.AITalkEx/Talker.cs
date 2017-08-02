@@ -27,20 +27,24 @@ namespace RucheHome.Automation.Talkers.AITalkEx
         /// コンストラクタ。
         /// </summary>
         /// <param name="product">製品種別。</param>
-        public Talker(Product product)
-            :
-            base(
-                ClrVersion.V2,
-                product.GetProcessFileName() ?? @"dummy",   // ベースクラスでの例外回避
-                product.GetProcessProduct() ?? @"dummy",    // ベースクラスでの例外回避
-                product.GetTalkerName(),
-                canSetBlankText: true,
-                canSaveBlankText: false,
-                hasCharacters: false)
+        public Talker(Product product) : base(ClrVersion.V2)
         {
-            // 例外回避発動時はここで例外になる
             ArgumentValidation.IsEnumDefined(product, nameof(product));
+
+            this.Product = product;
+
+            this.ProcessFileName = product.GetProcessFileName();
+            this.ProcessProduct = product.GetProcessProduct();
+            this.TalkerName = product.GetTalkerName();
         }
+
+        /// <summary>
+        /// 製品種別を取得する。
+        /// </summary>
+        /// <remarks>
+        /// インスタンス生成後に値が変化することはない。
+        /// </remarks>
+        public Product Product { get; }
 
         /// <summary>
         /// 文章入力欄下にあるボタンの種別列挙。
@@ -348,6 +352,36 @@ namespace RucheHome.Automation.Talkers.AITalkEx
         #endregion
 
         #region ProcessTalkerBase<ParameterId> のオーバライド
+
+        /// <summary>
+        /// 操作対象プロセスの実行ファイル名(拡張子なし)を取得する。
+        /// </summary>
+        public override string ProcessFileName { get; }
+
+        /// <summary>
+        /// 操作対象プロセスの製品名情報を取得する。
+        /// </summary>
+        public override string ProcessProduct { get; }
+
+        /// <summary>
+        /// 名前を取得する。
+        /// </summary>
+        public override string TalkerName { get; }
+
+        /// <summary>
+        /// 空白文を設定することが可能か否かを取得する。
+        /// </summary>
+        public override bool CanSetBlankText { get; } = true;
+
+        /// <summary>
+        /// 空白文を音声ファイル保存させることが可能か否かを取得する。
+        /// </summary>
+        public override bool CanSaveBlankText { get; } = false;
+
+        /// <summary>
+        /// キャラクター設定を保持しているか否かを取得する。
+        /// </summary>
+        public override bool HasCharacters { get; } = false;
 
         /// <summary>
         /// 現在設定されている文章を取得する。
