@@ -19,7 +19,7 @@ namespace RucheHome.Automation.Talkers.CeVIO
     /// <summary>
     /// CeVIO Creative Studio S プロセスを操作する <see cref="IProcessTalker"/> 実装クラス。
     /// </summary>
-    public class Talker : WpfProcessTalkerBase<ParameterId>, ICreativeStudioOperation
+    public class Talker : WpfTalkerBase<ParameterId>, ICreativeStudioOperation
     {
         /// <summary>
         /// コンストラクタ。
@@ -292,15 +292,15 @@ namespace RucheHome.Automation.Talkers.CeVIO
         /// </summary>
         private const string SaveCompleteDialogTitle = @"CeVIO Creative Studio S";
 
-        #region Friendly.WpfProcessTalkerBase<ParameterId> のオーバライド
+        #region WpfTalkerBase<ParameterId> のオーバライド
 
         /// <summary>
-        /// <see cref="Friendly.ProcessTalkerBase{TParameterId}.TargetApp"/>
+        /// <see cref="TalkerBase{TParameterId}.TargetApp"/>
         /// プロパティ値の変更時に呼び出される。
         /// </summary>
         protected override void OnTargetAppChanged()
         {
-            // WpfProcessTalkerBase の処理
+            // WpfTalkerBase の処理
             base.OnTargetAppChanged();
 
             // キャスト名キャッシュをクリア
@@ -309,7 +309,7 @@ namespace RucheHome.Automation.Talkers.CeVIO
 
         #endregion
 
-        #region Friendly.ProcessTalkerBase<ParameterId> のオーバライド
+        #region Friendly.TalkerBase<ParameterId> のオーバライド
 
         /// <summary>
         /// ウィンドウタイトル種別を調べる。

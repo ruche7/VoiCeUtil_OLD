@@ -16,8 +16,8 @@ namespace RucheHome.Automation.Talkers.Friendly
     /// <see cref="IProcessTalker"/> インタフェースの各メソッドは互いに排他制御されている。
     /// そのため、派生クラスで抽象メソッドを実装する際、それらのメソッドを呼び出さないこと。
     /// </remarks>
-    public abstract class WpfProcessTalkerBase<TParameterId>
-        : ProcessTalkerBase<TParameterId>
+    public abstract class WpfTalkerBase<TParameterId>
+        : TalkerBase<TParameterId>
     {
         /// <summary>
         /// コンストラクタ。
@@ -31,7 +31,7 @@ namespace RucheHome.Automation.Talkers.Friendly
         /// <param name="canSetBlankText">空白文を設定可能ならば true 。</param>
         /// <param name="canSaveBlankText">空白文を音声ファイル保存可能ならば true 。</param>
         /// <param name="hasCharacters">キャラクター設定を保持しているならば true 。</param>
-        protected WpfProcessTalkerBase(
+        protected WpfTalkerBase(
             ClrVersion processClrVersion,
             string processFileName,
             string processProduct,
@@ -76,7 +76,7 @@ namespace RucheHome.Automation.Talkers.Friendly
         /// ビジュアルツリー走査用オブジェクトを取得する。
         /// </summary>
         /// <remarks>
-        /// <see cref="ProcessTalkerBase{TParameterId}.TargetApp"/>
+        /// <see cref="TalkerBase{TParameterId}.TargetApp"/>
         /// プロパティの変更時に更新される。
         /// </remarks>
         protected AppVisualTree TargetAppVisualTree
@@ -123,7 +123,7 @@ namespace RucheHome.Automation.Talkers.Friendly
         #region ProcessTalkerBase<ParameterId> のオーバライド
 
         /// <summary>
-        /// <see cref="ProcessTalkerBase{TParameterId}.TargetApp"/>
+        /// <see cref="TalkerBase{TParameterId}.TargetApp"/>
         /// プロパティ値の変更時に呼び出される。
         /// </summary>
         protected override void OnTargetAppChanged()

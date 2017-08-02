@@ -19,7 +19,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
     /// <summary>
     /// VOICEROID2プロセスを操作する <see cref="IProcessTalker"/> 実装クラス。
     /// </summary>
-    public class Talker : WpfProcessTalkerBase<ParameterId>
+    public class Talker : WpfTalkerBase<ParameterId>
     {
         /// <summary>
         /// コンストラクタ。
@@ -471,7 +471,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
         /// </summary>
         private const string SaveCompleteDialogTitle = @"情報";
 
-        #region Friendly.ProcessTalkerBase<ParameterId> のオーバライド
+        #region Friendly.TalkerBase<ParameterId> のオーバライド
 
         /// <summary>
         /// ウィンドウタイトル種別を調べる。

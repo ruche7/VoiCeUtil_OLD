@@ -63,10 +63,10 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="FormsProcessTalkerBase.cs" />
-    <Compile Include="ProcessTalkerBase.cs" />
+    <Compile Include="FormsTalkerBase.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="WpfProcessTalkerBase.cs" />
+    <Compile Include="TalkerBase.cs" />
+    <Compile Include="WpfTalkerBase.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

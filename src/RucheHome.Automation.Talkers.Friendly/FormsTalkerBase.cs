@@ -14,8 +14,8 @@ namespace RucheHome.Automation.Talkers.Friendly
     /// <see cref="IProcessTalker"/> インタフェースの各メソッドは互いに排他制御されている。
     /// そのため、派生クラスで抽象メソッドを実装する際、それらのメソッドを呼び出さないこと。
     /// </remarks>
-    public abstract class FormsProcessTalkerBase<TParameterId>
-        : ProcessTalkerBase<TParameterId>
+    public abstract class FormsTalkerBase<TParameterId>
+        : TalkerBase<TParameterId>
     {
         /// <summary>
         /// コンストラクタ。
@@ -29,7 +29,7 @@ namespace RucheHome.Automation.Talkers.Friendly
         /// <param name="canSetBlankText">空白文を設定可能ならば true 。</param>
         /// <param name="canSaveBlankText">空白文を音声ファイル保存可能ならば true 。</param>
         /// <param name="hasCharacters">キャラクター設定を保持しているならば true 。</param>
-        protected FormsProcessTalkerBase(
+        protected FormsTalkerBase(
             ClrVersion processClrVersion,
             string processFileName,
             string processProduct,

@@ -20,8 +20,8 @@ namespace RucheHome.Automation.Talkers.Friendly
     /// <see cref="IProcessTalker"/> インタフェースの各メソッドは互いに排他制御されている。
     /// そのため、派生クラスで抽象メソッドを実装する際、それらのメソッドを呼び出さないこと。
     /// </remarks>
-    public abstract class ProcessTalkerBase<TParameterId>
-        : Talkers.ProcessTalkerBase<TParameterId>, IDisposable
+    public abstract class TalkerBase<TParameterId>
+        : ProcessTalkerBase<TParameterId>, IDisposable
     {
         /// <summary>
         /// CLRバージョン種別列挙。
@@ -51,7 +51,7 @@ namespace RucheHome.Automation.Talkers.Friendly
         /// <param name="canSetBlankText">空白文を設定可能ならば true 。</param>
         /// <param name="canSaveBlankText">空白文を音声ファイル保存可能ならば true 。</param>
         /// <param name="hasCharacters">キャラクター設定を保持しているならば true 。</param>
-        protected ProcessTalkerBase(
+        protected TalkerBase(
             ClrVersion processClrVersion,
             string processFileName,
             string processProduct,
@@ -76,7 +76,7 @@ namespace RucheHome.Automation.Talkers.Friendly
         /// <summary>
         /// デストラクタ。
         /// </summary>
-        ~ProcessTalkerBase() => this.Dispose(false);
+        ~TalkerBase() => this.Dispose(false);
 
         /// <summary>
         /// <see cref="Dispose()"/> メソッドによってリソース破棄済みであるか否かを取得する。
@@ -115,7 +115,7 @@ namespace RucheHome.Automation.Talkers.Friendly
         /// <param name="action">非同期アクション。</param>
         /// <param name="timeoutMilliseconds">
         /// タイムアウトミリ秒数。既定値は
-        /// <see cref="Talkers.ProcessTalkerBase{TParameterId}.StandardTimeoutMilliseconds"/> 。
+        /// <see cref="ProcessTalkerBase{TParameterId}.StandardTimeoutMilliseconds"/> 。
         /// 負数ならば無制限。
         /// </param>
         /// <returns>完了したならば true 。タイムアウトしたならば false 。</returns>
@@ -277,7 +277,7 @@ namespace RucheHome.Automation.Talkers.Friendly
         /// 操作対象アプリを取得する。
         /// </summary>
         /// <remarks>
-        /// <see cref="Talkers.ProcessTalkerBase{TParameterId}.IsAlive"/> が
+        /// <see cref="ProcessTalkerBase{TParameterId}.IsAlive"/> が
         /// true の時のみ有効な値を返す。
         /// </remarks>
         protected WindowsAppFriend TargetApp
@@ -339,9 +339,9 @@ namespace RucheHome.Automation.Talkers.Friendly
         /// <returns>状態値。</returns>
         /// <remarks>
         /// このメソッドの戻り値によって
-        /// <see cref="Talkers.ProcessTalkerBase{TParameterId}.State"/> 等が更新される。
+        /// <see cref="ProcessTalkerBase{TParameterId}.State"/> 等が更新される。
         /// 付随メッセージも
-        /// <see cref="Talkers.ProcessTalkerBase{TParameterId}.StateMessage"/> に利用される。
+        /// <see cref="ProcessTalkerBase{TParameterId}.StateMessage"/> に利用される。
         /// </remarks>
         protected abstract Result<TalkerState> CheckState(WindowControl mainWindow);
 
@@ -361,7 +361,7 @@ namespace RucheHome.Automation.Talkers.Friendly
         #region ProcessTalkerBase<TParameterId> のオーバライド
 
         /// <summary>
-        /// <see cref="ProcessTalkerBase{TParameterId}"/> のプロパティ値変更時に呼び出される。
+        /// <see cref="TalkerBase{TParameterId}"/> のプロパティ値変更時に呼び出される。
         /// </summary>
         /// <param name="changedPropertyNames">
         /// 変更されたプロパティ名のコレクション。必ず要素数 1 以上となる。
@@ -396,7 +396,7 @@ namespace RucheHome.Automation.Talkers.Friendly
         /// </summary>
         /// <param name="process">
         /// 操作対象プロセス。
-        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装から
+        /// <see cref="TalkerBase{TParameterId}"/> 実装から
         /// null や操作対象外プロセスが渡されることはない。
         /// </param>
         /// <returns>状態値。</returns>
@@ -518,7 +518,7 @@ namespace RucheHome.Automation.Talkers.Friendly
         /// </summary>
         /// <param name="process">
         /// 操作対象プロセス。
-        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装から
+        /// <see cref="TalkerBase{TParameterId}"/> 実装から
         /// null や操作対象外プロセスが渡されることはない。
         /// </param>
         protected override void OnProcessExiting(Process process)
@@ -535,7 +535,7 @@ namespace RucheHome.Automation.Talkers.Friendly
         /// <param name="process">
         /// <see cref="Process.CloseMainWindow"/> 呼び出し後の操作対象プロセス。
         /// 呼び出し元で <see cref="Process.Refresh"/> 呼び出し済み。
-        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装から
+        /// <see cref="TalkerBase{TParameterId}"/> 実装から
         /// null や操作対象外プロセスが渡されることはない。
         /// </param>
         /// <returns>

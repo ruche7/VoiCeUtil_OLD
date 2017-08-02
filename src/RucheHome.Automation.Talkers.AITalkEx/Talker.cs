@@ -21,7 +21,7 @@ namespace RucheHome.Automation.Talkers.AITalkEx
     /// <item><description>株式会社インターネットの Talk Ex シリーズ</description></item>
     /// </list>
     /// </remarks>
-    public class Talker : FormsProcessTalkerBase<ParameterId>
+    public class Talker : FormsTalkerBase<ParameterId>
     {
         /// <summary>
         /// コンストラクタ。
@@ -292,7 +292,7 @@ namespace RucheHome.Automation.Talkers.AITalkEx
         /// </summary>
         private const string SaveProgressWindowTitle = @"音声保存";
 
-        #region Friendly.ProcessTalkerBase<ParameterId> のオーバライド
+        #region Friendly.TalkerBase<ParameterId> のオーバライド
 
         /// <summary>
         /// ウィンドウタイトル種別を調べる。
