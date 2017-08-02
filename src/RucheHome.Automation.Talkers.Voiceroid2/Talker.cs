@@ -17,9 +17,9 @@ using RucheHome.Diagnostics;
 namespace RucheHome.Automation.Talkers.Voiceroid2
 {
     /// <summary>
-    /// VOICEROID2プロセスを操作する <see cref="IProcessTalker"/> 実装クラス。
+    /// VOICEROID2プロセスを操作する <see cref="ITalker"/> 実装クラス。
     /// </summary>
-    public class Talker : WpfTalkerBase<ParameterId>
+    public class Talker : WpfTalkerBase<ParameterId>, ITalker
     {
         /// <summary>
         /// コンストラクタ。

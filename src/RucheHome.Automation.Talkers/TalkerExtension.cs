@@ -23,8 +23,7 @@ namespace RucheHome.Automation.Talkers
         /// <remarks>
         /// 設定処理自体行われなかったパラメータIDは戻り値のキーに含まれない。
         /// </remarks>
-        public static Result<Dictionary<object, Result<bool>>>
-        SetParameters(
+        public static Result<Dictionary<object, Result<bool>>> SetParameters(
             this ITalker talker,
             IEnumerable<(object id, decimal value)> parameters)
             =>
@@ -44,8 +43,7 @@ namespace RucheHome.Automation.Talkers
         /// <remarks>
         /// 設定処理自体行われなかったパラメータIDは戻り値のキーに含まれない。
         /// </remarks>
-        public static Result<Dictionary<object, Result<bool>>>
-        SetParameters(
+        public static Result<Dictionary<object, Result<bool>>> SetParameters(
             this ITalker talker,
             params (object id, decimal value)[] parameters)
             =>
@@ -54,6 +52,20 @@ namespace RucheHome.Automation.Talkers
         #endregion
 
         #region ITalker<TParameterId> の拡張メソッド群
+
+        /// <summary>
+        /// 現在のパラメータ一覧を取得する。
+        /// </summary>
+        /// <param name="talker"><see cref="ITalker{TParameterId}"/> オブジェクト。</param>
+        /// <param name="targetParameterIds">取得対象のパラメータID配列。</param>
+        /// <returns>
+        /// パラメータIDとその値のディクショナリ。取得できなかった場合は null 。
+        /// </returns>
+        public static Result<Dictionary<TParameterId, decimal>> GetParameters<TParameterId>(
+            this ITalker<TParameterId> talker,
+            params TParameterId[] targetParameterIds)
+            =>
+            talker.GetParameters(targetParameterIds);
 
         /// <summary>
         /// パラメータ群を設定する。

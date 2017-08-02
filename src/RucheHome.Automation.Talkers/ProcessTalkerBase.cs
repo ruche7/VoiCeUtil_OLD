@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -12,7 +13,7 @@ using RucheHome.Text.Extensions;
 namespace RucheHome.Automation.Talkers
 {
     /// <summary>
-    /// <see cref="IProcessTalker"/> インタフェースの抽象実装クラス。
+    /// <see cref="IProcessTalker{TParameterId}"/> インタフェースの抽象実装クラス。
     /// </summary>
     /// <typeparam name="TParameterId">パラメータID型。</typeparam>
     /// <remarks>
@@ -1651,7 +1652,7 @@ namespace RucheHome.Automation.Talkers
         /// パラメータIDとその値のディクショナリ。取得できなかった場合は null 。
         /// </returns>
         Result<Dictionary<object, decimal>> ITalker.GetParameters(
-            IEnumerable<object> targetParameterIds)
+            IEnumerable targetParameterIds)
         {
             var result = this.GetParameters(targetParameterIds?.OfType<TParameterId>());
 

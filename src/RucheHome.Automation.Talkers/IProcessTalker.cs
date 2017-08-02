@@ -5,7 +5,8 @@ using System.Diagnostics;
 namespace RucheHome.Automation.Talkers
 {
     /// <summary>
-    /// プロセス操作によって ITalker インタフェース機能を提供するためのインタフェース。
+    /// プロセス操作によって
+    /// <see cref="ITalker"/> インタフェース機能を提供するインタフェース。
     /// </summary>
     public interface IProcessTalker : ITalker
     {

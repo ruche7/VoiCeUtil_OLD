@@ -9,7 +9,7 @@ namespace RucheHome.Automation.Talkers.Friendly
 {
     /// <summary>
     /// WPFプロセス対象の、 Codeer.Friendly ライブラリを用いた
-    /// <see cref="IProcessTalker"/> インタフェースの抽象実装クラス。
+    /// <see cref="IProcessTalker{TParameterId}"/> インタフェースの抽象実装クラス。
     /// </summary>
     /// <typeparam name="TParameterId">パラメータID型。</typeparam>
     /// <remarks>

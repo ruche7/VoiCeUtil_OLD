@@ -17,9 +17,9 @@ using RucheHome.Diagnostics;
 namespace RucheHome.Automation.Talkers.CeVIO
 {
     /// <summary>
-    /// CeVIO Creative Studio S プロセスを操作する <see cref="IProcessTalker"/> 実装クラス。
+    /// CeVIO Creative Studio S プロセスを操作する <see cref="ITalker"/> 実装クラス。
     /// </summary>
-    public class Talker : WpfTalkerBase<ParameterId>, ICreativeStudioOperation
+    public class Talker : WpfTalkerBase<ParameterId>, ITalker
     {
         /// <summary>
         /// コンストラクタ。

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -135,7 +136,7 @@ namespace RucheHome.Automation.Talkers
         /// パラメータIDとその値のディクショナリ。取得できなかった場合は null 。
         /// </returns>
         Result<Dictionary<object, decimal>> GetParameters(
-            IEnumerable<object> targetParameterIds = null);
+            IEnumerable targetParameterIds = null);
 
         /// <summary>
         /// パラメータ群を設定する。

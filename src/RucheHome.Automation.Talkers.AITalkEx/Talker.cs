@@ -12,7 +12,7 @@ using RucheHome.Diagnostics;
 namespace RucheHome.Automation.Talkers.AITalkEx
 {
     /// <summary>
-    /// AITalkExベースのプロセスを操作する <see cref="IProcessTalker"/> 実装クラス。
+    /// AITalkExベースプロセスを操作する <see cref="ITalker"/> 実装クラス。
     /// </summary>
     /// <remarks>
     /// <para>下記の製品シリーズの一部に対応する。</para>
@@ -21,7 +21,7 @@ namespace RucheHome.Automation.Talkers.AITalkEx
     /// <item><description>株式会社インターネットの Talk Ex シリーズ</description></item>
     /// </list>
     /// </remarks>
-    public class Talker : FormsTalkerBase<ParameterId>
+    public class Talker : FormsTalkerBase<ParameterId>, ITalker
     {
         /// <summary>
         /// コンストラクタ。
@@ -37,14 +37,6 @@ namespace RucheHome.Automation.Talkers.AITalkEx
             this.ProcessProduct = product.GetProcessProduct();
             this.TalkerName = product.GetTalkerName();
         }
-
-        /// <summary>
-        /// 製品種別を取得する。
-        /// </summary>
-        /// <remarks>
-        /// インスタンス生成後に値が変化することはない。
-        /// </remarks>
-        public Product Product { get; }
 
         /// <summary>
         /// 文章入力欄下にあるボタンの種別列挙。
@@ -991,6 +983,15 @@ namespace RucheHome.Automation.Talkers.AITalkEx
 
             return true;
         }
+
+        #endregion
+
+        #region ITalker の実装
+
+        /// <summary>
+        /// 製品種別を取得する。
+        /// </summary>
+        public Product Product { get; }
 
         #endregion
     }
