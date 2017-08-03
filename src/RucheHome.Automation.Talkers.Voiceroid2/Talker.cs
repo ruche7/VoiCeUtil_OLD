@@ -523,16 +523,6 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
         #region ProcessTalkerBase<ParameterId> のオーバライド
 
         /// <summary>
-        /// 操作対象プロセスの実行ファイル名(拡張子なし)を取得する。
-        /// </summary>
-        public override string ProcessFileName { get; } = @"VoiceroidEditor";
-
-        /// <summary>
-        /// 操作対象プロセスの製品名情報を取得する。
-        /// </summary>
-        public override string ProcessProduct { get; } = @"VOICEROID2 Editor";
-
-        /// <summary>
         /// 名前を取得する。
         /// </summary>
         public override string TalkerName { get; } = @"VOICEROID2";
@@ -594,7 +584,9 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
                     }
                 }
 
-                return names.AsReadOnly();
+                // 重複除外する
+                // 標準タブとユーザタブでボイスプリセット名が重複することがあるため
+                return Array.AsReadOnly(names.Distinct().ToArray());
             }
 
             try
@@ -679,9 +671,14 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
             Result<bool> setCharacter(
                 dynamic tabControl,
                 int tabItemCount,
-                int selectedTabIndex)
+                int _)
             {
-                var tabIndex = selectedTabIndex;
+                // 標準タブとユーザタブでボイスプリセット名が重複している場合、
+                // どちらを選んでも実際にはユーザタブ側の設定が使われる。(v2.0.0.0)
+                // そのためユーザタブを優先して検索する。
+
+                var startTabIndex = (tabItemCount > 1) ? 1 : 0;
+                var tabIndex = startTabIndex;
 
                 do
                 {
@@ -711,7 +708,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
                     // 次のタブアイテムへ
                     tabIndex = (tabIndex + 1) % tabItemCount;
                 }
-                while (tabIndex != selectedTabIndex);
+                while (tabIndex != startTabIndex);
 
                 return (false, @"対象ボイスプリセットが見つかりません。");
             }
@@ -1369,6 +1366,20 @@ namespace RucheHome.Automation.Talkers.Voiceroid2
 
             return true;
         }
+
+        #endregion
+
+        #region ProcessOperationBase のオーバライド
+
+        /// <summary>
+        /// 操作対象プロセスの製品名情報を取得する。
+        /// </summary>
+        public override string ProcessProduct { get; } = @"VOICEROID2 Editor";
+
+        /// <summary>
+        /// 操作対象プロセスの実行ファイル名(拡張子なし)を取得する。
+        /// </summary>
+        public override string ProcessFileName { get; } = @"VoiceroidEditor";
 
         #endregion
     }

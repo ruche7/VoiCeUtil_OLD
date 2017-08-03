@@ -9,7 +9,20 @@ namespace RucheHome.Automation.Talkers
     /// <summary>
     /// 文章の読み上げや音声ファイル保存の機能を提供するインタフェース。
     /// </summary>
-    public interface ITalker : INotifyPropertyChanged
+    /// <remarks>
+    /// <para>
+    /// <see cref="IOperationState.IsAlive"/> は、 <see cref="State"/> が
+    /// <see cref="TalkerState.None"/>, <see cref="TalkerState.Fail"/>,
+    /// <see cref="TalkerState.Startup"/>, <see cref="TalkerState.Cleanup"/>
+    /// のいずれでもなければ true を返すように実装すること。
+    /// </para>
+    /// <para>
+    /// <see cref="IOperationState.CanOperate"/> は、 <see cref="State"/> が
+    /// <see cref="TalkerState.Idle"/> または
+    /// <see cref="TalkerState.Speaking"/> ならば true を返すように実装すること。
+    /// </para>
+    /// </remarks>
+    public interface ITalker : IOperationState, INotifyPropertyChanged
     {
         /// <summary>
         /// 名前を取得する。
@@ -55,27 +68,6 @@ namespace RucheHome.Automation.Talkers
         /// 状態を取得する。
         /// </summary>
         TalkerState State { get; }
-
-        /// <summary>
-        /// 動作中の状態であるか否かを取得する。
-        /// </summary>
-        /// <remarks>
-        /// <see cref="State"/> が
-        /// <see cref="TalkerState.None"/>, <see cref="TalkerState.Fail"/>,
-        /// <see cref="TalkerState.Startup"/>, <see cref="TalkerState.Cleanup"/>
-        /// のいずれでもなければ true を返す。
-        /// </remarks>
-        bool IsAlive { get; }
-
-        /// <summary>
-        /// 各種操作可能な状態であるか否かを取得する。
-        /// </summary>
-        /// <remarks>
-        /// <see cref="State"/> が
-        /// <see cref="TalkerState.Idle"/> または
-        /// <see cref="TalkerState.Speaking"/> ならば true を返す。
-        /// </remarks>
-        bool CanOperate { get; }
 
         /// <summary>
         /// 現在の状態に関する付随メッセージを取得する。

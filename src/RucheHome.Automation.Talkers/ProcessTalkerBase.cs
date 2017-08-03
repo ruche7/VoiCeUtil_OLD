@@ -7,7 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using RucheHome.Diagnostics;
-using RucheHome.ObjectModel;
 using RucheHome.Text.Extensions;
 
 namespace RucheHome.Automation.Talkers
@@ -21,7 +20,7 @@ namespace RucheHome.Automation.Talkers
     /// そのため、派生クラスで抽象メソッドを実装する際、それらのメソッドを呼び出さないこと。
     /// </remarks>
     public abstract class ProcessTalkerBase<TParameterId>
-        : BindableBase, IProcessTalker<TParameterId>
+        : ProcessOperationBase, IProcessTalker<TParameterId>
     {
         /// <summary>
         /// コンストラクタ。
@@ -87,19 +86,6 @@ namespace RucheHome.Automation.Talkers
             WaitUntil(getter, f => f, timeoutMilliseconds);
 
         /// <summary>
-        /// 操作対象プロセスを取得する。
-        /// </summary>
-        /// <remarks>
-        /// <para>起動していないならば null となる。</para>
-        /// <para>
-        /// <see cref="Process.GetProcessesByName(string)">Process.GetProcessesByName</see>
-        /// から取得したインスタンスを設定するため、プロパティ値変更時に以前の値に対して
-        /// <see cref="Process.Dispose"/> 呼び出しを行うことはない。
-        /// </para>
-        /// </remarks>
-        protected Process TargetProcess { get; private set; } = null;
-
-        /// <summary>
         /// 現在の <see cref="State"/> では処理を行えないことを示すメッセージを作成する。
         /// </summary>
         /// <returns>エラーメッセージ。アイドル状態である場合は null 。</returns>
@@ -159,16 +145,6 @@ namespace RucheHome.Automation.Talkers
         /// <returns><see cref="Result{T}"/> 値。</returns>
         protected Result<T> MakeStateErrorResult<T>(T value = default(T)) =>
             (value, this.MakeStateErrorMessage());
-
-        /// <summary>
-        /// 指定したプロセスが操作対象であるか否かを取得する。
-        /// </summary>
-        /// <param name="process">プロセス。</param>
-        /// <returns>操作対象ならば true 。そうでなければ false 。</returns>
-        protected bool IsOwnProcess(Process process) =>
-            process != null &&
-            !process.HasExited &&
-            process.MainModule.FileVersionInfo.ProductName == this.ProcessProduct;
 
         /// <summary>
         /// 音声保存先ディレクトリを作成し、書き込み権限を確認する。
@@ -391,34 +367,12 @@ namespace RucheHome.Automation.Talkers
         #region 要オーバライド
 
         /// <summary>
-        /// 操作対象プロセスの実行ファイル名(拡張子なし)を取得する。
-        /// </summary>
-        /// <remarks>
-        /// <para>
-        /// <see cref="Process.GetProcessesByName(string)">Process.GetProcessesByName</see>
-        /// メソッドの引数として利用できる。
-        /// </para>
-        /// <para>インスタンス生成後に値が変化することはない。</para>
-        /// </remarks>
-        public abstract string ProcessFileName { get; }
-
-        /// <summary>
-        /// 操作対象プロセスの製品名情報を取得する。
-        /// </summary>
-        /// <remarks>
-        /// <para>操作対象プロセスか否かの判別に利用される。</para>
-        /// <para>インスタンス生成後に値が変化することはない。</para>
-        /// </remarks>
-        public abstract string ProcessProduct { get; }
-
-        /// <summary>
         /// 名前を取得する。
         /// </summary>
         /// <remarks>
-        /// <para>既定では <see cref="ProcessProduct"/> を返す。</para>
-        /// <para>インスタンス生成後に値が変化することはない。</para>
+        /// インスタンス生成後に値が変化することはない。
         /// </remarks>
-        public virtual string TalkerName => this.ProcessProduct;
+        public abstract string TalkerName { get; }
 
         /// <summary>
         /// 文章の最大許容文字数を取得する。
@@ -747,26 +701,99 @@ namespace RucheHome.Automation.Talkers
 
         #endregion
 
-        #region IProcessTalker の実装
+        #region ProcessOperationBase のオーバライド
 
         /// <summary>
-        /// メインウィンドウハンドルを取得する。
+        /// 操作対象プロセスを取得する。
         /// </summary>
         /// <remarks>
-        /// <see cref="ITalker.IsAlive"/> が false の場合は
-        /// <see cref="IntPtr.Zero"/> を返す。
+        /// <para>起動していないならば null となる。</para>
+        /// <para>
+        /// <see cref="Process.GetProcessesByName(string)">Process.GetProcessesByName</see>
+        /// から取得したインスタンスを設定するため、プロパティ値変更時に以前の値に対して
+        /// <see cref="Process.Dispose"/> 呼び出しを行うことはない。
+        /// </para>
         /// </remarks>
-        public IntPtr MainWindowHandle
+        protected override sealed Process TargetProcess { get; set; } = null;
+
+        /// <summary>
+        /// 操作対象が生存状態であるか否かを取得する。
+        /// </summary>
+        /// <remarks>
+        /// <para><see cref="Update"/> メソッド呼び出しによって更新される。</para>
+        /// <para>
+        /// <see cref="State"/> が
+        /// <see cref="TalkerState.None"/>, <see cref="TalkerState.Fail"/>,
+        /// <see cref="TalkerState.Startup"/>, <see cref="TalkerState.Cleanup"/>
+        /// のいずれでもなければ true を返す。
+        /// </para>
+        /// </remarks>
+        public override sealed bool IsAlive
         {
             get
             {
-                // TargetProcess の評価を1回にするために一旦変数に入れる
-                var process = this.TargetProcess;
-                return
-                    (process?.HasExited == false && this.IsAlive) ?
-                        process.MainWindowHandle : IntPtr.Zero;
+                // State の評価を1回にするために一旦変数に入れる
+                var state = this.State;
+                return (
+                    state != TalkerState.None &&
+                    state != TalkerState.Fail &&
+                    state != TalkerState.Startup &&
+                    state != TalkerState.Cleanup);
             }
         }
+
+        /// <summary>
+        /// 操作対象が操作可能な状態であるか否かを取得する。
+        /// </summary>
+        /// <remarks>
+        /// <para><see cref="Update"/> メソッド呼び出しによって更新される。</para>
+        /// <para>
+        /// <see cref="State"/> が
+        /// <see cref="TalkerState.Idle"/> または
+        /// <see cref="TalkerState.Speaking"/> ならば true を返す。
+        /// </para>
+        /// </remarks>
+        public override sealed bool CanOperate
+        {
+            get
+            {
+                // State の評価を1回にするために一旦変数に入れる
+                var state = this.State;
+                return (state == TalkerState.Idle || state == TalkerState.Speaking);
+            }
+        }
+
+        /// <summary>
+        /// <see cref="ProcessOperationBase.UpdateByProcess"/> の隠蔽実装。
+        /// </summary>
+        /// <param name="process">無視される。</param>
+        /// <remarks>
+        /// 必ず <see cref="NotSupportedException"/> 例外を送出する。
+        /// </remarks>
+        protected override sealed void UpdateByProcess(Process process) =>
+            throw new NotSupportedException();
+
+        /// <summary>
+        /// <see cref="ProcessOperationBase.RunProcessImpl"/> の隠蔽実装。
+        /// </summary>
+        /// <param name="process">無視される。</param>
+        /// <returns>値を返すことはない。</returns>
+        /// <remarks>
+        /// 必ず <see cref="NotSupportedException"/> 例外を送出する。
+        /// </remarks>
+        protected override sealed Result<bool> RunProcessImpl(Process process) =>
+            throw new NotSupportedException();
+
+        /// <summary>
+        /// <see cref="ProcessOperationBase.ExitProcessImpl"/> の隠蔽実装。
+        /// </summary>
+        /// <param name="process">無視される。</param>
+        /// <returns>値を返すことはない。</returns>
+        /// <remarks>
+        /// 必ず <see cref="NotSupportedException"/> 例外を送出する。
+        /// </remarks>
+        protected override sealed Result<bool?> ExitProcessImpl(Process process) =>
+            throw new NotSupportedException();
 
         /// <summary>
         /// 状態を更新する。
@@ -774,7 +801,7 @@ namespace RucheHome.Automation.Talkers
         /// <param name="processes">
         /// 対象プロセス検索先列挙。メソッド内でプロセスリストを取得させるならば null 。
         /// </param>
-        public void Update(IEnumerable<Process> processes = null)
+        public override sealed void Update(IEnumerable<Process> processes = null)
         {
             // SaveFile 処理中のデッドロック回避
             if (this.IsPropertyChangedOnSaveFile)
@@ -805,7 +832,7 @@ namespace RucheHome.Automation.Talkers
         /// <see cref="State"/> が <see cref="TalkerState.None"/> または
         /// <see cref="TalkerState.Fail"/> の場合は取得できない。
         /// </remarks>
-        public Result<string> GetProcessFilePath()
+        public override sealed Result<string> GetProcessFilePath()
         {
             // SaveFile 処理中のデッドロック回避
             // ダミーのロックオブジェクトを使わせる
@@ -821,17 +848,8 @@ namespace RucheHome.Automation.Talkers
                     return MakeStateErrorResult<string>();
                 }
 
-                try
-                {
-                    return this.TargetProcess?.MainModule?.FileName;
-                }
-                catch (Exception ex)
-                {
-                    ThreadDebug.WriteException(ex);
-                }
+                return base.GetProcessFilePath();
             }
-
-            return (null, @"情報を取得できませんでした。");
         }
 
         /// <summary>
@@ -843,7 +861,7 @@ namespace RucheHome.Automation.Talkers
         /// 起動開始の成否を確認するまでブロッキングする。起動完了は待たない。
         /// 既に起動している場合は何もせず true を返す。
         /// </remarks>
-        public Result<bool> RunProcess(string processFilePath)
+        public override sealed Result<bool> RunProcess(string processFilePath)
         {
             // SaveFile 処理中のデッドロック回避
             // ダミーのロックオブジェクトを使わせる
@@ -869,63 +887,16 @@ namespace RucheHome.Automation.Talkers
                         return MakeStateErrorResult(false);
                     }
 
-                    if (string.IsNullOrWhiteSpace(processFilePath))
+                    // 起動処理
+                    var (process, processMessage) = this.StartProcess(processFilePath);
+                    if (process == null)
                     {
-                        return (false, @"実行ファイルパスが不正です。");
-                    }
-                    if (!File.Exists(processFilePath))
-                    {
-                        return (false, @"実行ファイルが存在しません。");
+                        return (false, processMessage);
                     }
 
-                    Process process = null;
-                    try
-                    {
-                        // 起動
-                        process = Process.Start(processFilePath);
-                        if (process == null)
-                        {
-                            return (false, @"起動処理に失敗しました。");
-                        }
-
-                        // 入力待機
-                        try
-                        {
-                            if (!process.WaitForInputIdle(StandardTimeoutMilliseconds))
-                            {
-                                return (false, @"起動待機に失敗しました。");
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            // 管理者権限で起動する設定になっていてUACが有効だとここに来る
-                            ThreadTrace.WriteException(ex);
-                            return (false, @"管理者権限で起動した可能性があります。");
-                        }
-
-                        // 操作対象プロセスか？
-                        if (!this.IsOwnProcess(process))
-                        {
-                            if (!process.CloseMainWindow())
-                            {
-                                process.Kill();
-                            }
-                            return (false, @"操作対象ではありませんでした。");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        ThreadTrace.WriteException(ex);
-                        return (
-                            false,
-                            ex.Message ?? (ex.GetType().Name + @" 例外が発生しました。"));
-                    }
-                    finally
-                    {
-                        // Process インスタンスのリソースを破棄
-                        // プロセス自体は起動し続ける
-                        process?.Dispose();
-                    }
+                    // Process インスタンスのリソースを破棄
+                    // プロセス自体は起動し続ける
+                    process.Dispose();
 
                     // 状態更新
                     raisePropChanged = this.UpdateImpl(null);
@@ -982,7 +953,7 @@ namespace RucheHome.Automation.Talkers
         /// 終了の成否を確認するまでブロッキングする。
         /// 既に終了している場合は何もせず true を返す。
         /// </remarks>
-        public Result<bool?> ExitProcess()
+        public override sealed Result<bool?> ExitProcess()
         {
             // SaveFile 処理中のデッドロック回避
             if (this.IsPropertyChangedOnSaveFile)
@@ -1168,53 +1139,6 @@ namespace RucheHome.Automation.Talkers
         /// <see cref="Update"/> メソッド呼び出しによって更新される。
         /// </remarks>
         public TalkerState State { get; private set; } = TalkerState.None;
-
-        /// <summary>
-        /// 動作中の状態であるか否かを取得する。
-        /// </summary>
-        /// <remarks>
-        /// <para><see cref="Update"/> メソッド呼び出しによって更新される。</para>
-        /// <para>
-        /// <see cref="State"/> が
-        /// <see cref="TalkerState.None"/>, <see cref="TalkerState.Fail"/>,
-        /// <see cref="TalkerState.Startup"/>, <see cref="TalkerState.Cleanup"/>
-        /// のいずれでもなければ true を返す。
-        /// </para>
-        /// </remarks>
-        public bool IsAlive
-        {
-            get
-            {
-                // State の評価を1回にするために一旦変数に入れる
-                var state = this.State;
-                return (
-                    state != TalkerState.None &&
-                    state != TalkerState.Fail &&
-                    state != TalkerState.Startup &&
-                    state != TalkerState.Cleanup);
-            }
-        }
-
-        /// <summary>
-        /// 各種操作可能な状態であるか否かを取得する。
-        /// </summary>
-        /// <remarks>
-        /// <para><see cref="Update"/> メソッド呼び出しによって更新される。</para>
-        /// <para>
-        /// <see cref="State"/> が
-        /// <see cref="TalkerState.Idle"/> または
-        /// <see cref="TalkerState.Speaking"/> ならば true を返す。
-        /// </para>
-        /// </remarks>
-        public bool CanOperate
-        {
-            get
-            {
-                // State の評価を1回にするために一旦変数に入れる
-                var state = this.State;
-                return (state == TalkerState.Idle || state == TalkerState.Speaking);
-            }
-        }
 
         /// <summary>
         /// 現在の状態に関する付随メッセージを取得する。

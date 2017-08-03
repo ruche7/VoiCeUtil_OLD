@@ -408,16 +408,6 @@ namespace RucheHome.Automation.Talkers.CeVIO
         #region ProcessTalkerBase<ParameterId> のオーバライド
 
         /// <summary>
-        /// 操作対象プロセスの実行ファイル名(拡張子なし)を取得する。
-        /// </summary>
-        public override string ProcessFileName { get; } = @"CeVIO Creative Studio";
-
-        /// <summary>
-        /// 操作対象プロセスの製品名情報を取得する。
-        /// </summary>
-        public override string ProcessProduct { get; } = @"CeVIO Creative Studio";
-
-        /// <summary>
         /// 名前を取得する。
         /// </summary>
         public override string TalkerName { get; } = @"CeVIO Creative Studio S";
@@ -1296,6 +1286,20 @@ namespace RucheHome.Automation.Talkers.CeVIO
 
             return true;
         }
+
+        #endregion
+
+        #region ProcessOperationBase のオーバライド
+
+        /// <summary>
+        /// 操作対象プロセスの製品名情報を取得する。
+        /// </summary>
+        public override string ProcessProduct { get; } = @"CeVIO Creative Studio";
+
+        /// <summary>
+        /// 操作対象プロセスの実行ファイル名(拡張子なし)を取得する。
+        /// </summary>
+        public override string ProcessFileName { get; } = @"CeVIO Creative Studio";
 
         #endregion
 

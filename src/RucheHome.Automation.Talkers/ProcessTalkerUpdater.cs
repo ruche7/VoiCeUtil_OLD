@@ -153,7 +153,7 @@ namespace RucheHome.Automation.Talkers
         }
 
         /// <summary>
-        /// <see cref="IProcessTalker.Update"/>
+        /// <see cref="IProcessOperation.Update"/>
         /// メソッド呼び出しで送出された直近の例外を取得する。
         /// </summary>
         /// <param name="talker"><see cref="IProcessTalker"/> インスタンス。</param>

@@ -75,6 +75,10 @@
       <Project>{1d283799-8d58-4377-bd05-383f0a2f7a73}</Project>
       <Name>RucheHome.Automation.Friendly</Name>
     </ProjectReference>
+    <ProjectReference Include="..\RucheHome.Automation\RucheHome.Automation.csproj">
+      <Project>{3240fed0-0230-475a-b212-2f3b3096c3af}</Project>
+      <Name>RucheHome.Automation</Name>
+    </ProjectReference>
     <ProjectReference Include="..\RucheHome.Core\RucheHome.Core.csproj">
       <Project>{33ab6685-2e0e-49e2-86fe-15385ec365c6}</Project>
       <Name>RucheHome.Core</Name>

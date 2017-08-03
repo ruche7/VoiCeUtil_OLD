@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace RucheHome.Automation.Talkers
+namespace RucheHome.Automation
 {
     /// <summary>
     /// メソッドの戻り値と付随メッセージを保持する構造体。

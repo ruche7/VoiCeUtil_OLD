@@ -346,16 +346,6 @@ namespace RucheHome.Automation.Talkers.AITalkEx
         #region ProcessTalkerBase<ParameterId> のオーバライド
 
         /// <summary>
-        /// 操作対象プロセスの実行ファイル名(拡張子なし)を取得する。
-        /// </summary>
-        public override string ProcessFileName { get; }
-
-        /// <summary>
-        /// 操作対象プロセスの製品名情報を取得する。
-        /// </summary>
-        public override string ProcessProduct { get; }
-
-        /// <summary>
         /// 名前を取得する。
         /// </summary>
         public override string TalkerName { get; }
@@ -983,6 +973,20 @@ namespace RucheHome.Automation.Talkers.AITalkEx
 
             return true;
         }
+
+        #endregion
+
+        #region ProcessOperationBase のオーバライド
+
+        /// <summary>
+        /// 操作対象プロセスの製品名情報を取得する。
+        /// </summary>
+        public override string ProcessProduct { get; }
+
+        /// <summary>
+        /// 操作対象プロセスの実行ファイル名(拡張子なし)を取得する。
+        /// </summary>
+        public override string ProcessFileName { get; }
 
         #endregion
 
