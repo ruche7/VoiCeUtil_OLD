@@ -41,6 +41,7 @@
     <Compile Include="IOperationState.cs" />
     <Compile Include="IProcessOperation.cs" />
     <Compile Include="ProcessOperationBase.cs" />
+    <Compile Include="ProcessOperationUpdater.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Result.cs" />
   </ItemGroup>

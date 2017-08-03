@@ -7,12 +7,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using RucheHome.Diagnostics;
 
-namespace RucheHome.Automation.Talkers
+namespace RucheHome.Automation
 {
     /// <summary>
-    /// <see cref="IProcessTalker"/> インスタンス群の非同期な状態更新処理を提供するクラス。
+    /// <see cref="IProcessOperation"/>
+    /// オブジェクト群の非同期な状態更新処理を提供するクラス。
     /// </summary>
-    public class ProcessTalkerUpdater : IDisposable
+    public class ProcessOperationUpdater : IDisposable
     {
         /// <summary>
         /// コンストラクタ。
@@ -22,7 +23,7 @@ namespace RucheHome.Automation.Talkers
         /// <see cref="ThreadPool.GetMinThreads">ThreadPool.GetMinThreads</see>
         /// メソッドから取得する。
         /// </remarks>
-        public ProcessTalkerUpdater()
+        public ProcessOperationUpdater()
         {
             // スレッドプールの設定値からタスク数を決定
             ThreadPool.GetMinThreads(out var count, out _);
@@ -32,8 +33,10 @@ namespace RucheHome.Automation.Talkers
         /// <summary>
         /// コンストラクタ。
         /// </summary>
-        /// <param name="taskCountLimit">並走させるタスクの最大数。 1 以上 1024 以下。</param>
-        public ProcessTalkerUpdater(int taskCountLimit)
+        /// <param name="taskCountLimit">
+        /// 並走させるタスクの最大数。 1 以上 1024 以下。
+        /// </param>
+        public ProcessOperationUpdater(int taskCountLimit)
         {
             ArgumentValidation.IsWithinRange(taskCountLimit, 1, 1024, nameof(taskCountLimit));
 
@@ -43,7 +46,7 @@ namespace RucheHome.Automation.Talkers
         /// <summary>
         /// デストラクタ。
         /// </summary>
-        ~ProcessTalkerUpdater() => this.Dispose(false);
+        ~ProcessOperationUpdater() => this.Dispose(false);
 
         /// <summary>
         /// 並走させるタスクの最大数を取得する。
@@ -53,7 +56,7 @@ namespace RucheHome.Automation.Talkers
         /// <summary>
         /// 状態更新処理間隔ミリ秒数を取得または設定する。
         /// </summary>
-        public int TalkerUpdateIntervalMilliseconds { get; set; } = 10;
+        public int OperationUpdateIntervalMilliseconds { get; set; } = 10;
 
         /// <summary>
         /// プロセスリスト更新間隔ミリ秒数を取得または設定する。
@@ -61,28 +64,30 @@ namespace RucheHome.Automation.Talkers
         public int ProcessListUpdateIntervalMilliseconds { get; set; } = 100;
 
         /// <summary>
-        /// <see cref="IProcessTalker"/> インスタンスを登録する。
+        /// <see cref="IProcessOperation"/> オブジェクトを登録する。
         /// </summary>
-        /// <param name="talker"><see cref="IProcessTalker"/> インスタンス。</param>
+        /// <param name="processOperation">
+        /// <see cref="IProcessOperation"/> オブジェクト。
+        /// </param>
         /// <returns>登録できたならば true 。既に登録済みならば false 。</returns>
-        public bool Register(IProcessTalker talker)
+        public bool Add(IProcessOperation processOperation)
         {
-            ArgumentValidation.IsNotNull(talker, nameof(talker));
+            ArgumentValidation.IsNotNull(processOperation, nameof(processOperation));
 
-            lock (this.TalkerTaskLock)
+            lock (this.OperationTaskLock)
             {
-                if (this.Talkers.Contains(talker))
+                if (this.Operations.Contains(processOperation))
                 {
                     return false;
                 }
 
                 // 追加
-                this.Talkers.Add(talker);
+                this.Operations.Add(processOperation);
 
                 // タスク数が少ないなら追加
                 while (
                     this.Tasks.Count < this.TaskCountLimit &&
-                    this.Tasks.Count < this.Talkers.Count)
+                    this.Tasks.Count < this.Operations.Count)
                 {
                     if (!this.PushTask())
                     {
@@ -95,39 +100,41 @@ namespace RucheHome.Automation.Talkers
         }
 
         /// <summary>
-        /// <see cref="IProcessTalker"/> インスタンスの登録を破棄する。
+        /// <see cref="IProcessOperation"/> オブジェクトの登録を破棄する。
         /// </summary>
-        /// <param name="talker"><see cref="IProcessTalker"/> インスタンス。</param>
+        /// <param name="processOperation">
+        /// <see cref="IProcessOperation"/> オブジェクト。
+        /// </param>
         /// <returns>破棄できたならば true 。登録されていないならば false 。</returns>
-        public bool Remove(IProcessTalker talker)
+        public bool Remove(IProcessOperation processOperation)
         {
-            ArgumentValidation.IsNotNull(talker, nameof(talker));
+            ArgumentValidation.IsNotNull(processOperation, nameof(processOperation));
 
             List<Task> removedTasks = null;
 
-            lock (this.TalkerTaskLock)
+            lock (this.OperationTaskLock)
             {
                 // 位置検索
-                var index = this.Talkers.IndexOf(talker);
+                var index = this.Operations.IndexOf(processOperation);
                 if (index < 0)
                 {
                     return false;
                 }
 
                 // 削除
-                this.Talkers.RemoveAt(index);
+                this.Operations.RemoveAt(index);
 
                 // 次回処理対象インデックスより手前を削除したなら補正
-                if (this.TargetTalkerIndex > index)
+                if (this.OperationIndex > index)
                 {
-                    --this.TargetTalkerIndex;
+                    --this.OperationIndex;
                 }
 
                 // タスク数が多すぎるなら終わらせる
-                if (this.Tasks.Count > this.Talkers.Count)
+                if (this.Tasks.Count > this.Operations.Count)
                 {
                     removedTasks = new List<Task>();
-                    while (this.Tasks.Count > this.Talkers.Count)
+                    while (this.Tasks.Count > this.Operations.Count)
                     {
                         var task = this.PopTask();
                         if (task == null)
@@ -140,7 +147,7 @@ namespace RucheHome.Automation.Talkers
             }
             lock (((ICollection)this.LastExceptionMap).SyncRoot)
             {
-                this.LastExceptionMap.Remove(talker);
+                this.LastExceptionMap.Remove(processOperation);
             }
 
             // lock 内で Wait するとデッドロックするので注意
@@ -156,38 +163,44 @@ namespace RucheHome.Automation.Talkers
         /// <see cref="IProcessOperation.Update"/>
         /// メソッド呼び出しで送出された直近の例外を取得する。
         /// </summary>
-        /// <param name="talker"><see cref="IProcessTalker"/> インスタンス。</param>
+        /// <param name="processOperation">
+        /// <see cref="IProcessOperation"/> オブジェクト。
+        /// </param>
         /// <returns>例外。登録されていないか例外が送出されていないならば null 。</returns>
-        public Exception GetLastException(IProcessTalker talker)
+        public Exception GetLastException(IProcessOperation processOperation)
         {
-            ArgumentValidation.IsNotNull(talker, nameof(talker));
+            ArgumentValidation.IsNotNull(processOperation, nameof(processOperation));
 
             lock (((ICollection)this.LastExceptionMap).SyncRoot)
             {
-                return this.LastExceptionMap.TryGetValue(talker, out var ex) ? ex : null;
+                return
+                    this.LastExceptionMap.TryGetValue(processOperation, out var ex) ?
+                        ex : null;
             }
         }
 
         /// <summary>
-        /// 登録済み <see cref="IProcessTalker"/> インスタンスリストを取得する。
+        /// 登録済み <see cref="IProcessOperation"/> オブジェクトリストを取得する。
         /// </summary>
-        private List<IProcessTalker> Talkers { get; } = new List<IProcessTalker>();
+        private List<IProcessOperation> Operations { get; } = new List<IProcessOperation>();
 
         /// <summary>
-        /// 次回処理対象の Talkers インデックスを取得または設定する。
+        /// 次回処理対象の <see cref="Operations"/> インデックスを取得または設定する。
         /// </summary>
-        private int TargetTalkerIndex { get; set; } = 0;
+        private int OperationIndex { get; set; } = 0;
 
         /// <summary>
         /// タスクスタックを取得する。
         /// </summary>
-        private Stack<(Task task, CancellationTokenSource cancelTokenSource)> Tasks { get; } =
+        private Stack<(Task task, CancellationTokenSource cancelTokenSource)>
+        Tasks { get; } =
             new Stack<(Task task, CancellationTokenSource cancelTokenSource)>();
 
         /// <summary>
-        /// Talkers, TargetTalkerIndex, Tasks の排他制御用オブジェクト。
+        /// <see cref="Operations"/>, <see cref="OperationIndex"/>, <see cref="Tasks"/>
+        /// の排他制御用オブジェクト。
         /// </summary>
-        private object TalkerTaskLock = new object();
+        private object OperationTaskLock = new object();
 
         /// <summary>
         /// 実行ファイル名ごとのプロセス配列ディクショナリを取得する。
@@ -211,8 +224,8 @@ namespace RucheHome.Automation.Talkers
         /// <summary>
         /// 最後に発生した例外のディクショナリを取得する。
         /// </summary>
-        private Dictionary<IProcessTalker, Exception> LastExceptionMap { get; } =
-            new Dictionary<IProcessTalker, Exception>();
+        private Dictionary<IProcessOperation, Exception> LastExceptionMap { get; } =
+            new Dictionary<IProcessOperation, Exception>();
 
         /// <summary>
         /// タスクを1つ増やす。
@@ -280,11 +293,11 @@ namespace RucheHome.Automation.Talkers
             for (
                 ;
                 !cancelToken.IsCancellationRequested;
-                Thread.Sleep(this.TalkerUpdateIntervalMilliseconds))
+                Thread.Sleep(this.OperationUpdateIntervalMilliseconds))
             {
-                // 対象 Talker 決定
-                IProcessTalker talker = null;
-                lock (this.TalkerTaskLock)
+                // 対象 IProcessOperation オブジェクト決定
+                IProcessOperation processOperation = null;
+                lock (this.OperationTaskLock)
                 {
                     // 別の場所で lock して Cancel が呼ばれるため、
                     // この位置でもキャンセル済みか否か確認しておく
@@ -293,18 +306,18 @@ namespace RucheHome.Automation.Talkers
                         break;
                     }
 
-                    if (this.TargetTalkerIndex >= this.Talkers.Count)
+                    if (this.OperationIndex >= this.Operations.Count)
                     {
-                        this.TargetTalkerIndex = 0;
+                        this.OperationIndex = 0;
                     }
-                    if (this.TargetTalkerIndex < this.Talkers.Count)
+                    if (this.OperationIndex < this.Operations.Count)
                     {
                         // 処理対象取得
-                        talker = this.Talkers[this.TargetTalkerIndex];
-                        ++this.TargetTalkerIndex;
+                        processOperation = this.Operations[this.OperationIndex];
+                        ++this.OperationIndex;
                     }
                 }
-                if (talker == null)
+                if (processOperation == null)
                 {
                     continue;
                 }
@@ -334,14 +347,14 @@ namespace RucheHome.Automation.Talkers
                     // プロセス配列取得or作成
                     processes =
                         this.ProcessesMap.GetOrAdd(
-                            talker.ProcessFileName,
+                            processOperation.ProcessFileName,
                             name => Process.GetProcessesByName(name));
                 }
 
                 // 更新処理
                 try
                 {
-                    talker.Update(processes);
+                    processOperation.Update(processes);
                 }
                 catch (Exception ex)
                 {
@@ -353,7 +366,7 @@ namespace RucheHome.Automation.Talkers
                             break;
                         }
 
-                        this.LastExceptionMap[talker] = ex;
+                        this.LastExceptionMap[processOperation] = ex;
                     }
                 }
             }
@@ -380,10 +393,10 @@ namespace RucheHome.Automation.Talkers
         {
             List<Task> removedTasks = null;
 
-            lock (this.TalkerTaskLock)
+            lock (this.OperationTaskLock)
             {
-                this.Talkers.Clear();
-                this.TargetTalkerIndex = 0;
+                this.Operations.Clear();
+                this.OperationIndex = 0;
 
                 if (this.Tasks.Count > 0)
                 {
