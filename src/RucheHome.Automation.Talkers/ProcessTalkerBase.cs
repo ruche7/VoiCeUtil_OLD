@@ -210,11 +210,6 @@ namespace RucheHome.Automation.Talkers
         }
 
         /// <summary>
-        /// 排他制御用オブジェクト。
-        /// </summary>
-        private readonly object LockObject = new object();
-
-        /// <summary>
         /// <see cref="SaveFile"/> メソッドの lock 内で
         /// PropertyChanged イベントを処理中であるか否かを取得する。
         /// </summary>
@@ -233,11 +228,6 @@ namespace RucheHome.Automation.Talkers
         private bool IsPropertyChangedOnSaveFile { get; set; } = false;
 
         /// <summary>
-        /// プロセス検索インスタンスを取得する。
-        /// </summary>
-        private ProcessDetector ProcessDetector { get; } = new ProcessDetector();
-
-        /// <summary>
         /// 状態を更新する。
         /// </summary>
         /// <param name="processes">
@@ -246,16 +236,7 @@ namespace RucheHome.Automation.Talkers
         /// <returns>プロパティ値変更通知を行うデリゲート。通知不要ならば null 。</returns>
         private Action UpdateImpl(IEnumerable<Process> processes = null)
         {
-            this.ProcessDetector.ProductName = this.ProcessProduct;
-
-            // プロセス列挙が渡された場合はファイル名を検索条件にしない
-            this.ProcessDetector.FileName =
-                (processes == null) ? this.ProcessFileName : null;
-
-            // 検索
-            var process = this.ProcessDetector.Detect(processes).FirstOrDefault();
-
-            return this.UpdateByTargetProcess(process);
+            return this.UpdateByTargetProcess(this.FindTargetProcess(processes));
         }
 
         /// <summary>
@@ -314,7 +295,7 @@ namespace RucheHome.Automation.Talkers
             // まず値変更
             this.State = state;
             this.StateMessage = stateMessage;
-            this.TargetProcess = (state == TalkerState.None) ? null : targetProcess;
+            this.targetProcess = (state == TalkerState.None) ? null : targetProcess;
 
             // 変更通知対象をリストアップ
             var changedPropNames = new List<string>();
@@ -714,7 +695,16 @@ namespace RucheHome.Automation.Talkers
         /// <see cref="Process.Dispose"/> 呼び出しを行うことはない。
         /// </para>
         /// </remarks>
-        protected override sealed Process TargetProcess { get; set; } = null;
+        protected override sealed Process TargetProcess => this.targetProcess;
+        private Process targetProcess = null;
+
+        /// <summary>
+        /// メインウィンドウハンドルを取得する。
+        /// </summary>
+        /// <remarks>
+        /// 実装の sealed 化のためのオーバライド。
+        /// </remarks>
+        public override sealed IntPtr MainWindowHandle => base.MainWindowHandle;
 
         /// <summary>
         /// 操作対象が生存状態であるか否かを取得する。
@@ -764,38 +754,6 @@ namespace RucheHome.Automation.Talkers
         }
 
         /// <summary>
-        /// <see cref="ProcessOperationBase.UpdateByProcess"/> の隠蔽実装。
-        /// </summary>
-        /// <param name="process">無視される。</param>
-        /// <remarks>
-        /// 必ず <see cref="NotSupportedException"/> 例外を送出する。
-        /// </remarks>
-        protected override sealed void UpdateByProcess(Process process) =>
-            throw new NotSupportedException();
-
-        /// <summary>
-        /// <see cref="ProcessOperationBase.RunProcessImpl"/> の隠蔽実装。
-        /// </summary>
-        /// <param name="process">無視される。</param>
-        /// <returns>値を返すことはない。</returns>
-        /// <remarks>
-        /// 必ず <see cref="NotSupportedException"/> 例外を送出する。
-        /// </remarks>
-        protected override sealed Result<bool> RunProcessImpl(Process process) =>
-            throw new NotSupportedException();
-
-        /// <summary>
-        /// <see cref="ProcessOperationBase.ExitProcessImpl"/> の隠蔽実装。
-        /// </summary>
-        /// <param name="process">無視される。</param>
-        /// <returns>値を返すことはない。</returns>
-        /// <remarks>
-        /// 必ず <see cref="NotSupportedException"/> 例外を送出する。
-        /// </remarks>
-        protected override sealed Result<bool?> ExitProcessImpl(Process process) =>
-            throw new NotSupportedException();
-
-        /// <summary>
         /// 状態を更新する。
         /// </summary>
         /// <param name="processes">
@@ -825,6 +783,26 @@ namespace RucheHome.Automation.Talkers
         }
 
         /// <summary>
+        /// <see cref="ProcessOperationBase.UpdateCore"/> の隠蔽実装。
+        /// </summary>
+        /// <param name="processes">無視される。</param>
+        /// <remarks>
+        /// 必ず <see cref="NotSupportedException"/> 例外を送出する。
+        /// </remarks>
+        protected override sealed void UpdateCore(IEnumerable<Process> processes) =>
+            throw new NotSupportedException();
+
+        /// <summary>
+        /// <see cref="ProcessOperationBase.UpdateByProcess"/> の隠蔽実装。
+        /// </summary>
+        /// <param name="targetProcess">無視される。</param>
+        /// <remarks>
+        /// 必ず <see cref="NotSupportedException"/> 例外を送出する。
+        /// </remarks>
+        protected override sealed void UpdateByProcess(Process targetProcess) =>
+            throw new NotSupportedException();
+
+        /// <summary>
         /// 実行ファイルパスを取得する。
         /// </summary>
         /// <returns>実行ファイルパス。取得できなかった場合は null 。</returns>
@@ -848,9 +826,21 @@ namespace RucheHome.Automation.Talkers
                     return MakeStateErrorResult<string>();
                 }
 
-                return base.GetProcessFilePath();
+                return this.GetProcessFilePathCore();
             }
         }
+
+        /// <summary>
+        /// <see cref="ProcessOperationBase.GetProcessFilePathCore">
+        /// ProcessOperationBase.GetProcessFilePathCore
+        /// </see> メソッドを呼び出す。
+        /// </summary>
+        /// <returns>実行ファイルパス。取得できなかった場合は null 。</returns>
+        /// <remarks>
+        /// 実装の sealed 化のためのオーバライド。
+        /// </remarks>
+        protected override sealed Result<string> GetProcessFilePathCore() =>
+            base.GetProcessFilePathCore();
 
         /// <summary>
         /// プロセスを起動させる。
@@ -940,6 +930,28 @@ namespace RucheHome.Automation.Talkers
 
             return result;
         }
+
+        /// <summary>
+        /// <see cref="ProcessOperationBase.RunProcessCore"/> の隠蔽実装。
+        /// </summary>
+        /// <param name="processFilePath">無視される。</param>
+        /// <returns>値を返すことはない。</returns>
+        /// <remarks>
+        /// 必ず <see cref="NotSupportedException"/> 例外を送出する。
+        /// </remarks>
+        protected override sealed Result<bool> RunProcessCore(string processFilePath) =>
+            throw new NotSupportedException();
+
+        /// <summary>
+        /// <see cref="ProcessOperationBase.RunProcessImpl"/> の隠蔽実装。
+        /// </summary>
+        /// <param name="process">無視される。</param>
+        /// <returns>値を返すことはない。</returns>
+        /// <remarks>
+        /// 必ず <see cref="NotSupportedException"/> 例外を送出する。
+        /// </remarks>
+        protected override sealed Result<bool> RunProcessImpl(Process process) =>
+            throw new NotSupportedException();
 
         /// <summary>
         /// プロセスを終了させる。
@@ -1058,6 +1070,27 @@ namespace RucheHome.Automation.Talkers
 
             return result;
         }
+
+        /// <summary>
+        /// <see cref="ProcessOperationBase.ExitProcessCore"/> の隠蔽実装。
+        /// </summary>
+        /// <returns>値を返すことはない。</returns>
+        /// <remarks>
+        /// 必ず <see cref="NotSupportedException"/> 例外を送出する。
+        /// </remarks>
+        protected override sealed Result<bool?> ExitProcessCore() =>
+            throw new NotSupportedException();
+
+        /// <summary>
+        /// <see cref="ProcessOperationBase.ExitProcessImpl"/> の隠蔽実装。
+        /// </summary>
+        /// <param name="process">無視される。</param>
+        /// <returns>値を返すことはない。</returns>
+        /// <remarks>
+        /// 必ず <see cref="NotSupportedException"/> 例外を送出する。
+        /// </remarks>
+        protected override sealed Result<bool?> ExitProcessImpl(Process process) =>
+            throw new NotSupportedException();
 
         #endregion
 

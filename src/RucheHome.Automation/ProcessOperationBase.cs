@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -12,8 +13,10 @@ namespace RucheHome.Automation
     /// <see cref="IProcessOperation"/> インタフェースの抽象実装クラス。
     /// </summary>
     /// <remarks>
-    /// 既定では、各メソッドは互いに排他制御されている。
-    /// そのため、派生クラスで内部メソッドを実装する際、他のメソッドを呼び出さないこと。
+    /// 既定では、 <see cref="Update"/>, <see cref="GetProcessFilePath"/>,
+    /// <see cref="RunProcess"/>, <see cref="ExitProcess"/> の各メソッドは互いに
+    /// <see cref="LockObject"/> を用いて排他制御され、
+    /// 末尾に "Core" を付けた名前のメソッドに実処理を委譲している。
     /// </remarks>
     public abstract class ProcessOperationBase : BindableBase, IProcessOperation
     {
@@ -23,33 +26,239 @@ namespace RucheHome.Automation
         public ProcessOperationBase() { }
 
         /// <summary>
-        /// 操作対象プロセスを取得または設定する。
+        /// 排他制御用オブジェクト。
+        /// </summary>
+        protected readonly object LockObject = new object();
+
+        /// <summary>
+        /// 操作対象プロセスを取得する。
         /// </summary>
         /// <remarks>
-        /// 起動していないならば null となる。
+        /// <para>起動していないならば null とすること。</para>
+        /// <para>
+        /// 既定では、派生クラスでこのプロパティの値を更新するには
+        /// <see cref="UpdateByProcess"/> を用いること。
+        /// </para>
         /// </remarks>
-        protected virtual Process TargetProcess
-        {
-            get => this.targetProcess;
-            set =>
-                this.SetProperty(
-                    ref this.targetProcess,
-                    (value?.HasExited == false) ? value : null);
-        }
+        protected virtual Process TargetProcess => this.targetProcess;
         private Process targetProcess = null;
+
+        #region 要オーバライド
+
+        /// <summary>
+        /// 操作対象プロセスの製品名情報を取得する。
+        /// </summary>
+        /// <remarks>
+        /// <para>操作対象プロセスか否かの判別に利用される。</para>
+        /// <para>インスタンス生成後に値が変化することはない。</para>
+        /// </remarks>
+        public abstract string ProcessProduct { get; }
+
+        /// <summary>
+        /// 操作対象プロセスの実行ファイル名(拡張子なし)を取得する。
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <see cref="Process.GetProcessesByName(string)">Process.GetProcessesByName</see>
+        /// メソッドの引数として利用できる。
+        /// </para>
+        /// <para>インスタンス生成後に値が変化することはない。</para>
+        /// </remarks>
+        public abstract string ProcessFileName { get; }
+
+        /// <summary>
+        /// <see cref="RunProcess"/> の既定の実装によってプロセスを起動させた後の処理を行う。
+        /// </summary>
+        /// <param name="process">起動済みプロセス。製品情報の一致も確認済み。</param>
+        /// <returns>成功したならば true 。そうでなければ false 。</returns>
+        /// <remarks>
+        /// <para>
+        /// 既定では <see cref="NotImplementedException"/> 例外を送出するため、
+        /// <see cref="RunProcess"/> の既定の実装を用いるならば必ずオーバライドすること。
+        /// </para>
+        /// <para>
+        /// このメソッドで true を返しても、 <see cref="TargetProcess"/> が
+        /// null のままの場合は呼び出し元で失敗扱いとなる。
+        /// </para>
+        /// </remarks>
+        protected virtual Result<bool> RunProcessImpl(Process process) =>
+            throw new NotImplementedException();
+
+        /// <summary>
+        /// <see cref="ExitProcess"/>
+        /// の既定の実装によってプロセスに終了通知を行った後の処理を行う。
+        /// </summary>
+        /// <param name="process">
+        /// <see cref="Process.CloseMainWindow">Process.CloseMainWindow</see>
+        /// 呼び出し済みプロセス。 <see cref="TargetProcess"/> と同一。
+        /// </param>
+        /// <returns>
+        /// 成功したならば true 。
+        /// 終了通知には成功したがプロセス側で終了が抑止されたならば null 。
+        /// 失敗したならば false 。
+        /// </returns>
+        /// <remarks>
+        /// <para>
+        /// 既定では <see cref="NotImplementedException"/> 例外を送出するため、
+        /// <see cref="ExitProcess"/> の既定の実装を用いるならば必ずオーバライドすること。
+        /// </para>
+        /// <para>
+        /// このメソッドで true を返しても、 <see cref="TargetProcess"/> が
+        /// null 以外のままの場合は呼び出し元で失敗扱いとなる。
+        /// </para>
+        /// </remarks>
+        protected virtual Result<bool?> ExitProcessImpl(Process process) =>
+            throw new NotImplementedException();
+
+        #endregion
+
+        #region Update メソッドの既定の実処理
+
+        /// <summary>
+        /// <see cref="Update"/> メソッドの既定の実処理を行う。
+        /// </summary>
+        /// <param name="processes">
+        /// 対象プロセス検索先列挙。メソッド内でプロセスリストを取得させるならば null 。
+        /// </param>
+        /// <remarks>
+        /// 既定では <see cref="FindTargetProcess"/> によってプロセスを検索し、
+        /// 見つかったか否かに関わらず <see cref="UpdateByProcess"/> を呼び出す。
+        /// </remarks>
+        protected virtual void UpdateCore(IEnumerable<Process> processes = null) =>
+            this.UpdateByProcess(this.FindTargetProcess(processes));
+
+        /// <summary>
+        /// プロセス検索オブジェクト。
+        /// </summary>
+        private readonly ProcessDetector ProcessDetector = new ProcessDetector();
+
+        /// <summary>
+        /// 操作対象プロセスを検索する。
+        /// </summary>
+        /// <param name="processes">
+        /// 対象プロセス検索先列挙。メソッド内でプロセスリストを取得させるならば null 。
+        /// </param>
+        /// <returns>操作対象プロセス。見つからなければ null 。</returns>
+        protected Process FindTargetProcess(IEnumerable<Process> processes = null)
+        {
+            this.ProcessDetector.ProductName = this.ProcessProduct;
+
+            // processes が非 null ならばファイル名は検索条件としない
+            this.ProcessDetector.FileName =
+                (processes == null) ? this.ProcessFileName : null;
+
+            return this.ProcessDetector.Detect(processes).FirstOrDefault(p => !p.HasExited);
+        }
 
         /// <summary>
         /// 操作対象プロセスによって状態を更新する。
         /// </summary>
-        /// <param name="process">操作対象プロセス。見つからなければ null 。</param>
+        /// <param name="targetProcess">操作対象プロセス。見つからなければ null 。</param>
         /// <remarks>
-        /// 既定では各プロパティ値を更新する。
+        /// 既定では、 <see cref="TargetProcess"/> を更新し、必要に応じて各プロパティ値の
+        /// <see cref="INotifyPropertyChanged.PropertyChanged"/> イベントを呼び出す。
         /// </remarks>
-        protected virtual void UpdateByProcess(Process process)
+        protected virtual void UpdateByProcess(Process targetProcess)
         {
-            this.TargetProcess = process;
-            this.IsAlive = (process?.HasExited == false);
-            this.CanOperate = this.IsAlive;
+            var process = (targetProcess?.HasExited == false) ? targetProcess : null;
+            if (process == this.TargetProcess)
+            {
+                return;
+            }
+
+            var oldMainWindowHandle = this.MainWindowHandle;
+            var oldAlive = this.IsAlive;
+            var oldCanOperate = this.CanOperate;
+
+            // TargetProcess プロパティ値更新
+            this.targetProcess = process;
+
+            // 各プロパティ値の PropertyChanged イベント呼び出し
+            this.RaisePropertyChanged(nameof(TargetProcess));
+            if (this.MainWindowHandle != oldMainWindowHandle)
+            {
+                this.RaisePropertyChanged(nameof(MainWindowHandle));
+            }
+            if (this.IsAlive != oldAlive)
+            {
+                this.RaisePropertyChanged(nameof(IsAlive));
+            }
+            if (this.CanOperate != oldCanOperate)
+            {
+                this.RaisePropertyChanged(nameof(CanOperate));
+            }
+        }
+
+        #endregion
+
+        #region GetProcessFilePath メソッドの既定の実処理
+
+        /// <summary>
+        /// <see cref="GetProcessFilePath"/> の既定の実処理を行う。
+        /// </summary>
+        /// <returns>実行ファイルパス。取得できなかった場合は null 。</returns>
+        /// <remarks>
+        /// 既定では、 <see cref="TargetProcess"/> が null の場合は取得できない。
+        /// </remarks>
+        protected virtual Result<string> GetProcessFilePathCore()
+        {
+            var process = this.TargetProcess;
+            if (process == null)
+            {
+                return (null, @"実行中のみ取得可能です。");
+            }
+
+            try
+            {
+                var filePath = process.MainModule.FileName;
+                return (
+                    filePath,
+                    (filePath == null) ? @"情報を取得できませんでした。" : null);
+            }
+            catch (Exception ex)
+            {
+                ThreadTrace.WriteException(ex);
+            }
+            return (null, @"情報を取得できませんでした。");
+        }
+
+        #endregion
+
+        #region RunProcess メソッドの既定の実処理
+
+        /// <summary>
+        /// <see cref="RunProcess"/> メソッドの既定の実処理を行う。
+        /// </summary>
+        /// <param name="processFilePath">実行ファイルパス。</param>
+        /// <returns>成功したならば true 。そうでなければ false 。</returns>
+        /// <remarks>
+        /// 既定では、 <see cref="StartProcess"/> によるプロセスの起動処理を行い、
+        /// 処理に成功したならば <see cref="RunProcessImpl"/> を呼び出す。
+        /// </remarks>
+        protected virtual Result<bool> RunProcessCore(string processFilePath)
+        {
+            if (this.IsAlive && this.TargetProcess?.HasExited == false)
+            {
+                // 既に起動しているので何もしない
+                return (true, @"既に起動しています。");
+            }
+
+            // 起動処理
+            var (process, failMessage) = this.StartProcess(processFilePath);
+            if (process == null)
+            {
+                return (false, failMessage);
+            }
+
+            // 派生クラス処理
+            var r = this.RunProcessImpl(process);
+
+            if (r.Value && this.TargetProcess == null)
+            {
+                return (false, @"起動を確認できません。");
+            }
+
+            return r;
         }
 
         /// <summary>
@@ -152,77 +361,58 @@ namespace RucheHome.Automation
             return process;
         }
 
-        /// <summary>
-        /// 排他制御用オブジェクト。
-        /// </summary>
-        private readonly object LockObject = new object();
+        #endregion
 
-        #region 要オーバライド
+        #region ExitProcess メソッドの既定の実処理
 
         /// <summary>
-        /// 操作対象プロセスの製品名情報を取得する。
+        /// <see cref="ExitProcess"/> メソッドの既定の実処理を行う。
         /// </summary>
-        /// <remarks>
-        /// <para>操作対象プロセスか否かの判別に利用される。</para>
-        /// <para>インスタンス生成後に値が変化することはない。</para>
-        /// </remarks>
-        public abstract string ProcessProduct { get; }
-
-        /// <summary>
-        /// 操作対象プロセスの実行ファイル名(拡張子なし)を取得する。
-        /// </summary>
-        /// <remarks>
-        /// <para>
-        /// <see cref="Process.GetProcessesByName(string)">Process.GetProcessesByName</see>
-        /// メソッドの引数として利用できる。
-        /// </para>
-        /// <para>インスタンス生成後に値が変化することはない。</para>
-        /// </remarks>
-        public abstract string ProcessFileName { get; }
-
-        /// <summary>
-        /// <see cref="RunProcess"/> の既定の実装によってプロセスを起動させた後の処理を行う。
-        /// </summary>
-        /// <param name="process">起動済みプロセス。製品情報の一致も確認済み。</param>
-        /// <returns>成功したならば true 。そうでなければ false 。</returns>
-        /// <remarks>
-        /// <para>
-        /// 既定では <see cref="NotImplementedException"/> 例外を送出するため、
-        /// <see cref="RunProcess"/> の既定の実装を用いるならば必ずオーバライドすること。
-        /// </para>
-        /// <para>
-        /// このメソッドで true を返しても、 <see cref="TargetProcess"/> が
-        /// null のままの場合は呼び出し元で失敗扱いとなる。
-        /// </para>
-        /// </remarks>
-        protected virtual Result<bool> RunProcessImpl(Process process) =>
-            throw new NotImplementedException();
-
-        /// <summary>
-        /// <see cref="ExitProcess"/>
-        /// の既定の実装によってプロセスに終了通知を行った後の処理を行う。
-        /// </summary>
-        /// <param name="process">
-        /// <see cref="Process.CloseMainWindow">Process.CloseMainWindow</see>
-        /// 呼び出し済みプロセス。 <see cref="TargetProcess"/> と同一。
-        /// </param>
         /// <returns>
         /// 成功したならば true 。
         /// 終了通知には成功したがプロセス側で終了が抑止されたならば null 。
         /// 失敗したならば false 。
         /// </returns>
         /// <remarks>
-        /// <para>
-        /// 既定では <see cref="NotImplementedException"/> 例外を送出するため、
-        /// <see cref="ExitProcess"/> の既定の実装を用いるならば必ずオーバライドすること。
-        /// </para>
-        /// <para>
-        /// このメソッドで true を返しても、 <see cref="TargetProcess"/> が
-        /// null 以外のままの場合は呼び出し元で失敗扱いとなる。
-        /// </para>
+        /// 既定では、プロセスの終了通知を行い、通知に成功したならば
+        /// <see cref="ExitProcessImpl"/> を呼び出す。
         /// </remarks>
-        protected virtual Result<bool?> ExitProcessImpl(Process process) =>
-            throw new NotImplementedException();
+        protected virtual Result<bool?> ExitProcessCore()
+        {
+            var process = this.TargetProcess;
+            if (process == null)
+            {
+                // 既に終了しているので何もしない
+                return (true, @"終了済みです。");
+            }
+
+            try
+            {
+                if (!process.HasExited)
+                {
+                    // 終了通知
+                    if (!process.CloseMainWindow())
+                    {
+                        return (false, @"終了通知に失敗しました。");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ThreadTrace.WriteException(ex);
+                return (false, @"終了処理に失敗しました。");
+            }
+
+            // 派生クラス処理
+            var r = this.ExitProcessImpl(process);
+
+            if (r.Value == true && this.TargetProcess != null)
+            {
+                return (false, @"終了を確認できません。");
+            }
+
+            return r;
+        }
 
         #endregion
 
@@ -232,10 +422,12 @@ namespace RucheHome.Automation
         /// メインウィンドウハンドルを取得する。
         /// </summary>
         /// <remarks>
-        /// <see cref="TargetProcess"/> が null もしくは終了済みの場合、および
-        /// <see cref="IsAlive"/> が false の場合は <see cref="IntPtr.Zero"/> を返す。
+        /// 既定では、 <see cref="TargetProcess"/> が有効かつ
+        /// <see cref="IsAlive"/> が true ならば
+        /// <see cref="TargetProcess"/>.<see cref="Process.MainWindowHandle"/> を返す。
+        /// そうでなければ <see cref="IntPtr.Zero">IntPtr.Zero</see> を返す。
         /// </remarks>
-        public IntPtr MainWindowHandle
+        public virtual IntPtr MainWindowHandle
         {
             get
             {
@@ -253,24 +445,14 @@ namespace RucheHome.Automation
         /// 対象プロセス検索先列挙。メソッド内でプロセスリストを取得させるならば null 。
         /// </param>
         /// <remarks>
-        /// 既定では <see cref="ProcessProduct"/> によってプロセスを特定し、
-        /// <see cref="UpdateByProcess"/> を呼び出す。
+        /// 既定では <see cref="LockObject"/> による排他ロックを行った後に
+        /// <see cref="UpdateCore"/> を呼び出す。
         /// </remarks>
         public virtual void Update(IEnumerable<Process> processes = null)
         {
-            // 検索インスタンス作成
-            // processes が指定されているならファイル名は検索条件としない
-            var detector =
-                new ProcessDetector(
-                    fileName: (processes == null) ? this.ProcessFileName : null,
-                    productName: this.ProcessProduct);
-
             lock (this.LockObject)
             {
-                // 検索
-                var process = detector.Detect(processes).FirstOrDefault();
-
-                this.UpdateByProcess(process);
+                this.UpdateCore(processes);
             }
         }
 
@@ -279,29 +461,15 @@ namespace RucheHome.Automation
         /// </summary>
         /// <returns>実行ファイルパス。取得できなかった場合は null 。</returns>
         /// <remarks>
-        /// 既定では、 <see cref="TargetProcess"/> が null の場合は取得できない。
+        /// 既定では <see cref="LockObject"/> による排他ロックを行った後に
+        /// <see cref="GetProcessFilePathCore"/> を呼び出す。
         /// </remarks>
         public virtual Result<string> GetProcessFilePath()
         {
             lock (this.LockObject)
             {
-                var process = this.TargetProcess;
-                if (process == null)
-                {
-                    return (null, @"実行中のみ取得可能です。");
-                }
-
-                try
-                {
-                    return process.MainModule.FileName;
-                }
-                catch (Exception ex)
-                {
-                    ThreadTrace.WriteException(ex);
-                }
+                return this.GetProcessFilePathCore();
             }
-
-            return (null, @"情報を取得できませんでした。");
         }
 
         /// <summary>
@@ -310,35 +478,14 @@ namespace RucheHome.Automation
         /// <param name="processFilePath">実行ファイルパス。</param>
         /// <returns>成功したならば true 。そうでなければ false 。</returns>
         /// <remarks>
-        /// 既定では、プロセスの起動処理を行い、処理に成功したならば
-        /// <see cref="RunProcessImpl"/> を呼び出す。
+        /// 既定では <see cref="LockObject"/> による排他ロックを行った後に
+        /// <see cref="RunProcessCore"/> を呼び出す。
         /// </remarks>
         public virtual Result<bool> RunProcess(string processFilePath)
         {
             lock (this.LockObject)
             {
-                if (this.IsAlive && this.TargetProcess?.HasExited == false)
-                {
-                    // 既に起動しているので何もしない
-                    return (true, @"既に起動しています。");
-                }
-
-                // 起動処理
-                var (process, failMessage) = this.StartProcess(processFilePath);
-                if (process == null)
-                {
-                    return (false, failMessage);
-                }
-
-                // 派生クラス処理
-                var r = this.RunProcessImpl(process);
-
-                if (r.Value && this.TargetProcess == null)
-                {
-                    return (false, @"起動を確認できません。");
-                }
-
-                return r;
+                return this.RunProcessCore(processFilePath);
             }
         }
 
@@ -351,46 +498,14 @@ namespace RucheHome.Automation
         /// 失敗したならば false 。
         /// </returns>
         /// <remarks>
-        /// 既定では、プロセスの終了通知を行い、通知に成功したならば
-        /// <see cref="ExitProcessImpl"/> を呼び出す。
+        /// 既定では <see cref="LockObject"/> による排他ロックを行った後に
+        /// <see cref="ExitProcessCore"/> を呼び出す。
         /// </remarks>
         public virtual Result<bool?> ExitProcess()
         {
             lock (this.LockObject)
             {
-                var process = this.TargetProcess;
-                if (process == null)
-                {
-                    // 既に終了しているので何もしない
-                    return (true, @"終了済みです。");
-                }
-
-                try
-                {
-                    if (!process.HasExited)
-                    {
-                        // 終了通知
-                        if (!process.CloseMainWindow())
-                        {
-                            return (false, @"終了通知に失敗しました。");
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    ThreadTrace.WriteException(ex);
-                    return (false, @"終了処理に失敗しました。");
-                }
-
-                // 派生クラス処理
-                var r = this.ExitProcessImpl(process);
-
-                if (r.Value == true && this.TargetProcess != null)
-                {
-                    return (false, @"終了を確認できません。");
-                }
-
-                return r;
+                return this.ExitProcessCore();
             }
         }
 
@@ -401,22 +516,18 @@ namespace RucheHome.Automation
         /// <summary>
         /// 操作対象が生存状態であるか否かを取得する。
         /// </summary>
-        public virtual bool IsAlive
-        {
-            get => this.alive;
-            protected set => this.SetProperty(ref this.alive, value);
-        }
-        private bool alive = false;
+        /// <remarks>
+        /// 既定では <see cref="TargetProcess"/> が有効ならば true を返す。
+        /// </remarks>
+        public virtual bool IsAlive => (this.TargetProcess?.HasExited == false);
 
         /// <summary>
         /// 操作対象が操作可能な状態であるか否かを取得する。
         /// </summary>
-        public virtual bool CanOperate
-        {
-            get => this.canOperate;
-            protected set => this.SetProperty(ref this.canOperate, value);
-        }
-        private bool canOperate = false;
+        /// <remarks>
+        /// 既定では <see cref="IsAlive"/> と同じ値を返す。
+        /// </remarks>
+        public virtual bool CanOperate => this.IsAlive;
 
         #endregion
     }

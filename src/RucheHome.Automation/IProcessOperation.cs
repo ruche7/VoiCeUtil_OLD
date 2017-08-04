@@ -14,7 +14,7 @@ namespace RucheHome.Automation
         /// </summary>
         /// <remarks>
         /// <para>
-        /// <see cref="Process.GetProcessesByName">Process.GetProcessesByName</see>
+        /// <see cref="Process.GetProcessesByName(string)">Process.GetProcessesByName</see>
         /// メソッドの引数として利用できる。
         /// </para>
         /// <para>インスタンス生成後に値が変化することはない。</para>
@@ -25,7 +25,7 @@ namespace RucheHome.Automation
         /// メインウィンドウハンドルを取得する。
         /// </summary>
         /// <remarks>
-        /// 少なくとも <see cref="IsAlive"/> が false の場合は
+        /// 少なくとも <see cref="IOperationState.IsAlive"/> が false の場合は
         /// <see cref="IntPtr.Zero"/> を返す。
         /// </remarks>
         IntPtr MainWindowHandle { get; }
