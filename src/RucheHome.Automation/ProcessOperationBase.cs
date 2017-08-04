@@ -37,7 +37,7 @@ namespace RucheHome.Automation
         /// <para>起動していないならば null とすること。</para>
         /// <para>
         /// 既定では、派生クラスでこのプロパティの値を更新するには
-        /// <see cref="UpdateByProcess"/> を用いること。
+        /// <see cref="UpdateByTargetProcess"/> を用いること。
         /// </para>
         /// </remarks>
         protected virtual Process TargetProcess => this.targetProcess;
@@ -120,12 +120,15 @@ namespace RucheHome.Automation
         /// <param name="processes">
         /// 対象プロセス検索先列挙。メソッド内でプロセスリストを取得させるならば null 。
         /// </param>
+        /// <returns>プロパティ値変更通知を行うデリゲート。通知不要ならば null 。</returns>
         /// <remarks>
         /// 既定では <see cref="FindTargetProcess"/> によってプロセスを検索し、
-        /// 見つかったか否かに関わらず <see cref="UpdateByProcess"/> を呼び出す。
+        /// 見つかったか否かに関わらず <see cref="UpdateByTargetProcess"/> を呼び出す。
         /// </remarks>
-        protected virtual void UpdateCore(IEnumerable<Process> processes = null) =>
-            this.UpdateByProcess(this.FindTargetProcess(processes));
+        protected virtual Action UpdateCore(
+            IEnumerable<Process> processes = null)
+            =>
+            this.UpdateByTargetProcess(this.FindTargetProcess(processes));
 
         /// <summary>
         /// プロセス検索オブジェクト。
@@ -153,17 +156,31 @@ namespace RucheHome.Automation
         /// <summary>
         /// 操作対象プロセスによって状態を更新する。
         /// </summary>
-        /// <param name="targetProcess">操作対象プロセス。見つからなければ null 。</param>
+        /// <param name="targetProcess">
+        /// 操作対象プロセス。見つからなかった場合は null 。
+        /// </param>
+        /// <returns>プロパティ値変更通知を行うデリゲート。通知不要ならば null 。</returns>
         /// <remarks>
-        /// 既定では、 <see cref="TargetProcess"/> を更新し、必要に応じて各プロパティ値の
-        /// <see cref="INotifyPropertyChanged.PropertyChanged"/> イベントを呼び出す。
+        /// <para>
+        /// 既定では、 <see cref="TargetProcess"/> を更新し、
+        /// <see cref="TargetProcess"/>, <see cref="MainWindowHandle"/>,
+        /// <see cref="IsAlive"/>, <see cref="CanOperate"/>
+        /// の各プロパティ値のうち変更のあったものについて
+        /// <see cref="INotifyPropertyChanged.PropertyChanged"/>
+        /// イベントを呼び出すデリゲートを作成して返す。
+        /// </para>
+        /// <para>
+        /// ただし、引数値が現在の <see cref="TargetProcess"/> と等価ならば、何もせず
+        /// null を返す。
+        /// </para>
         /// </remarks>
-        protected virtual void UpdateByProcess(Process targetProcess)
+        protected virtual Action UpdateByTargetProcess(Process targetProcess)
         {
             var process = (targetProcess?.HasExited == false) ? targetProcess : null;
             if (process == this.TargetProcess)
             {
-                return;
+                // 操作対象プロセスに変化が無ければ何もしない
+                return null;
             }
 
             var oldMainWindowHandle = this.MainWindowHandle;
@@ -173,20 +190,31 @@ namespace RucheHome.Automation
             // TargetProcess プロパティ値更新
             this.targetProcess = process;
 
-            // 各プロパティ値の PropertyChanged イベント呼び出し
-            this.RaisePropertyChanged(nameof(TargetProcess));
+            // PropertyChanged イベント呼び出し対象プロパティ名リスト作成
+            var propNames = new List<string>();
+            propNames.Add(nameof(TargetProcess));
             if (this.MainWindowHandle != oldMainWindowHandle)
             {
-                this.RaisePropertyChanged(nameof(MainWindowHandle));
+                propNames.Add(nameof(MainWindowHandle));
             }
             if (this.IsAlive != oldAlive)
             {
-                this.RaisePropertyChanged(nameof(IsAlive));
+                propNames.Add(nameof(IsAlive));
             }
             if (this.CanOperate != oldCanOperate)
             {
-                this.RaisePropertyChanged(nameof(CanOperate));
+                propNames.Add(nameof(CanOperate));
             }
+
+            // PropertyChanged 呼び出しデリゲートを作成して返す
+            return
+                () =>
+                {
+                    foreach (var name in propNames)
+                    {
+                        this.RaisePropertyChanged(name);
+                    }
+                };
         }
 
         #endregion
@@ -445,14 +473,31 @@ namespace RucheHome.Automation
         /// 対象プロセス検索先列挙。メソッド内でプロセスリストを取得させるならば null 。
         /// </param>
         /// <remarks>
+        /// <para>
         /// 既定では <see cref="LockObject"/> による排他ロックを行った後に
         /// <see cref="UpdateCore"/> を呼び出す。
+        /// その後、戻り値のプロパティ値変更通知デリゲートを排他ロック外で呼び出す。
+        /// </para>
+        /// <para>
+        /// 排他ロック内で <see cref="INotifyPropertyChanged.PropertyChanged"/>
+        /// イベントを呼び出してしまうと、アタッチされたデリゲートから他のメソッドが
+        /// 呼び出されることによるデッドロックの恐れがあるため、このような処理となっている。
+        /// </para>
         /// </remarks>
         public virtual void Update(IEnumerable<Process> processes = null)
         {
-            lock (this.LockObject)
+            Action propChanged = null;
+
+            try
             {
-                this.UpdateCore(processes);
+                lock (this.LockObject)
+                {
+                    propChanged = this.UpdateCore(processes);
+                }
+            }
+            finally
+            {
+                propChanged?.Invoke();
             }
         }
 

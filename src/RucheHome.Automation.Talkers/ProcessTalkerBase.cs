@@ -228,31 +228,6 @@ namespace RucheHome.Automation.Talkers
         private bool IsPropertyChangedOnSaveFile { get; set; } = false;
 
         /// <summary>
-        /// 状態を更新する。
-        /// </summary>
-        /// <param name="processes">
-        /// 対象プロセス検索先列挙。メソッド内でプロセスリストを取得させるならば null 。
-        /// </param>
-        /// <returns>プロパティ値変更通知を行うデリゲート。通知不要ならば null 。</returns>
-        private Action UpdateImpl(IEnumerable<Process> processes = null)
-        {
-            return this.UpdateByTargetProcess(this.FindTargetProcess(processes));
-        }
-
-        /// <summary>
-        /// 操作対象プロセスによって状態を更新する。
-        /// </summary>
-        /// <param name="targetProcess">操作対象プロセス。</param>
-        /// <returns>プロパティ値変更通知を行うデリゲート。通知不要ならば null 。</returns>
-        private Action UpdateByTargetProcess(Process targetProcess)
-        {
-            var r =
-                (targetProcess != null) ? this.CheckState(targetProcess) : TalkerState.None;
-
-            return this.UpdateProperties(r.Value, r.Message, targetProcess);
-        }
-
-        /// <summary>
         /// <see cref="TargetProcess"/> によって状態を更新する。
         /// </summary>
         /// <param name="refresh">
@@ -762,45 +737,40 @@ namespace RucheHome.Automation.Talkers
         public override sealed void Update(IEnumerable<Process> processes = null)
         {
             // SaveFile 処理中のデッドロック回避
-            if (this.IsPropertyChangedOnSaveFile)
+            if (!this.IsPropertyChangedOnSaveFile)
             {
-                return;
-            }
-
-            Action raisePropChanged = null;
-
-            try
-            {
-                lock (this.LockObject)
-                {
-                    raisePropChanged = this.UpdateImpl(processes);
-                }
-            }
-            finally
-            {
-                raisePropChanged?.Invoke();
+                base.Update(processes);
             }
         }
 
         /// <summary>
-        /// <see cref="ProcessOperationBase.UpdateCore"/> の隠蔽実装。
+        /// <see cref="Update"/> メソッドの実処理を行う。
         /// </summary>
-        /// <param name="processes">無視される。</param>
+        /// <param name="processes">
+        /// 対象プロセス検索先列挙。メソッド内でプロセスリストを取得させるならば null 。
+        /// </param>
+        /// <returns>プロパティ値変更通知を行うデリゲート。通知不要ならば null 。</returns>
         /// <remarks>
-        /// 必ず <see cref="NotSupportedException"/> 例外を送出する。
+        /// 実装の sealed 化のためのオーバライド。
         /// </remarks>
-        protected override sealed void UpdateCore(IEnumerable<Process> processes) =>
-            throw new NotSupportedException();
+        protected override sealed Action UpdateCore(IEnumerable<Process> processes) =>
+            base.UpdateCore(processes);
 
         /// <summary>
-        /// <see cref="ProcessOperationBase.UpdateByProcess"/> の隠蔽実装。
+        /// 操作対象プロセスによって状態を更新する。
         /// </summary>
-        /// <param name="targetProcess">無視される。</param>
-        /// <remarks>
-        /// 必ず <see cref="NotSupportedException"/> 例外を送出する。
-        /// </remarks>
-        protected override sealed void UpdateByProcess(Process targetProcess) =>
-            throw new NotSupportedException();
+        /// <param name="targetProcess">
+        /// 操作対象プロセス。見つからなかった場合は null 。
+        /// </param>
+        /// <returns>プロパティ値変更通知を行うデリゲート。通知不要ならば null 。</returns>
+        protected override sealed Action UpdateByTargetProcess(Process targetProcess)
+        {
+            var process = (targetProcess?.HasExited == false) ? targetProcess : null;
+            var (state, stateMessage) =
+                (process != null) ? this.CheckState(process) : TalkerState.None;
+
+            return this.UpdateProperties(state, stateMessage, process);
+        }
 
         /// <summary>
         /// 実行ファイルパスを取得する。
@@ -889,7 +859,7 @@ namespace RucheHome.Automation.Talkers
                     process.Dispose();
 
                     // 状態更新
-                    raisePropChanged = this.UpdateImpl(null);
+                    raisePropChanged = this.UpdateCore(null);
 
                     switch (this.State)
                     {
@@ -1033,7 +1003,7 @@ namespace RucheHome.Automation.Talkers
                     }
 
                     // 状態更新
-                    raisePropChanged = this.UpdateImpl(null);
+                    raisePropChanged = this.UpdateCore(null);
 
                     switch (this.State)
                     {
