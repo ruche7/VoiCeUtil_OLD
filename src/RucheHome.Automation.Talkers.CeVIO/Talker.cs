@@ -1104,7 +1104,7 @@ namespace RucheHome.Automation.Talkers.CeVIO
             try
             {
                 // WAVE書き出しメニューアイテムを取得
-                var menuItem = speechDataGrid.Control.ContextMenu.Items[12];
+                var menuItem = speechDataGrid.Base.ContextMenu.Items[12];
 
                 if (!(bool)menuItem.IsEnabled)
                 {

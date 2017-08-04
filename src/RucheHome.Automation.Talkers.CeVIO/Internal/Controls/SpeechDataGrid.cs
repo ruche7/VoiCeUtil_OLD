@@ -102,7 +102,7 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         /// <returns>コンテキストメニュー。</returns>
         private static dynamic InitializeContextMenu(AppDataGrid dataGrid)
         {
-            var menu = dataGrid.Control.ContextMenu;
+            var menu = dataGrid.Base.ContextMenu;
             if (menu == null)
             {
                 ThreadTrace.WriteLine(@"speechDataGrid.ContextMenu is null.");
@@ -135,7 +135,7 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
                         try
                         {
                             dataGrid.Focus();
-                            menu.PlacementTarget = dataGrid.Control;
+                            menu.PlacementTarget = dataGrid.Base;
                             try
                             {
                                 menu.IsOpen = true;

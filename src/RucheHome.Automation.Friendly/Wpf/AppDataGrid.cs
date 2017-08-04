@@ -20,7 +20,7 @@ namespace RucheHome.Automation.Friendly.Wpf
             ArgumentValidation.IsNotNull(dataGrid, nameof(dataGrid));
             ArgumentValidation.IsNotNull(appVisualTree, nameof(appVisualTree));
 
-            this.Control = dataGrid;
+            this.Base = dataGrid;
             this.AppVisualTree = appVisualTree;
         }
 
@@ -32,7 +32,7 @@ namespace RucheHome.Automation.Friendly.Wpf
         /// <summary>
         /// ラップ対象の DataGrid オブジェクトを取得する。
         /// </summary>
-        public dynamic Control { get; }
+        public dynamic Base { get; }
 
         /// <summary>
         /// 選択行のインデックスを取得または設定する。
@@ -42,24 +42,24 @@ namespace RucheHome.Automation.Friendly.Wpf
         /// </remarks>
         public int SelectedRow
         {
-            get => (int)this.Control.SelectedIndex;
-            set => this.Control.SelectedIndex = value;
+            get => (int)this.Base.SelectedIndex;
+            set => this.Base.SelectedIndex = value;
         }
 
         /// <summary>
         /// 行数を取得する。
         /// </summary>
-        public int RowCount => (int)this.Control.Items.Count;
+        public int RowCount => (int)this.Base.Items.Count;
 
         /// <summary>
         /// 列数を取得する。非表示の列も含む。
         /// </summary>
-        public int ColumnCount => (int)this.Control.Columns.Count;
+        public int ColumnCount => (int)this.Base.Columns.Count;
 
         /// <summary>
         /// DataGrid オブジェクトにフォーカスを設定する。
         /// </summary>
-        public void Focus() => this.Control.Focus();
+        public void Focus() => this.Base.Focus();
 
         /// <summary>
         /// DataGridRow オブジェクトを取得する。
@@ -73,7 +73,7 @@ namespace RucheHome.Automation.Friendly.Wpf
         /// </summary>
         /// <param name="column">列インデックス。非表示の列も含む。</param>
         /// <returns>DataGridColumn オブジェクト。</returns>
-        public dynamic GetColumn(int column) => this.Control.Columns[column];
+        public dynamic GetColumn(int column) => this.Base.Columns[column];
 
         /// <summary>
         /// DataGridCell オブジェクトを取得する。
@@ -158,7 +158,7 @@ namespace RucheHome.Automation.Friendly.Wpf
         {
             ArgumentValidation.IsNotNull(dataGridCell, nameof(dataGridCell));
 
-            this.Control.CurrentCell =
+            this.Base.CurrentCell =
                 this.App.Type(DataGridCellInfoTypeFullName)(
                     DataGridCellInfoConstructorInfo,
                     dataGridCell);
@@ -209,7 +209,7 @@ namespace RucheHome.Automation.Friendly.Wpf
             ArgumentValidation.IsNotNull(dataGridCell, nameof(dataGridCell));
             ArgumentValidation.IsNotNull(text, nameof(text));
 
-            var dataGrid = this.Control;
+            var dataGrid = this.Base;
             dataGrid.Focus();
 
             this.SelectCellFrom(dataGridCell);
@@ -239,7 +239,7 @@ namespace RucheHome.Automation.Friendly.Wpf
         {
             var vtree = this.AppVisualTree;
 
-            var border = vtree.GetDescendant(this.Control, 0);
+            var border = vtree.GetDescendant(this.Base, 0);
             var presenter = border.Child.Content;
             var parent = vtree.GetDescendant(presenter, 0);
 

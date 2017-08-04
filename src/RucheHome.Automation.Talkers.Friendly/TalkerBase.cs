@@ -6,7 +6,7 @@ using System.Windows.Automation;
 using Codeer.Friendly;
 using Codeer.Friendly.Windows;
 using Codeer.Friendly.Windows.Grasp;
-using Codeer.Friendly.Windows.NativeStandardControls;
+using RucheHome.Automation.Friendly.Native;
 using RucheHome.Diagnostics;
 
 namespace RucheHome.Automation.Talkers.Friendly
@@ -58,7 +58,12 @@ namespace RucheHome.Automation.Talkers.Friendly
         /// <summary>
         /// <see cref="Dispose()"/> メソッドによってリソース破棄済みであるか否かを取得する。
         /// </summary>
-        public bool IsDisposed { get; private set; } = false;
+        public bool IsDisposed
+        {
+            get => this.disposed;
+            private set => this.SetProperty(ref this.disposed, value);
+        }
+        private bool disposed = false;
 
         /// <summary>
         /// ウィンドウ種別列挙。
@@ -120,63 +125,6 @@ namespace RucheHome.Automation.Talkers.Friendly
         }
 
         /// <summary>
-        /// ファイルダイアログからファイル名コンボボックスを取得する。
-        /// </summary>
-        /// <param name="fileDialog">ファイルダイアログ。</param>
-        /// <returns>コンボボックス。取得できなかった場合は null 。</returns>
-        protected static NativeComboBox GetFileDialogFileNameComboBox(
-            WindowControl fileDialog)
-        {
-            if (fileDialog != null)
-            {
-                try
-                {
-                    var root = fileDialog.IdentifyFromZIndex(11, 0);
-
-                    // 直下に Edit を持つ ComboBox を探す
-                    var combo =
-                        root
-                            .GetFromWindowClass(@"ComboBox")
-                            .Where(c => c.GetFromWindowClass(@"Edit").Length > 0)
-                            .FirstOrDefault();
-
-                    if (combo != null)
-                    {
-                        return new NativeComboBox(combo);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    ThreadTrace.WriteException(ex);
-                }
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// ファイルダイアログから決定ボタンを取得する。
-        /// </summary>
-        /// <param name="fileDialog">ファイルダイアログ。</param>
-        /// <returns>ボタン。取得できなかった場合は null 。</returns>
-        protected static NativeButton GetFileDialogOkButton(WindowControl fileDialog)
-        {
-            if (fileDialog != null)
-            {
-                try
-                {
-                    return new NativeButton(fileDialog.IdentifyFromDialogId(1));
-                }
-                catch (Exception ex)
-                {
-                    ThreadTrace.WriteException(ex);
-                }
-            }
-
-            return null;
-        }
-
-        /// <summary>
         /// ファイルダイアログにファイルパスを設定して決定ボタンをクリックする。
         /// </summary>
         /// <param name="fileDialog">ファイルダイアログ。</param>
@@ -189,25 +137,22 @@ namespace RucheHome.Automation.Talkers.Friendly
             ArgumentValidation.IsNotNull(fileDialog, nameof(fileDialog));
             ArgumentValidation.IsNotNullOrEmpty(filePath, nameof(filePath));
 
-            // ファイル名コンボボックス、決定ボタンを取得
-            var fileNameCombo = GetFileDialogFileNameComboBox(fileDialog);
-            if (fileNameCombo == null)
+            // ファイルダイアログオブジェクト作成
+            AppFileDialog dialog = null;
+            try
             {
-                return (false, @"ダイアログのファイル名入力欄が見つかりません。");
+                dialog = new AppFileDialog(fileDialog);
             }
-            var okButton = GetFileDialogOkButton(fileDialog);
-            if (okButton == null)
+            catch (Exception ex)
             {
-                return (false, @"ダイアログの決定ボタンが見つかりません。");
+                ThreadTrace.WriteException(ex);
+                return (false, @"ダイアログの情報を取得できませんでした。");
             }
 
             // ファイルパス設定
             try
             {
-                var ok =
-                    WaitAsyncAction(
-                        async => fileNameCombo.EmulateChangeEditText(filePath, async));
-                if (!ok)
+                if (!WaitAsyncAction(async => dialog.SetFileName(filePath, async)))
                 {
                     return (
                         false,
@@ -223,12 +168,11 @@ namespace RucheHome.Automation.Talkers.Friendly
             try
             {
                 // 決定ボタンクリック
-                var okAsync = new Async();
-                okButton.EmulateClick(okAsync);
+                var async = new Async();
+                dialog.ClickDecideButton(async);
 
                 // ダイアログが表示されてしまったら失敗
-                var dialog = fileDialog.WaitForNextModal(okAsync);
-                if (dialog != null)
+                if (dialog.Base.WaitForNextModal(async) != null)
                 {
                     return (false, @"ダイアログが表示されたため処理を中止しました。");
                 }
@@ -566,8 +510,13 @@ namespace RucheHome.Automation.Talkers.Friendly
         /// </summary>
         public void Dispose()
         {
-            this.Dispose(true);
-            GC.SuppressFinalize(this);
+            if (!this.IsDisposed)
+            {
+                this.Dispose(true);
+                GC.SuppressFinalize(this);
+
+                this.IsDisposed = true;
+            }
         }
 
         /// <summary>
@@ -578,11 +527,6 @@ namespace RucheHome.Automation.Talkers.Friendly
         /// </param>
         protected virtual void Dispose(bool disposing)
         {
-            if (disposing)
-            {
-                this.IsDisposed = true;
-            }
-
             this.TargetApp?.Dispose();
             this.TargetApp = null;
         }
