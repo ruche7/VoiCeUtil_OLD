@@ -824,104 +824,84 @@ namespace RucheHome.Automation.Talkers
         public override sealed Result<bool> RunProcess(string processFilePath)
         {
             // SaveFile 処理中のデッドロック回避
-            // ダミーのロックオブジェクトを使わせる
-            bool propChangedOnSaveFile = this.IsPropertyChangedOnSaveFile;
-            object lockObj = propChangedOnSaveFile ? (new object()) : this.LockObject;
-
-            Result<bool> result;
-            Action raisePropChanged = null;
-
-            try
+            if (this.IsPropertyChangedOnSaveFile)
             {
-                lock (lockObj)
-                {
-                    if (
-                        propChangedOnSaveFile ||
-                        (this.State != TalkerState.None && this.State != TalkerState.Fail))
-                    {
-                        // 既に起動しているので何もしない
-                        return (true, @"既に起動しています。");
-                    }
-                    if (this.State == TalkerState.Fail)
-                    {
-                        return MakeStateErrorResult(false);
-                    }
-
-                    // 起動処理
-                    var (process, processMessage) = this.StartProcess(processFilePath);
-                    if (process == null)
-                    {
-                        return (false, processMessage);
-                    }
-
-                    // Process インスタンスのリソースを破棄
-                    // プロセス自体は起動し続ける
-                    process.Dispose();
-
-                    // 状態更新
-                    raisePropChanged = this.UpdateCore(null);
-
-                    switch (this.State)
-                    {
-                    case TalkerState.None:
-                        result = (false, @"起動状態にできませんでした。");
-                        break;
-
-                    case TalkerState.Cleanup:
-                        // 多重起動に引っ掛かるとここに来る場合がある
-                        // 通常は事前に弾くはず ⇒ 起動状態を確認できていない可能性が高い
-                        result = (false, @"管理者権限で起動済みの可能性があります。");
-                        break;
-
-                    case TalkerState.Fail:
-                        result = MakeStateErrorResult(false);
-                        break;
-
-                    default:
-                        result = true;
-                        break;
-                    }
-                }
-            }
-            finally
-            {
-                try
-                {
-                    raisePropChanged?.Invoke();
-                }
-                catch (Exception ex)
-                {
-                    ThreadTrace.WriteException(ex);
-                    result = (
-                        false,
-                        ex.Message ?? (ex.GetType().Name + @" 例外が発生しました。"));
-                }
+                // 既に起動しているはずなので何もしない
+                return (true, @"既に起動しています。");
             }
 
-            return result;
+            return base.RunProcess(processFilePath);
         }
 
         /// <summary>
-        /// <see cref="ProcessOperationBase.RunProcessCore"/> の隠蔽実装。
+        /// <see cref="RunProcess"/> メソッドの実処理を行う。
         /// </summary>
-        /// <param name="processFilePath">無視される。</param>
-        /// <returns>値を返すことはない。</returns>
-        /// <remarks>
-        /// 必ず <see cref="NotSupportedException"/> 例外を送出する。
-        /// </remarks>
-        protected override sealed Result<bool> RunProcessCore(string processFilePath) =>
-            throw new NotSupportedException();
+        /// <param name="processFilePath">実行ファイルパス。</param>
+        /// <param name="raisePropertyChanged">
+        /// プロパティ値変更通知を行うデリゲートの設定先。通知不要ならば null が設定される。
+        /// </param>
+        /// <returns>成功したならば true 。そうでなければ false 。</returns>
+        protected override sealed Result<bool> RunProcessCore(
+            string processFilePath,
+            out Action raisePropertyChanged)
+        {
+            raisePropertyChanged = null;
+
+            switch (this.State)
+            {
+            case TalkerState.None:
+                break;
+
+            case TalkerState.Fail:
+                return MakeStateErrorResult(false);
+
+            default:
+                // 既に起動しているので何もしない
+                return (true, @"既に起動しています。");
+            }
+
+            return base.RunProcessCore(processFilePath, out raisePropertyChanged);
+        }
 
         /// <summary>
-        /// <see cref="ProcessOperationBase.RunProcessImpl"/> の隠蔽実装。
+        /// <see cref="RunProcess"/>
+        /// メソッドの既定の実装によってプロセスを起動させた後の処理を行う。
         /// </summary>
-        /// <param name="process">無視される。</param>
-        /// <returns>値を返すことはない。</returns>
-        /// <remarks>
-        /// 必ず <see cref="NotSupportedException"/> 例外を送出する。
-        /// </remarks>
-        protected override sealed Result<bool> RunProcessImpl(Process process) =>
-            throw new NotSupportedException();
+        /// <param name="process">起動済みプロセス。製品情報の一致も確認済み。</param>
+        /// <param name="raisePropertyChanged">
+        /// プロパティ値変更通知を行うデリゲートの設定先。通知不要ならば null が設定される。
+        /// </param>
+        /// <returns>成功したならば true 。そうでなければ false 。</returns>
+        protected override sealed Result<bool> RunProcessImpl(
+            Process process,
+            out Action raisePropertyChanged)
+        {
+            // Process インスタンスのリソースを破棄
+            // プロセス自体は起動し続ける
+            process.Dispose();
+
+            // 状態更新
+            raisePropertyChanged = this.UpdateCore(null);
+
+            switch (this.State)
+            {
+            case TalkerState.None:
+                return (false, @"起動状態にできませんでした。");
+
+            case TalkerState.Cleanup:
+                // 多重起動に引っ掛かるとここに来る場合がある
+                // 通常は事前に弾くはず ⇒ 起動状態を確認できていない可能性が高い
+                return (false, @"管理者権限で起動済みの可能性があります。");
+
+            case TalkerState.Fail:
+                return MakeStateErrorResult(false);
+
+            default:
+                break;
+            }
+
+            return true;
+        }
 
         /// <summary>
         /// プロセスを終了させる。
@@ -943,123 +923,110 @@ namespace RucheHome.Automation.Talkers
                 return MakeStateErrorResult<bool?>(false);
             }
 
-            Result<bool?> result;
-            Action raisePropChanged = null;
-
-            try
-            {
-                lock (this.LockObject)
-                {
-                    switch (this.State)
-                    {
-                    case TalkerState.None:
-                        // 既に終了しているので何もしない
-                        return (true, @"終了済みです。");
-
-                    case TalkerState.Startup:
-                    case TalkerState.Cleanup:
-                    case TalkerState.Idle:
-                    case TalkerState.Speaking:
-                        break;
-
-                    default:
-                        return MakeStateErrorResult<bool?>(false);
-                    }
-
-                    try
-                    {
-                        var process = this.TargetProcess;
-
-                        if (process?.HasExited == false)
-                        {
-                            // 終了前処理
-                            this.OnProcessExiting(process);
-
-                            // Cleanup 状態以外ならば終了通知
-                            if (
-                                this.State != TalkerState.Cleanup &&
-                                !process.CloseMainWindow())
-                            {
-                                return (false, @"終了通知に失敗しました。");
-                            }
-
-                            // 終了orブロッキング状態まで待つ
-                            var done =
-                                WaitUntil(
-                                    () => this.CheckProcessExited(process),
-                                    f => f != false);
-                            if (done == false)
-                            {
-                                return (false, @"終了状態へ遷移しませんでした。");
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        ThreadTrace.WriteException(ex);
-                        return (
-                            false,
-                            ex.Message ?? (ex.GetType().Name + @" 例外が発生しました。"));
-                    }
-
-                    // 状態更新
-                    raisePropChanged = this.UpdateCore(null);
-
-                    switch (this.State)
-                    {
-                    case TalkerState.Fail:
-                        result = MakeStateErrorResult<bool?>(false);
-                        break;
-
-                    case TalkerState.Blocking:
-                    case TalkerState.FileSaving:
-                        result = (null, @"本体側で終了が保留されました。");
-                        break;
-
-                    default:
-                        // Startup, Idle は終了後即再起動したものと判断
-                        result = true;
-                        break;
-                    }
-                }
-            }
-            finally
-            {
-                try
-                {
-                    raisePropChanged?.Invoke();
-                }
-                catch (Exception ex)
-                {
-                    ThreadTrace.WriteException(ex);
-                    result = (
-                        false,
-                        ex.Message ?? (ex.GetType().Name + @" 例外が発生しました。"));
-                }
-            }
-
-            return result;
+            return base.ExitProcess();
         }
 
         /// <summary>
-        /// <see cref="ProcessOperationBase.ExitProcessCore"/> の隠蔽実装。
+        /// <see cref="ExitProcess"/> メソッドの実処理を行う。
         /// </summary>
-        /// <returns>値を返すことはない。</returns>
-        /// <remarks>
-        /// 必ず <see cref="NotSupportedException"/> 例外を送出する。
-        /// </remarks>
-        protected override sealed Result<bool?> ExitProcessCore() =>
-            throw new NotSupportedException();
+        /// <param name="raisePropertyChanged">
+        /// プロパティ値変更通知を行うデリゲートの設定先。通知不要ならば null が設定される。
+        /// </param>
+        /// <returns>
+        /// 成功したならば true 。
+        /// 終了通知には成功したがプロセス側で終了が抑止されたならば null 。
+        /// 失敗したならば false 。
+        /// </returns>
+        protected override sealed Result<bool?> ExitProcessCore(
+            out Action raisePropertyChanged)
+        {
+            raisePropertyChanged = null;
+
+            switch (this.State)
+            {
+            case TalkerState.None:
+                // 既に終了しているので何もしない
+                return (true, @"終了済みです。");
+
+            case TalkerState.Startup:
+            case TalkerState.Cleanup:
+            case TalkerState.Idle:
+            case TalkerState.Speaking:
+                break;
+
+            default:
+                return MakeStateErrorResult<bool?>(false);
+            }
+
+            try
+            {
+                var process = this.TargetProcess;
+
+                if (process?.HasExited == false)
+                {
+                    // 終了前処理
+                    this.OnProcessExiting(process);
+
+                    // Cleanup 状態以外ならば終了通知
+                    if (
+                        this.State != TalkerState.Cleanup &&
+                        !process.CloseMainWindow())
+                    {
+                        return (false, @"終了通知に失敗しました。");
+                    }
+
+                    // 終了orブロッキング状態まで待つ
+                    var done =
+                        WaitUntil(
+                            () => this.CheckProcessExited(process),
+                            f => f != false);
+                    if (done == false)
+                    {
+                        return (false, @"終了状態へ遷移しませんでした。");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ThreadTrace.WriteException(ex);
+                return (
+                    false,
+                    ex.Message ?? (ex.GetType().Name + @" 例外が発生しました。"));
+            }
+
+            // 状態更新
+            raisePropertyChanged = this.UpdateCore(null);
+
+            switch (this.State)
+            {
+            case TalkerState.Fail:
+                return MakeStateErrorResult<bool?>(false);
+
+            case TalkerState.Blocking:
+            case TalkerState.FileSaving:
+                return (null, @"本体側で終了が保留されました。");
+
+            default:
+                // Startup, Idle は終了後即再起動したものと判断
+                break;
+            }
+
+            return true;
+        }
 
         /// <summary>
         /// <see cref="ProcessOperationBase.ExitProcessImpl"/> の隠蔽実装。
         /// </summary>
         /// <param name="process">無視される。</param>
+        /// <param name="raisePropertyChanged">値は設定されない。</param>
         /// <returns>値を返すことはない。</returns>
         /// <remarks>
         /// 必ず <see cref="NotSupportedException"/> 例外を送出する。
         /// </remarks>
-        protected override sealed Result<bool?> ExitProcessImpl(Process process) =>
+        protected override sealed Result<bool?> ExitProcessImpl(
+            Process process,
+            out Action raisePropertyChanged)
+            =>
             throw new NotSupportedException();
 
         #endregion

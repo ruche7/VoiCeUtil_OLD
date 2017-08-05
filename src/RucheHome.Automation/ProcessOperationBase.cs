@@ -66,56 +66,12 @@ namespace RucheHome.Automation
         /// </remarks>
         public abstract string ProcessFileName { get; }
 
-        /// <summary>
-        /// <see cref="RunProcess"/> の既定の実装によってプロセスを起動させた後の処理を行う。
-        /// </summary>
-        /// <param name="process">起動済みプロセス。製品情報の一致も確認済み。</param>
-        /// <returns>成功したならば true 。そうでなければ false 。</returns>
-        /// <remarks>
-        /// <para>
-        /// 既定では <see cref="NotImplementedException"/> 例外を送出するため、
-        /// <see cref="RunProcess"/> の既定の実装を用いるならば必ずオーバライドすること。
-        /// </para>
-        /// <para>
-        /// このメソッドで true を返しても、 <see cref="TargetProcess"/> が
-        /// null のままの場合は呼び出し元で失敗扱いとなる。
-        /// </para>
-        /// </remarks>
-        protected virtual Result<bool> RunProcessImpl(Process process) =>
-            throw new NotImplementedException();
-
-        /// <summary>
-        /// <see cref="ExitProcess"/>
-        /// の既定の実装によってプロセスに終了通知を行った後の処理を行う。
-        /// </summary>
-        /// <param name="process">
-        /// <see cref="Process.CloseMainWindow">Process.CloseMainWindow</see>
-        /// 呼び出し済みプロセス。 <see cref="TargetProcess"/> と同一。
-        /// </param>
-        /// <returns>
-        /// 成功したならば true 。
-        /// 終了通知には成功したがプロセス側で終了が抑止されたならば null 。
-        /// 失敗したならば false 。
-        /// </returns>
-        /// <remarks>
-        /// <para>
-        /// 既定では <see cref="NotImplementedException"/> 例外を送出するため、
-        /// <see cref="ExitProcess"/> の既定の実装を用いるならば必ずオーバライドすること。
-        /// </para>
-        /// <para>
-        /// このメソッドで true を返しても、 <see cref="TargetProcess"/> が
-        /// null 以外のままの場合は呼び出し元で失敗扱いとなる。
-        /// </para>
-        /// </remarks>
-        protected virtual Result<bool?> ExitProcessImpl(Process process) =>
-            throw new NotImplementedException();
-
         #endregion
 
         #region Update メソッドの既定の実処理
 
         /// <summary>
-        /// <see cref="Update"/> メソッドの既定の実処理を行う。
+        /// <see cref="Update"/> メソッドの実処理を行う。
         /// </summary>
         /// <param name="processes">
         /// 対象プロセス検索先列挙。メソッド内でプロセスリストを取得させるならば null 。
@@ -222,7 +178,7 @@ namespace RucheHome.Automation
         #region GetProcessFilePath メソッドの既定の実処理
 
         /// <summary>
-        /// <see cref="GetProcessFilePath"/> の既定の実処理を行う。
+        /// <see cref="GetProcessFilePath"/> の実処理を行う。
         /// </summary>
         /// <returns>実行ファイルパス。取得できなかった場合は null 。</returns>
         /// <remarks>
@@ -255,16 +211,23 @@ namespace RucheHome.Automation
         #region RunProcess メソッドの既定の実処理
 
         /// <summary>
-        /// <see cref="RunProcess"/> メソッドの既定の実処理を行う。
+        /// <see cref="RunProcess"/> メソッドの実処理を行う。
         /// </summary>
         /// <param name="processFilePath">実行ファイルパス。</param>
+        /// <param name="raisePropertyChanged">
+        /// プロパティ値変更通知を行うデリゲートの設定先。通知不要ならば null が設定される。
+        /// </param>
         /// <returns>成功したならば true 。そうでなければ false 。</returns>
         /// <remarks>
         /// 既定では、 <see cref="StartProcess"/> によるプロセスの起動処理を行い、
         /// 処理に成功したならば <see cref="RunProcessImpl"/> を呼び出す。
         /// </remarks>
-        protected virtual Result<bool> RunProcessCore(string processFilePath)
+        protected virtual Result<bool> RunProcessCore(
+            string processFilePath,
+            out Action raisePropertyChanged)
         {
+            raisePropertyChanged = null;
+
             if (this.IsAlive && this.TargetProcess?.HasExited == false)
             {
                 // 既に起動しているので何もしない
@@ -279,7 +242,7 @@ namespace RucheHome.Automation
             }
 
             // 派生クラス処理
-            var r = this.RunProcessImpl(process);
+            var r = this.RunProcessImpl(process, out raisePropertyChanged);
 
             if (r.Value && this.TargetProcess == null)
             {
@@ -389,13 +352,43 @@ namespace RucheHome.Automation
             return process;
         }
 
+        /// <summary>
+        /// <see cref="RunProcess"/>
+        /// メソッドの既定の実装によってプロセスを起動させた後の処理を行う。
+        /// </summary>
+        /// <param name="process">起動済みプロセス。製品情報の一致も確認済み。</param>
+        /// <param name="raisePropertyChanged">
+        /// プロパティ値変更通知を行うデリゲートの設定先。通知不要ならば null が設定される。
+        /// </param>
+        /// <returns>成功したならば true 。そうでなければ false 。</returns>
+        /// <remarks>
+        /// <para>
+        /// 既定では <see cref="UpdateByTargetProcess"/> を呼び出し、
+        /// 戻り値を引数 raisePropertyChanged に設定して true を返す。
+        /// </para>
+        /// <para>
+        /// このメソッドで true を返しても、 <see cref="TargetProcess"/> が
+        /// null のままの場合は呼び出し元で失敗扱いとなる。
+        /// </para>
+        /// </remarks>
+        protected virtual Result<bool> RunProcessImpl(
+            Process process,
+            out Action raisePropertyChanged)
+        {
+            raisePropertyChanged = this.UpdateByTargetProcess(process);
+            return true;
+        }
+
         #endregion
 
         #region ExitProcess メソッドの既定の実処理
 
         /// <summary>
-        /// <see cref="ExitProcess"/> メソッドの既定の実処理を行う。
+        /// <see cref="ExitProcess"/> メソッドの実処理を行う。
         /// </summary>
+        /// <param name="raisePropertyChanged">
+        /// プロパティ値変更通知を行うデリゲートの設定先。通知不要ならば null が設定される。
+        /// </param>
         /// <returns>
         /// 成功したならば true 。
         /// 終了通知には成功したがプロセス側で終了が抑止されたならば null 。
@@ -405,8 +398,10 @@ namespace RucheHome.Automation
         /// 既定では、プロセスの終了通知を行い、通知に成功したならば
         /// <see cref="ExitProcessImpl"/> を呼び出す。
         /// </remarks>
-        protected virtual Result<bool?> ExitProcessCore()
+        protected virtual Result<bool?> ExitProcessCore(out Action raisePropertyChanged)
         {
+            raisePropertyChanged = null;
+
             var process = this.TargetProcess;
             if (process == null)
             {
@@ -432,14 +427,62 @@ namespace RucheHome.Automation
             }
 
             // 派生クラス処理
-            var r = this.ExitProcessImpl(process);
+            var r = this.ExitProcessImpl(process, out raisePropertyChanged);
 
             if (r.Value == true && this.TargetProcess != null)
             {
-                return (false, @"終了を確認できません。");
+                return (null, @"終了を確認できません。");
             }
 
             return r;
+        }
+
+        /// <summary>
+        /// <see cref="ExitProcess"/>
+        /// メソッドの既定の実装によってプロセスに終了通知を行った後の処理を行う。
+        /// </summary>
+        /// <param name="targetProcess">
+        /// <see cref="Process.CloseMainWindow">Process.CloseMainWindow</see>
+        /// 呼び出し済みプロセス。 <see cref="TargetProcess"/> と同一。
+        /// </param>
+        /// <param name="raisePropertyChanged">
+        /// プロパティ値変更通知を行うデリゲートの設定先。通知不要ならば null が設定される。
+        /// </param>
+        /// <returns>
+        /// 成功したならば true 。
+        /// 終了通知には成功したがプロセス側で終了が抑止されたならば null 。
+        /// 失敗したならば false 。
+        /// </returns>
+        /// <remarks>
+        /// <para>
+        /// 既定では引数 targetProcess に対して <see cref="Process.WaitForExit()"/>
+        /// を呼び出し、続けて <see cref="UpdateByTargetProcess"/> を引数値 null で呼び出す。
+        /// そしてその戻り値を引数 raisePropertyChanged に設定して true を返す。
+        /// </para>
+        /// <para>
+        /// このメソッドで true を返しても、 <see cref="TargetProcess"/> が
+        /// null 以外のままの場合は呼び出し元で失敗扱いとなる。
+        /// </para>
+        /// </remarks>
+        protected virtual Result<bool?> ExitProcessImpl(
+            Process targetProcess,
+            out Action raisePropertyChanged)
+        {
+            raisePropertyChanged = null;
+
+            try
+            {
+                targetProcess.WaitForExit();
+            }
+            catch (Exception ex)
+            {
+                ThreadTrace.WriteException(ex);
+                return (null, @"終了待機に失敗しました。");
+            }
+
+            raisePropertyChanged = this.UpdateByTargetProcess(null);
+
+            return true;
         }
 
         #endregion
@@ -486,18 +529,18 @@ namespace RucheHome.Automation
         /// </remarks>
         public virtual void Update(IEnumerable<Process> processes = null)
         {
-            Action propChanged = null;
+            Action raisePropChanged = null;
 
             try
             {
                 lock (this.LockObject)
                 {
-                    propChanged = this.UpdateCore(processes);
+                    raisePropChanged = this.UpdateCore(processes);
                 }
             }
             finally
             {
-                propChanged?.Invoke();
+                raisePropChanged?.Invoke();
             }
         }
 
@@ -523,15 +566,53 @@ namespace RucheHome.Automation
         /// <param name="processFilePath">実行ファイルパス。</param>
         /// <returns>成功したならば true 。そうでなければ false 。</returns>
         /// <remarks>
+        /// <para>
         /// 既定では <see cref="LockObject"/> による排他ロックを行った後に
         /// <see cref="RunProcessCore"/> を呼び出す。
+        /// その後、受け取ったプロパティ値変更通知デリゲートを排他ロック外で呼び出す。
+        /// プロパティ値変更通知デリゲートが例外を送出した場合は失敗扱いとなる。
+        /// </para>
+        /// <para>
+        /// 排他ロック内で <see cref="INotifyPropertyChanged.PropertyChanged"/>
+        /// イベントを呼び出してしまうと、アタッチされたデリゲートから他のメソッドが
+        /// 呼び出されることによるデッドロックの恐れがあるため、このような処理となっている。
+        /// </para>
         /// </remarks>
         public virtual Result<bool> RunProcess(string processFilePath)
         {
-            lock (this.LockObject)
+            Result<bool> result;
+            Action raisePropChanged = null;
+
+            try
             {
-                return this.RunProcessCore(processFilePath);
+                lock (this.LockObject)
+                {
+                    result = this.RunProcessCore(processFilePath, out raisePropChanged);
+                }
             }
+            catch (Exception ex)
+            {
+                ThreadTrace.WriteException(ex);
+                result = (
+                    false,
+                    ex.Message ?? (ex.GetType().Name + @" 例外が発生しました。"));
+            }
+            finally
+            {
+                try
+                {
+                    raisePropChanged?.Invoke();
+                }
+                catch (Exception ex)
+                {
+                    ThreadTrace.WriteException(ex);
+                    result = (
+                        false,
+                        ex.Message ?? (ex.GetType().Name + @" 例外が発生しました。"));
+                }
+            }
+
+            return result;
         }
 
         /// <summary>
@@ -543,15 +624,53 @@ namespace RucheHome.Automation
         /// 失敗したならば false 。
         /// </returns>
         /// <remarks>
+        /// <para>
         /// 既定では <see cref="LockObject"/> による排他ロックを行った後に
         /// <see cref="ExitProcessCore"/> を呼び出す。
+        /// その後、受け取ったプロパティ値変更通知デリゲートを排他ロック外で呼び出す。
+        /// プロパティ値変更通知デリゲートが例外を送出した場合は失敗扱いとなる。
+        /// </para>
+        /// <para>
+        /// 排他ロック内で <see cref="INotifyPropertyChanged.PropertyChanged"/>
+        /// イベントを呼び出してしまうと、アタッチされたデリゲートから他のメソッドが
+        /// 呼び出されることによるデッドロックの恐れがあるため、このような処理となっている。
+        /// </para>
         /// </remarks>
         public virtual Result<bool?> ExitProcess()
         {
-            lock (this.LockObject)
+            Result<bool?> result;
+            Action raisePropChanged = null;
+
+            try
             {
-                return this.ExitProcessCore();
+                lock (this.LockObject)
+                {
+                    result = this.ExitProcessCore(out raisePropChanged);
+                }
             }
+            catch (Exception ex)
+            {
+                ThreadTrace.WriteException(ex);
+                result = (
+                    false,
+                    ex.Message ?? (ex.GetType().Name + @" 例外が発生しました。"));
+            }
+            finally
+            {
+                try
+                {
+                    raisePropChanged?.Invoke();
+                }
+                catch (Exception ex)
+                {
+                    ThreadTrace.WriteException(ex);
+                    result = (
+                        false,
+                        ex.Message ?? (ex.GetType().Name + @" 例外が発生しました。"));
+                }
+            }
+
+            return result;
         }
 
         #endregion
