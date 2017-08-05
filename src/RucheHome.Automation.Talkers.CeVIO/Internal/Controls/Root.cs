@@ -21,7 +21,7 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         /// <param name="canChangeTrackGetter">トラック選択変更可否取得デリゲート。</param>
         public Root(
             Func<dynamic> mainWindowGetter,
-            Func<AppVisualTree> appVisualTreeGetter,
+            Func<WpfVisualTree> appVisualTreeGetter,
             Func<bool> canChangeTrackGetter)
         {
             this.MainWindowGetter =
@@ -58,7 +58,7 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         /// <returns>コントロール。見つからないか非表示ならば null 。</returns>
         public Result<dynamic> Get(
             dynamic mainWindow = null,
-            AppVisualTree appVisualTree = null) =>
+            WpfVisualTree appVisualTree = null) =>
             this.Get(out var _, (DynamicAppVar)mainWindow, appVisualTree);
 
         /// <summary>
@@ -75,7 +75,7 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         public Result<dynamic> Get(
             out bool compacted,
             dynamic mainWindow = null,
-            AppVisualTree appVisualTree = null)
+            WpfVisualTree appVisualTree = null)
         {
             compacted = false;
 
@@ -123,6 +123,6 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         /// <summary>
         /// ビジュアルツリー走査用オブジェクト取得デリゲートを取得する。
         /// </summary>
-        private Func<AppVisualTree> AppVisualTreeGetter { get; }
+        private Func<WpfVisualTree> AppVisualTreeGetter { get; }
     }
 }

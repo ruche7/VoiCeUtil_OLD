@@ -100,6 +100,25 @@ namespace RucheHome.Automation
             =>
             WaitUntil(getter, f => f, timeoutMilliseconds);
 
+        /// <summary>
+        /// <see cref="TargetProcess"/> によって状態を更新する。
+        /// </summary>
+        /// <param name="refresh">
+        /// プロセスの内部状態更新を行うならば true 。既定では true 。
+        /// </param>
+        /// <returns>プロパティ値変更通知を行うデリゲート。通知不要ならば null 。</returns>
+        protected Action UpdateByCurrentTargetProcess(bool refresh = true)
+        {
+            var process = this.TargetProcess;
+
+            if (refresh)
+            {
+                process?.Refresh();
+            }
+
+            return this.UpdateByTargetProcess(process);
+        }
+
         #region 要オーバライド
 
         /// <summary>
@@ -326,22 +345,30 @@ namespace RucheHome.Automation
                 return (true, @"既に起動しています。");
             }
 
-            // 起動処理
-            var (process, failMessage) = this.StartProcess(processFilePath);
-            if (process == null)
+            try
             {
-                return (false, failMessage);
+                // 起動処理
+                var (process, failMessage) = this.StartProcess(processFilePath);
+                if (process == null)
+                {
+                    return (false, failMessage);
+                }
+
+                // 反映
+                var result = this.RunProcessImpl(process, out raisePropertyChanged);
+
+                if (result.Value && this.TargetProcess == null)
+                {
+                    return (false, @"起動を確認できません。");
+                }
+
+                return result;
             }
-
-            // 派生クラス処理
-            var r = this.RunProcessImpl(process, out raisePropertyChanged);
-
-            if (r.Value && this.TargetProcess == null)
+            catch (Exception ex)
             {
-                return (false, @"起動を確認できません。");
+                ThreadTrace.WriteException(ex);
             }
-
-            return r;
+            return (false, @"起動処理に失敗しました。");
         }
 
         /// <summary>
@@ -496,8 +523,9 @@ namespace RucheHome.Automation
         /// 失敗したならば false 。
         /// </returns>
         /// <remarks>
-        /// 既定では、プロセスに対して終了通知を行い、通知に成功したならば
-        /// <see cref="ExitProcessImpl"/> を呼び出す。
+        /// 既定では、プロセスに対して <see cref="RequestProcessExit"/> と
+        /// <see cref="WaitForProcessExitedOrBlocking"/> の呼び出しを行い、
+        /// それらの処理に成功したら <see cref="ExitProcessImpl"/> を呼び出す。
         /// </remarks>
         protected virtual Result<bool?> ExitProcessCore(out Action raisePropertyChanged)
         {
@@ -512,65 +540,72 @@ namespace RucheHome.Automation
 
             try
             {
-                if (!process.HasExited)
+                // 終了通知
+                var r = this.RequestProcessExit(process);
+                if (!r.Value)
                 {
-                    // 終了通知
-                    if (!process.CloseMainWindow())
-                    {
-                        return (false, @"終了通知に失敗しました。");
-                    }
+                    return (false, r.Message);
                 }
+
+                // 終了待機
+                r = this.WaitForProcessExitedOrBlocking(process);
+                if (!r.Value)
+                {
+                    return (false, r.Message);
+                }
+
+                // 反映
+                var result = this.ExitProcessImpl(out raisePropertyChanged);
+
+                if (result.Value == true && this.TargetProcess != null)
+                {
+                    return (false, @"終了を確認できません。");
+                }
+
+                return result;
             }
             catch (Exception ex)
             {
                 ThreadTrace.WriteException(ex);
-                return (false, @"終了処理に失敗しました。");
             }
-
-            // 派生クラス処理
-            var r = this.ExitProcessImpl(process, out raisePropertyChanged);
-
-            if (r.Value == true && this.TargetProcess != null)
-            {
-                return (null, @"終了を確認できません。");
-            }
-
-            return r;
+            return (false, @"終了処理に失敗しました。");
         }
 
         /// <summary>
-        /// <see cref="ExitProcessCore"/>
-        /// メソッドの既定の実装によってプロセスに終了通知を行った後の処理を行う。
+        /// 処理対象プロセスに対して終了通知を行う。
         /// </summary>
-        /// <param name="targetProcess">
-        /// <see cref="Process.CloseMainWindow">Process.CloseMainWindow</see>
-        /// 呼び出し済みプロセス。 <see cref="TargetProcess"/> と同一。
-        /// </param>
-        /// <param name="raisePropertyChanged">
-        /// プロパティ値変更通知を行うデリゲートの設定先。通知不要ならば null が設定される。
-        /// </param>
-        /// <returns>
-        /// 成功したならば true 。
-        /// 終了通知には成功したがプロセス側で終了が抑止されたならば null 。
-        /// 失敗したならば false 。
-        /// </returns>
+        /// <param name="targetProcess">処理対象プロセス。</param>
+        /// <returns>成功したならば true 。そうでなければ false 。</returns>
         /// <remarks>
-        /// <para>
-        /// 既定では引数 targetProcess に対して <see cref="Process.WaitForExit()"/>
-        /// を呼び出し、続けて <see cref="UpdateByTargetProcess"/> を引数値 null で呼び出す。
-        /// そしてその戻り値を引数 raisePropertyChanged に設定して true を返す。
-        /// </para>
-        /// <para>
-        /// このメソッドで true を返しても、 <see cref="TargetProcess"/> が
-        /// null 以外のままの場合は呼び出し元で失敗扱いとなる。
-        /// </para>
+        /// 既定では <see cref="Process.CloseMainWindow"/> を呼び出す。
         /// </remarks>
-        protected virtual Result<bool?> ExitProcessImpl(
-            Process targetProcess,
-            out Action raisePropertyChanged)
+        protected virtual Result<bool> RequestProcessExit(Process targetProcess)
         {
-            raisePropertyChanged = null;
+            bool ok = false;
 
+            try
+            {
+                ok = targetProcess.HasExited ? true : targetProcess.CloseMainWindow();
+            }
+            catch (Exception ex)
+            {
+                ThreadTrace.WriteException(ex);
+                ok = false;
+            }
+
+            return (ok, ok ? null : @"終了通知に失敗しました。");
+        }
+
+        /// <summary>
+        /// 処理対象プロセスが終了するか終了不可能な状態になるまで待機する。
+        /// </summary>
+        /// <param name="targetProcess">終了通知成功済みの処理対象プロセス。</param>
+        /// <returns>成功したならば true 。そうでなければ false 。</returns>
+        /// <remarks>
+        /// 既定では <see cref="Process.WaitForExit()"/> を呼び出す。
+        /// </remarks>
+        protected virtual Result<bool> WaitForProcessExitedOrBlocking(Process targetProcess)
+        {
             try
             {
                 targetProcess.WaitForExit();
@@ -578,10 +613,43 @@ namespace RucheHome.Automation
             catch (Exception ex)
             {
                 ThreadTrace.WriteException(ex);
-                return (null, @"終了待機に失敗しました。");
+                return (false, @"終了待機に失敗しました。");
             }
 
-            raisePropertyChanged = this.UpdateByTargetProcess(null);
+            return true;
+        }
+
+        /// <summary>
+        /// <see cref="ExitProcessCore"/>
+        /// メソッドの既定の実装によって終了または終了不可状態まで待機した後の処理を行う。
+        /// </summary>
+        /// <param name="raisePropertyChanged">
+        /// プロパティ値変更通知を行うデリゲートの設定先。通知不要ならば null が設定される。
+        /// </param>
+        /// <returns>
+        /// 終了が確認できたならば true 。
+        /// 終了不可状態になったことが確認できたならば null 。
+        /// 失敗したならば false 。
+        /// </returns>
+        /// <remarks>
+        /// <para>
+        /// 既定では <see cref="UpdateCore"/> を引数値 null で呼び出し、戻り値を引数
+        /// raisePropertyChanged に設定する。
+        /// そして <see cref="IsAlive"/> の値に応じて true または null を返す。
+        /// </para>
+        /// <para>
+        /// このメソッドで true を返しても、 <see cref="TargetProcess"/>
+        /// が非 null のままの場合は呼び出し元で失敗扱いとなる。
+        /// </para>
+        /// </remarks>
+        protected virtual Result<bool?> ExitProcessImpl(out Action raisePropertyChanged)
+        {
+            raisePropertyChanged = this.UpdateCore(null);
+
+            if (this.IsAlive)
+            {
+                return (null, @"終了が保留されました。");
+            }
 
             return true;
         }
@@ -691,13 +759,6 @@ namespace RucheHome.Automation
                     result = this.RunProcessCore(processFilePath, out raisePropChanged);
                 }
             }
-            catch (Exception ex)
-            {
-                ThreadTrace.WriteException(ex);
-                result = (
-                    false,
-                    ex.Message ?? (ex.GetType().Name + @" 例外が発生しました。"));
-            }
             finally
             {
                 try
@@ -748,13 +809,6 @@ namespace RucheHome.Automation
                 {
                     result = this.ExitProcessCore(out raisePropChanged);
                 }
-            }
-            catch (Exception ex)
-            {
-                ThreadTrace.WriteException(ex);
-                result = (
-                    false,
-                    ex.Message ?? (ex.GetType().Name + @" 例外が発生しました。"));
             }
             finally
             {

@@ -168,25 +168,6 @@ namespace RucheHome.Automation.Talkers
         /// </remarks>
         private bool IsPropertyChangedOnSaveFile { get; set; } = false;
 
-        /// <summary>
-        /// <see cref="TargetProcess"/> によって状態を更新する。
-        /// </summary>
-        /// <param name="refresh">
-        /// プロセスの内部状態更新を行うならば true 。既定では true 。
-        /// </param>
-        /// <returns>プロパティ値変更通知を行うデリゲート。通知不要ならば null 。</returns>
-        private Action UpdateByCurrentTargetProcess(bool refresh = true)
-        {
-            var process = this.TargetProcess;
-
-            if (refresh)
-            {
-                process?.Refresh();
-            }
-
-            return this.UpdateByTargetProcess(process);
-        }
-
         #region 要オーバライド
 
         /// <summary>
@@ -530,15 +511,9 @@ namespace RucheHome.Automation.Talkers
         /// 操作対象プロセスを取得する。
         /// </summary>
         /// <remarks>
-        /// <para>起動していないならば null となる。</para>
-        /// <para>
-        /// <see cref="Process.GetProcessesByName(string)">Process.GetProcessesByName</see>
-        /// から取得したインスタンスを設定するため、プロパティ値変更時に以前の値に対して
-        /// <see cref="Process.Dispose"/> 呼び出しを行うことはない。
-        /// </para>
+        /// 実装の sealed 化のためのオーバライド。
         /// </remarks>
-        protected override sealed Process TargetProcess => this.targetProcess;
-        private Process targetProcess = null;
+        protected override sealed Process TargetProcess => base.TargetProcess;
 
         /// <summary>
         /// メインウィンドウハンドルを取得する。
@@ -648,28 +623,26 @@ namespace RucheHome.Automation.Talkers
         /// <see cref="TargetProcess"/>, <see cref="State"/>, <see cref="StateMessage"/>
         /// を変更するデリゲートを作成する。
         /// </remarks>
-        protected override sealed Action MakeUpdatePropertiesAction(Process targetProcess)
-        {
-            var process = (targetProcess?.HasExited == false) ? targetProcess : null;
-
-            // 状態確認
-            var (state, stateMessage) =
-                (process != null) ? this.CheckState(process) : TalkerState.None;
-
-            // プロセス未起動扱いなら process を null とする
-            if (state == TalkerState.None)
+        protected override sealed Action MakeUpdatePropertiesAction(Process targetProcess) =>
+            () =>
             {
-                process = null;
-            }
+                // ベースクラス処理によって TargetProcess を更新
+                base.MakeUpdatePropertiesAction(targetProcess)?.Invoke();
+                var process = this.TargetProcess;
 
-            return
-                () =>
+                // 状態確認
+                var (state, stateMessage) =
+                    (process != null) ? this.CheckState(process) : TalkerState.None;
+
+                // state が None なら TargetProcess を null に更新
+                if (state == TalkerState.None && process != null)
                 {
-                    this.targetProcess = process;
-                    this.State = state;
-                    this.StateMessage = stateMessage;
-                };
-        }
+                    base.MakeUpdatePropertiesAction(null)?.Invoke();
+                }
+
+                this.State = state;
+                this.StateMessage = stateMessage;
+            };
 
         /// <summary>
         /// プロパティ値を変更するデリゲートを呼び出し、
@@ -901,45 +874,59 @@ namespace RucheHome.Automation.Talkers
                 return MakeStateErrorResult<bool?>(false);
             }
 
-            try
+            return base.ExitProcessCore(out raisePropertyChanged);
+        }
+
+        /// <summary>
+        /// 処理対象プロセスに対して終了通知を行う。
+        /// </summary>
+        /// <param name="targetProcess">処理対象プロセス。</param>
+        /// <returns>成功したならば true 。そうでなければ false 。</returns>
+        protected override sealed Result<bool> RequestProcessExit(Process targetProcess)
+        {
+            // 終了前処理
+            this.OnProcessExiting(targetProcess);
+
+            // Cleanup 状態以外ならば終了通知
+            return
+                (this.State == TalkerState.Cleanup) ?
+                    true : base.RequestProcessExit(targetProcess);
+        }
+
+        /// <summary>
+        /// 処理対象プロセスが終了するか終了不可能な状態になるまで待機する。
+        /// </summary>
+        /// <param name="targetProcess">終了通知成功済みの処理対象プロセス。</param>
+        /// <returns>成功したならば true 。そうでなければ false 。</returns>
+        protected override Result<bool> WaitForProcessExitedOrBlocking(Process targetProcess)
+        {
+            // 終了orブロッキング状態まで待つ
+            if (!WaitUntil(() => this.CheckProcessExited(targetProcess) != false))
             {
-                var process = this.TargetProcess;
-
-                if (process?.HasExited == false)
-                {
-                    // 終了前処理
-                    this.OnProcessExiting(process);
-
-                    // Cleanup 状態以外ならば終了通知
-                    if (
-                        this.State != TalkerState.Cleanup &&
-                        !process.CloseMainWindow())
-                    {
-                        return (false, @"終了通知に失敗しました。");
-                    }
-
-                    // 終了orブロッキング状態まで待つ
-                    var done =
-                        WaitUntil(
-                            () => this.CheckProcessExited(process),
-                            f => f != false);
-                    if (done == false)
-                    {
-                        return (false, @"終了状態へ遷移しませんでした。");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                ThreadTrace.WriteException(ex);
-                return (
-                    false,
-                    ex.Message ?? (ex.GetType().Name + @" 例外が発生しました。"));
+                return (false, @"終了状態へ遷移しませんでした。");
             }
 
-            // 状態更新
-            raisePropertyChanged = this.UpdateCore(null);
+            return true;
+        }
 
+        /// <summary>
+        /// <see cref="ExitProcessCore"/>
+        /// メソッドの既定の実装によって終了または終了不可状態まで待機した後の処理を行う。
+        /// </summary>
+        /// <param name="raisePropertyChanged">
+        /// プロパティ値変更通知を行うデリゲートの設定先。通知不要ならば null が設定される。
+        /// </param>
+        /// <returns>
+        /// 終了が確認できたならば true 。
+        /// 終了不可状態になったことが確認できたならば null 。
+        /// 失敗したならば false 。
+        /// </returns>
+        protected override sealed Result<bool?> ExitProcessImpl(
+            out Action raisePropertyChanged)
+        {
+            base.ExitProcessImpl(out raisePropertyChanged);
+
+            // ベースクラス処理の戻り値は無視して State で判定
             switch (this.State)
             {
             case TalkerState.Fail:
@@ -950,27 +937,12 @@ namespace RucheHome.Automation.Talkers
                 return (null, @"本体側で終了が保留されました。");
 
             default:
-                // Startup, Idle は終了後即再起動したものと判断
+                // Startup, Idle, Speaking は終了後即再起動したものと判断
                 break;
             }
 
             return true;
         }
-
-        /// <summary>
-        /// <see cref="ProcessOperationBase.ExitProcessImpl"/> の隠蔽実装。
-        /// </summary>
-        /// <param name="process">無視される。</param>
-        /// <param name="raisePropertyChanged">値は設定されない。</param>
-        /// <returns>値を返すことはない。</returns>
-        /// <remarks>
-        /// 必ず <see cref="NotSupportedException"/> 例外を送出する。
-        /// </remarks>
-        protected override sealed Result<bool?> ExitProcessImpl(
-            Process process,
-            out Action raisePropertyChanged)
-            =>
-            throw new NotSupportedException();
 
         #endregion
 

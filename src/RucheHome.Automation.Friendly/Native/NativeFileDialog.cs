@@ -8,15 +8,15 @@ using RucheHome.Diagnostics;
 namespace RucheHome.Automation.Friendly.Native
 {
     /// <summary>
-    /// 操作対象アプリのネイティブファイルダイアログをラップするクラス。
+    /// Win32のファイルダイアログをラップするクラス。
     /// </summary>
-    public class AppFileDialog
+    public class NativeFileDialog
     {
         /// <summary>
         /// コンストラクタ。
         /// </summary>
         /// <param name="fileDialog">ラップ対象のファイルダイアログオブジェクト。</param>
-        public AppFileDialog(WindowControl fileDialog)
+        public NativeFileDialog(WindowControl fileDialog)
         {
             this.Base = fileDialog ?? throw new ArgumentNullException(nameof(fileDialog));
 
@@ -28,7 +28,7 @@ namespace RucheHome.Automation.Friendly.Native
         /// コンストラクタ。
         /// </summary>
         /// <param name="fileDialog">ラップ対象のファイルダイアログオブジェクト。</param>
-        public AppFileDialog(AppVar fileDialog)
+        public NativeFileDialog(AppVar fileDialog)
             : this((fileDialog == null) ? null : new WindowControl(fileDialog))
         {
         }

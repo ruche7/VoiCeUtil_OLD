@@ -124,10 +124,10 @@ namespace RucheHome.Automation.Talkers.Friendly
             ArgumentValidation.IsNotNullOrEmpty(filePath, nameof(filePath));
 
             // ファイルダイアログオブジェクト作成
-            AppFileDialog dialog = null;
+            NativeFileDialog dialog = null;
             try
             {
-                dialog = new AppFileDialog(fileDialog);
+                dialog = new NativeFileDialog(fileDialog);
             }
             catch (Exception ex)
             {
@@ -194,22 +194,8 @@ namespace RucheHome.Automation.Talkers.Friendly
         /// </summary>
         /// <param name="process">操作対象プロセス。</param>
         /// <returns>操作対象アプリ。生成できなければ null 。</returns>
-        private WindowsAppFriend CreateApp(Process process)
-        {
-            try
-            {
-                if (process?.HasExited == false)
-                {
-                    return AppFactory.Create(process, this.ProcessClrVersion);
-                }
-            }
-            catch (Exception ex)
-            {
-                ThreadTrace.WriteException(ex);
-            }
-
-            return null;
-        }
+        private WindowsAppFriend CreateApp(Process process) =>
+            AppFactory.Create(process, this.ProcessClrVersion);
 
         #region 要オーバライド
 
@@ -314,12 +300,7 @@ namespace RucheHome.Automation.Talkers.Friendly
                 // TargetApp とプロセスIDが同じなら TargetApp を使う
                 app =
                     (this.TargetApp?.ProcessId == process.Id) ?
-                        this.TargetApp : CreateApp(process);
-                if (app == null || process.HasExited)
-                {
-                    // アプリが終了している
-                    return TalkerState.None;
-                }
+                        this.TargetApp : this.CreateApp(process);
 
                 // トップレベルウィンドウ群取得
                 var topWins = WindowControl.GetTopLevelWindows(app);
@@ -426,7 +407,7 @@ namespace RucheHome.Automation.Talkers.Friendly
         /// </summary>
         /// <param name="process">
         /// 操作対象プロセス。
-        /// <see cref="TalkerBase{TParameterId}"/> 実装から
+        /// <see cref="ProcessTalkerBase{TParameterId}"/> 実装から
         /// null や操作対象外プロセスが渡されることはない。
         /// </param>
         protected override void OnProcessExiting(Process process)
@@ -435,6 +416,12 @@ namespace RucheHome.Automation.Talkers.Friendly
             this.TargetApp?.Dispose();
             this.TargetApp = null;
         }
+
+        /// <summary>
+        /// コントロールタイプが Window であればヒットするUI検索条件オブジェクト。
+        /// </summary>
+        private static readonly Condition WindowControlTypeCondition =
+            new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Window);
 
         /// <summary>
         /// <see cref="Process.CloseMainWindow"/>
@@ -472,11 +459,7 @@ namespace RucheHome.Automation.Talkers.Friendly
                 {
                     var mainWin = AutomationElement.FromHandle(handle);
                     var dialog =
-                        mainWin.FindFirst(
-                            TreeScope.Children,
-                            new PropertyCondition(
-                                AutomationElement.ControlTypeProperty,
-                                ControlType.Window));
+                        mainWin.FindFirst(TreeScope.Children, WindowControlTypeCondition);
                     if (dialog != null)
                     {
                         return null;

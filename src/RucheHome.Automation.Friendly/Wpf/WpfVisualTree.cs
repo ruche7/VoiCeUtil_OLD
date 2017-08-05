@@ -6,15 +6,15 @@ using RucheHome.Diagnostics;
 namespace RucheHome.Automation.Friendly.Wpf
 {
     /// <summary>
-    /// 操作対象WPFアプリのビジュアルツリー走査処理を提供するクラス。
+    /// WPFアプリのビジュアルツリー走査処理を提供するクラス。
     /// </summary>
-    public sealed class AppVisualTree
+    public sealed class WpfVisualTree
     {
         /// <summary>
         /// コンストラクタ。
         /// </summary>
         /// <param name="app">操作対象アプリ。</param>
-        public AppVisualTree(AppFriend app)
+        public WpfVisualTree(AppFriend app)
         {
             ArgumentValidation.IsNotNull(app, nameof(app));
 

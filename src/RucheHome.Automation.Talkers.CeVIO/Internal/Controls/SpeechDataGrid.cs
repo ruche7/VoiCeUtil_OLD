@@ -19,7 +19,7 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         /// </param>
         public SpeechDataGrid(
             ControlPanel controlPanel,
-            Func<AppVisualTree> appVisualTreeGetter)
+            Func<WpfVisualTree> appVisualTreeGetter)
         {
             this.ControlPanel =
                 controlPanel ?? throw new ArgumentNullException(nameof(controlPanel));
@@ -38,9 +38,9 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         /// ビジュアルツリー走査用オブジェクト。 null ならばメソッド内で取得される。
         /// </param>
         /// <returns>コントロール。見つからないか取得できない状態ならば null 。</returns>
-        public Result<AppDataGrid> Get(
+        public Result<WpfDataGrid> Get(
             dynamic controlPanel = null,
-            AppVisualTree appVisualTree = null)
+            WpfVisualTree appVisualTree = null)
         {
             // コントロールパネルを取得
             var ctrlPanel = controlPanel;
@@ -64,7 +64,7 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
             try
             {
                 var dataGrid =
-                    new AppDataGrid(ctrlPanel.Children[0].Content.Children[0], vtree);
+                    new WpfDataGrid(ctrlPanel.Children[0].Content.Children[0], vtree);
 
                 // コンテキストメニューを初期化して取得
                 var menu = InitializeContextMenu(dataGrid);
@@ -100,7 +100,7 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         /// </summary>
         /// <param name="dataGrid">セリフデータグリッド。</param>
         /// <returns>コンテキストメニュー。</returns>
-        private static dynamic InitializeContextMenu(AppDataGrid dataGrid)
+        private static dynamic InitializeContextMenu(WpfDataGrid dataGrid)
         {
             var menu = dataGrid.Base.ContextMenu;
             if (menu == null)
@@ -244,6 +244,6 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         /// <summary>
         /// ビジュアルツリー走査用オブジェクト取得デリゲートを取得する。
         /// </summary>
-        private Func<AppVisualTree> AppVisualTreeGetter { get; }
+        private Func<WpfVisualTree> AppVisualTreeGetter { get; }
     }
 }

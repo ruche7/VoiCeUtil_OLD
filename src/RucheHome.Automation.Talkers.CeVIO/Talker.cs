@@ -203,7 +203,7 @@ namespace RucheHome.Automation.Talkers.CeVIO
         /// </summary>
         /// <param name="speechDataGrid">セリフデータグリッド。</param>
         /// <returns>成功したならば true 。そうでなければ false 。</returns>
-        private Result<bool> SelectSpeechDataGridRowForInput(AppDataGrid speechDataGrid)
+        private Result<bool> SelectSpeechDataGridRowForInput(WpfDataGrid speechDataGrid)
         {
             if (speechDataGrid == null)
             {
@@ -355,7 +355,7 @@ namespace RucheHome.Automation.Talkers.CeVIO
                 // ビジュアルツリー走査用オブジェクト取得or作成
                 var vtree =
                     (mainWindow.App == this.TargetApp) ? this.TargetAppVisualTree : null;
-                vtree = vtree ?? new AppVisualTree(mainWindow.App);
+                vtree = vtree ?? new WpfVisualTree(mainWindow.App);
 
                 (DynamicAppVar c, var rootMessage) =
                     this.Root.Get(out bool compacted, (DynamicAppVar)mainWin, vtree);
@@ -1036,7 +1036,7 @@ namespace RucheHome.Automation.Talkers.CeVIO
         /// そのまま音声保存しようとすると連続書き出しになってしまうため、
         /// 一旦別の行を選択することで追加の行選択状態を解除する。
         /// </remarks>
-        private Result<AppDataGrid> SaveFileImpl_SelectSingleDataGridRow()
+        private Result<WpfDataGrid> SaveFileImpl_SelectSingleDataGridRow()
         {
             // セリフデータグリッドを取得
             var (grid, failMessage) = this.SpeechDataGrid.Get();
@@ -1093,7 +1093,7 @@ namespace RucheHome.Automation.Talkers.CeVIO
         /// <returns>音声ファイル保存ダイアログ。表示されなかった場合は null 。</returns>
         private Result<WindowControl> SaveFileImpl_ClickSaveMenu(
             dynamic mainWindow,
-            AppDataGrid speechDataGrid,
+            WpfDataGrid speechDataGrid,
             Async saveMenuAsync)
         {
             Debug.Assert((DynamicAppVar)mainWindow != null);

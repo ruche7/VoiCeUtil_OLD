@@ -20,7 +20,7 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         /// </param>
         public ParameterSliders(
             OperationPanel operationPanel,
-            Func<AppVisualTree> appVisualTreeGetter)
+            Func<WpfVisualTree> appVisualTreeGetter)
         {
             this.OperationPanel =
                 operationPanel ?? throw new ArgumentNullException(nameof(operationPanel));
@@ -47,7 +47,7 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         public Result<Dictionary<ParameterId, dynamic>> Get(
             IEnumerable<ParameterId> targetParameterIds = null,
             dynamic operationPanel = null,
-            AppVisualTree appVisualTree = null)
+            WpfVisualTree appVisualTree = null)
         {
             var dict = new Dictionary<ParameterId, dynamic>();
 
@@ -151,6 +151,6 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         /// <summary>
         /// ビジュアルツリー走査用オブジェクト取得デリゲートを取得する。
         /// </summary>
-        private Func<AppVisualTree> AppVisualTreeGetter { get; }
+        private Func<WpfVisualTree> AppVisualTreeGetter { get; }
     }
 }

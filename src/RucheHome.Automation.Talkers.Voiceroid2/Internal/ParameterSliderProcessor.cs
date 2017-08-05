@@ -65,7 +65,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2.Internal
         /// <returns></returns>
         public Result<Dictionary<ParameterId, T>> Execute<T>(
             dynamic mainWindow,
-            AppVisualTree visualTree,
+            WpfVisualTree visualTree,
             Executer<T> executer,
             IEnumerable<ParameterId> targetIds = null)
         {
@@ -409,7 +409,7 @@ namespace RucheHome.Automation.Talkers.Voiceroid2.Internal
         private static void AddPresetEmotionSlidersTo(
             dynamic tabControl,
             dynamic panelsParent,
-            AppVisualTree visualTree,
+            WpfVisualTree visualTree,
             GuiGroupTargetInfo targetInfo,
             IDictionary<ParameterId, dynamic> idSliders)
         {

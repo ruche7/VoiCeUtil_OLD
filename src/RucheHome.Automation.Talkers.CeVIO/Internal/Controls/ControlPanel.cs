@@ -20,7 +20,7 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         /// <param name="canChangeTrackGetter">トラック選択変更可否取得デリゲート。</param>
         public ControlPanel(
             Root root,
-            Func<AppVisualTree> appVisualTreeGetter,
+            Func<WpfVisualTree> appVisualTreeGetter,
             Func<bool> canChangeTrackGetter)
         {
             this.Root = root ?? throw new ArgumentNullException(nameof(root));
@@ -59,7 +59,7 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         public Result<dynamic> GetAny(
             out ControlPanelKind kind,
             dynamic root = null,
-            AppVisualTree appVisualTree = null)
+            WpfVisualTree appVisualTree = null)
         {
             kind = ControlPanelKind.None;
 
@@ -122,7 +122,7 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         /// <returns>コントロール。見つからないか取得できない状態ならば null 。</returns>
         public Result<dynamic> GetTalk(
             dynamic root = null,
-            AppVisualTree appVisualTree = null)
+            WpfVisualTree appVisualTree = null)
         {
             // ルートコントロールを取得
             var rootCtrl = root;
@@ -232,7 +232,7 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         /// <summary>
         /// ビジュアルツリー走査用オブジェクト取得デリゲートを取得する。
         /// </summary>
-        private Func<AppVisualTree> AppVisualTreeGetter { get; }
+        private Func<WpfVisualTree> AppVisualTreeGetter { get; }
 
         /// <summary>
         /// トラック選択変更可否取得デリゲートを取得する。

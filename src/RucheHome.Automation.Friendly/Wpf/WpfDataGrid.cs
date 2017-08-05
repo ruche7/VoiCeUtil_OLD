@@ -6,16 +6,16 @@ using RucheHome.Diagnostics;
 namespace RucheHome.Automation.Friendly.Wpf
 {
     /// <summary>
-    /// 操作対象WPFアプリの DataGrid コントロールをラップするクラス。
+    /// WPFの System.Windows.Controls.DataGrid コントロールをラップするクラス。
     /// </summary>
-    public class AppDataGrid
+    public class WpfDataGrid
     {
         /// <summary>
         /// コンストラクタ。
         /// </summary>
         /// <param name="dataGrid">ラップ対象の DataGrid オブジェクト。</param>
         /// <param name="appVisualTree">ビジュアルツリー走査用オブジェクト。</param>
-        public AppDataGrid(dynamic dataGrid, AppVisualTree appVisualTree)
+        public WpfDataGrid(dynamic dataGrid, WpfVisualTree appVisualTree)
         {
             ArgumentValidation.IsNotNull(dataGrid, nameof(dataGrid));
             ArgumentValidation.IsNotNull(appVisualTree, nameof(appVisualTree));
@@ -229,7 +229,7 @@ namespace RucheHome.Automation.Friendly.Wpf
         /// <summary>
         /// ビジュアルツリー走査用オブジェクトを取得する。
         /// </summary>
-        private AppVisualTree AppVisualTree { get; }
+        private WpfVisualTree AppVisualTree { get; }
 
         /// <summary>
         /// DataGridRow 群の親コントロールを取得する。

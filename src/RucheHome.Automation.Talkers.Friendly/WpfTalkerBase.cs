@@ -29,25 +29,12 @@ namespace RucheHome.Automation.Talkers.Friendly
         }
 
         /// <summary>
-        /// ボタンの押下操作をエミュレートする。
+        /// ボタンのクリック操作をエミュレートする。
         /// </summary>
         /// <param name="button">ボタン。</param>
         /// <param name="async">非同期オブジェクト。 null ならば同期処理。</param>
-        protected static void PerformClick(dynamic button, Async async = null)
-        {
-            ArgumentValidation.IsNotNull(button, nameof(button));
-
-            button.Focus();
-
-            if (async == null)
-            {
-                button.OnClick();
-            }
-            else
-            {
-                button.OnClick(async);
-            }
-        }
+        protected static void PerformClick(dynamic button, Async async = null) =>
+            WpfClicker.Click(button, async);
 
         /// <summary>
         /// ビジュアルツリー走査用オブジェクトを取得する。
@@ -56,12 +43,12 @@ namespace RucheHome.Automation.Talkers.Friendly
         /// <see cref="TalkerBase{TParameterId}.TargetApp"/>
         /// プロパティの変更時に更新される。
         /// </remarks>
-        protected AppVisualTree TargetAppVisualTree
+        protected WpfVisualTree TargetAppVisualTree
         {
             get => this.targetAppVisualTree;
             private set => this.SetProperty(ref this.targetAppVisualTree, value);
         }
-        private AppVisualTree targetAppVisualTree = null;
+        private WpfVisualTree targetAppVisualTree = null;
 
         /// <summary>
         /// メインウィンドウを取得する。
@@ -110,7 +97,7 @@ namespace RucheHome.Automation.Talkers.Friendly
             // TargetAppVisualTree を更新
             try
             {
-                this.TargetAppVisualTree = (app == null) ? null : new AppVisualTree(app);
+                this.TargetAppVisualTree = (app == null) ? null : new WpfVisualTree(app);
             }
             catch (Exception ex)
             {

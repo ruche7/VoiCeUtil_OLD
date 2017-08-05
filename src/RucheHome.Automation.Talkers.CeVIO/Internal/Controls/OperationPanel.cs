@@ -18,7 +18,7 @@ namespace RucheHome.Automation.Talkers.CeVIO.Internal.Controls
         /// </param>
         public OperationPanel(
             ControlPanel controlPanel,
-            Func<AppVisualTree> appVisualTreeGetter)
+            Func<WpfVisualTree> appVisualTreeGetter)
         {
             this.ControlPanel =
                 controlPanel ?? throw new ArgumentNullException(nameof(controlPanel));
