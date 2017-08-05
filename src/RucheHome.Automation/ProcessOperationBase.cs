@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using RucheHome.Diagnostics;
 using RucheHome.ObjectModel;
 
@@ -42,6 +43,62 @@ namespace RucheHome.Automation
         /// </remarks>
         protected virtual Process TargetProcess => this.targetProcess;
         private Process targetProcess = null;
+
+        /// <summary>
+        /// 待機処理の標準タイムアウトミリ秒数値。
+        /// </summary>
+        protected const int StandardTimeoutMilliseconds = 1500;
+
+        /// <summary>
+        /// デリゲートの戻り値が条件を満たさない間待機する。
+        /// </summary>
+        /// <typeparam name="T">戻り値の型。</typeparam>
+        /// <param name="getter">戻り値を取得するデリゲート。</param>
+        /// <param name="predicator">戻り値の条件判定を行うデリゲート。</param>
+        /// <param name="timeoutMilliseconds">
+        /// タイムアウトミリ秒数。既定値は <see cref="StandardTimeoutMilliseconds"/> 。
+        /// 負数ならば無制限。
+        /// </param>
+        /// <returns>
+        /// predicator が true を返したならばその値。
+        /// タイムアウトしたならばタイムアウト直前の値。
+        /// </returns>
+        protected static T WaitUntil<T>(
+            Func<T> getter,
+            Func<T, bool> predicator,
+            int timeoutMilliseconds = StandardTimeoutMilliseconds)
+        {
+            ArgumentValidation.IsNotNull(getter, nameof(getter));
+            ArgumentValidation.IsNotNull(predicator, nameof(predicator));
+
+            var value = getter();
+
+            for (
+                var sw = Stopwatch.StartNew();
+                !predicator(value) &&
+                (timeoutMilliseconds < 0 || sw.ElapsedMilliseconds < timeoutMilliseconds);)
+            {
+                Thread.Yield();
+                value = getter();
+            }
+
+            return value;
+        }
+
+        /// <summary>
+        /// デリゲートの戻り値が false の間待機する。
+        /// </summary>
+        /// <param name="getter">戻り値を取得するデリゲート。</param>
+        /// <param name="timeoutMilliseconds">
+        /// タイムアウトミリ秒数。既定値は <see cref="StandardTimeoutMilliseconds"/> 。
+        /// 負数ならば無制限。
+        /// </param>
+        /// <returns>true を返したならば true 。タイムアウトしたならば false 。</returns>
+        protected static bool WaitUntil(
+            Func<bool> getter,
+            int timeoutMilliseconds = StandardTimeoutMilliseconds)
+            =>
+            WaitUntil(getter, f => f, timeoutMilliseconds);
 
         #region 要オーバライド
 
@@ -117,38 +174,59 @@ namespace RucheHome.Automation
         /// </param>
         /// <returns>プロパティ値変更通知を行うデリゲート。通知不要ならば null 。</returns>
         /// <remarks>
-        /// <para>
-        /// 既定では、 <see cref="TargetProcess"/> を更新し、
-        /// <see cref="TargetProcess"/>, <see cref="MainWindowHandle"/>,
-        /// <see cref="IsAlive"/>, <see cref="CanOperate"/>
-        /// の各プロパティ値のうち変更のあったものについて
-        /// <see cref="INotifyPropertyChanged.PropertyChanged"/>
-        /// イベントを呼び出すデリゲートを作成して返す。
-        /// </para>
-        /// <para>
-        /// ただし、引数値が現在の <see cref="TargetProcess"/> と等価ならば、何もせず
-        /// null を返す。
-        /// </para>
+        /// 既定では、まず <see cref="MakeUpdatePropertiesAction"/> を呼び出し、
+        /// その戻り値を引数値として <see cref="UpdatePropertiesByAction"/> を呼び出す。
+        /// そしてその戻り値を引数値として <see cref="MakePropertiesChangedAction"/>
+        /// を呼び出し、その戻り値のデリゲートを返す。
         /// </remarks>
-        protected virtual Action UpdateByTargetProcess(Process targetProcess)
+        protected virtual Action UpdateByTargetProcess(Process targetProcess) =>
+            this.MakePropertiesChangedAction(
+                this.UpdatePropertiesByAction(
+                    this.MakeUpdatePropertiesAction(targetProcess)));
+
+        /// <summary>
+        /// 操作対象プロセスを基に、プロパティ値を変更するデリゲートを作成する。
+        /// </summary>
+        /// <param name="targetProcess">
+        /// 操作対象プロセス。見つからなかった場合は null 。
+        /// </param>
+        /// <returns>プロパティ値を変更するデリゲート。</returns>
+        /// <remarks>
+        /// 既定では、 <see cref="TargetProcess"/> のみを変更するデリゲートを作成する。
+        /// </remarks>
+        protected virtual Action MakeUpdatePropertiesAction(Process targetProcess)
         {
             var process = (targetProcess?.HasExited == false) ? targetProcess : null;
-            if (process == this.TargetProcess)
-            {
-                // 操作対象プロセスに変化が無ければ何もしない
-                return null;
-            }
+            return () => this.targetProcess = process;
+        }
 
+        /// <summary>
+        /// プロパティ値を変更するデリゲートを呼び出し、
+        /// 呼び出しの前後で値の変化したプロパティ名のコレクションを返す。
+        /// </summary>
+        /// <param name="updateProperties">プロパティ値を変更するデリゲート。</param>
+        /// <returns>値の変化したプロパティ名のコレクション。</returns>
+        /// <remarks>
+        /// 既定では、 <see cref="TargetProcess"/>, <see cref="MainWindowHandle"/>,
+        /// <see cref="IsAlive"/>, <see cref="CanOperate"/>
+        /// の 4 つのプロパティ値について変更を監視する。
+        /// </remarks>
+        protected virtual IReadOnlyCollection<string> UpdatePropertiesByAction(
+            Action updateProperties)
+        {
+            var oldTargetProcess = this.TargetProcess;
             var oldMainWindowHandle = this.MainWindowHandle;
             var oldAlive = this.IsAlive;
             var oldCanOperate = this.CanOperate;
 
-            // TargetProcess プロパティ値更新
-            this.targetProcess = process;
+            updateProperties?.Invoke();
 
-            // PropertyChanged イベント呼び出し対象プロパティ名リスト作成
             var propNames = new List<string>();
-            propNames.Add(nameof(TargetProcess));
+
+            if (this.TargetProcess != oldTargetProcess)
+            {
+                propNames.Add(nameof(TargetProcess));
+            }
             if (this.MainWindowHandle != oldMainWindowHandle)
             {
                 propNames.Add(nameof(MainWindowHandle));
@@ -162,16 +240,30 @@ namespace RucheHome.Automation
                 propNames.Add(nameof(CanOperate));
             }
 
-            // PropertyChanged 呼び出しデリゲートを作成して返す
-            return
-                () =>
-                {
-                    foreach (var name in propNames)
-                    {
-                        this.RaisePropertyChanged(name);
-                    }
-                };
+            return propNames;
         }
+
+        /// <summary>
+        /// 値の変化したプロパティ名について
+        /// <see cref="INotifyPropertyChanged.PropertyChanged"/>
+        /// イベントを呼び出すデリゲートを作成する。
+        /// </summary>
+        /// <param name="changedPropertyNames">値の変化したプロパティ名の列挙。</param>
+        /// <returns>デリゲート。呼び出し不要ならば null 。</returns>
+        protected Action MakePropertiesChangedAction(
+            IEnumerable<string> changedPropertyNames)
+            =>
+            (changedPropertyNames?.Any() != true) ?
+                (Action)null :
+                (
+                    () =>
+                    {
+                        foreach (var name in changedPropertyNames)
+                        {
+                            this.RaisePropertyChanged(name);
+                        }
+                    }
+                );
 
         #endregion
 
@@ -353,7 +445,7 @@ namespace RucheHome.Automation
         }
 
         /// <summary>
-        /// <see cref="RunProcess"/>
+        /// <see cref="RunProcessCore"/>
         /// メソッドの既定の実装によってプロセスを起動させた後の処理を行う。
         /// </summary>
         /// <param name="process">起動済みプロセス。製品情報の一致も確認済み。</param>
@@ -363,8 +455,10 @@ namespace RucheHome.Automation
         /// <returns>成功したならば true 。そうでなければ false 。</returns>
         /// <remarks>
         /// <para>
-        /// 既定では <see cref="UpdateByTargetProcess"/> を呼び出し、
-        /// 戻り値を引数 raisePropertyChanged に設定して true を返す。
+        /// 既定ではまず引数 process を破棄する。
+        /// 次に <see cref="UpdateCore"/> を引数値 null で呼び出し、戻り値を引数
+        /// raisePropertyChanged に設定する。
+        /// 最後に <see cref="IsAlive"/> の値を返す。
         /// </para>
         /// <para>
         /// このメソッドで true を返しても、 <see cref="TargetProcess"/> が
@@ -375,8 +469,15 @@ namespace RucheHome.Automation
             Process process,
             out Action raisePropertyChanged)
         {
-            raisePropertyChanged = this.UpdateByTargetProcess(process);
-            return true;
+            // Process インスタンスのリソースを破棄
+            // プロセス自体は起動し続ける
+            process.Dispose();
+
+            // 状態更新
+            raisePropertyChanged = this.UpdateCore(null);
+
+            var alive = this.IsAlive;
+            return (alive, alive ? null : @"起動状態にできませんでした。");
         }
 
         #endregion
@@ -395,7 +496,7 @@ namespace RucheHome.Automation
         /// 失敗したならば false 。
         /// </returns>
         /// <remarks>
-        /// 既定では、プロセスの終了通知を行い、通知に成功したならば
+        /// 既定では、プロセスに対して終了通知を行い、通知に成功したならば
         /// <see cref="ExitProcessImpl"/> を呼び出す。
         /// </remarks>
         protected virtual Result<bool?> ExitProcessCore(out Action raisePropertyChanged)
@@ -438,7 +539,7 @@ namespace RucheHome.Automation
         }
 
         /// <summary>
-        /// <see cref="ExitProcess"/>
+        /// <see cref="ExitProcessCore"/>
         /// メソッドの既定の実装によってプロセスに終了通知を行った後の処理を行う。
         /// </summary>
         /// <param name="targetProcess">

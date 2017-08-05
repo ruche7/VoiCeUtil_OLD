@@ -6,6 +6,7 @@ using System.Linq;
 using Codeer.Friendly;
 using Codeer.Friendly.Dynamic;
 using Codeer.Friendly.Windows.Grasp;
+using RucheHome.Automation.Friendly;
 using RucheHome.Automation.Talkers.Friendly;
 using RucheHome.Diagnostics;
 

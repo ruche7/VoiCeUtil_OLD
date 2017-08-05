@@ -9,6 +9,7 @@ using Codeer.Friendly;
 using Codeer.Friendly.Dynamic;
 using Codeer.Friendly.Windows.Grasp;
 using Codeer.Friendly.Windows.NativeStandardControls;
+using RucheHome.Automation.Friendly;
 using RucheHome.Automation.Talkers.Friendly;
 using RucheHome.Automation.Talkers.Voiceroid2.Internal;
 using RucheHome.Caches;

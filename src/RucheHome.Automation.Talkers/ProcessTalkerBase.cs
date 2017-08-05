@@ -5,7 +5,6 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using RucheHome.Diagnostics;
 using RucheHome.Text.Extensions;
 
@@ -26,64 +25,6 @@ namespace RucheHome.Automation.Talkers
         /// コンストラクタ。
         /// </summary>
         public ProcessTalkerBase() : base() { }
-
-        /// <summary>
-        /// 待機処理の標準タイムアウトミリ秒数値。
-        /// </summary>
-        protected const int StandardTimeoutMilliseconds = 1500;
-
-        /// <summary>
-        /// デリゲートの戻り値が条件を満たさない間待機する。
-        /// </summary>
-        /// <typeparam name="T">戻り値の型。</typeparam>
-        /// <param name="getter">戻り値を取得するデリゲート。</param>
-        /// <param name="predicator">戻り値の条件判定を行うデリゲート。</param>
-        /// <param name="timeoutMilliseconds">
-        /// タイムアウトミリ秒数。既定値は
-        /// <see cref="ProcessTalkerBase{TParameterId}.StandardTimeoutMilliseconds"/> 。
-        /// 負数ならば無制限。
-        /// </param>
-        /// <returns>
-        /// predicator が true を返したならばその値。
-        /// タイムアウトしたならばタイムアウト直前の値。
-        /// </returns>
-        protected static T WaitUntil<T>(
-            Func<T> getter,
-            Func<T, bool> predicator,
-            int timeoutMilliseconds = StandardTimeoutMilliseconds)
-        {
-            ArgumentValidation.IsNotNull(getter, nameof(getter));
-            ArgumentValidation.IsNotNull(predicator, nameof(predicator));
-
-            var value = getter();
-
-            for (
-                var sw = Stopwatch.StartNew();
-                !predicator(value) &&
-                (timeoutMilliseconds < 0 || sw.ElapsedMilliseconds < timeoutMilliseconds);)
-            {
-                Thread.Yield();
-                value = getter();
-            }
-
-            return value;
-        }
-
-        /// <summary>
-        /// デリゲートの戻り値が false の間待機する。
-        /// </summary>
-        /// <param name="getter">戻り値を取得するデリゲート。</param>
-        /// <param name="timeoutMilliseconds">
-        /// タイムアウトミリ秒数。既定値は
-        /// <see cref="ProcessTalkerBase{TParameterId}.StandardTimeoutMilliseconds"/> 。
-        /// 負数ならば無制限。
-        /// </param>
-        /// <returns>true を返したならば true 。タイムアウトしたならば false 。</returns>
-        protected static bool WaitUntil(
-            Func<bool> getter,
-            int timeoutMilliseconds = StandardTimeoutMilliseconds)
-            =>
-            WaitUntil(getter, f => f, timeoutMilliseconds);
 
         /// <summary>
         /// 現在の <see cref="State"/> では処理を行えないことを示すメッセージを作成する。
@@ -246,80 +187,6 @@ namespace RucheHome.Automation.Talkers
             return this.UpdateByTargetProcess(process);
         }
 
-        /// <summary>
-        /// プロパティ群を更新し、変更通知を行うデリゲートを返す。
-        /// </summary>
-        /// <param name="state">状態値。</param>
-        /// <param name="stateMessage">状態に関する付随メッセージ。</param>
-        /// <param name="targetProcess">
-        /// 操作対象プロセス。 state が <see cref="TalkerState.None"/> の場合は無視される。
-        /// </param>
-        /// <returns>プロパティ値変更通知を行うデリゲート。通知不要ならば null 。</returns>
-        private Action UpdateProperties(
-            TalkerState state,
-            string stateMessage,
-            Process targetProcess)
-        {
-            var stateOld = this.State;
-            var aliveOld = this.IsAlive;
-            var canOperateOld = this.CanOperate;
-            var stateMessageOld = this.StateMessage;
-            var processOld = this.TargetProcess;
-            var mainWinHandleOld = this.MainWindowHandle;
-
-            // まず値変更
-            this.State = state;
-            this.StateMessage = stateMessage;
-            this.targetProcess = (state == TalkerState.None) ? null : targetProcess;
-
-            // 変更通知対象をリストアップ
-            var changedPropNames = new List<string>();
-            if (this.State != stateOld)
-            {
-                changedPropNames.Add(nameof(State));
-            }
-            if (this.IsAlive != aliveOld)
-            {
-                changedPropNames.Add(nameof(IsAlive));
-            }
-            if (this.CanOperate != canOperateOld)
-            {
-                changedPropNames.Add(nameof(CanOperate));
-            }
-            if (this.StateMessage != stateMessageOld)
-            {
-                changedPropNames.Add(nameof(StateMessage));
-            }
-            if (this.TargetProcess != processOld)
-            {
-                changedPropNames.Add(nameof(TargetProcess));
-            }
-            if (this.MainWindowHandle != mainWinHandleOld)
-            {
-                changedPropNames.Add(nameof(MainWindowHandle));
-            }
-
-            if (changedPropNames.Count <= 0)
-            {
-                // 通知不要
-                return null;
-            }
-
-            // 通知デリゲート作成
-            return
-                () =>
-                {
-                    // まず PropertyChanged イベントを処理
-                    foreach (var name in changedPropNames)
-                    {
-                        this.RaisePropertyChanged(name);
-                    }
-
-                    // OnPropertyChanged メソッドを処理
-                    this.OnPropertyChanged(changedPropNames.AsReadOnly());
-                };
-        }
-
         #region 要オーバライド
 
         /// <summary>
@@ -364,22 +231,6 @@ namespace RucheHome.Automation.Talkers
         public abstract bool HasCharacters { get; }
 
         /// <summary>
-        /// <see cref="ProcessTalkerBase{TParameterId}"/> のプロパティ値変更時に呼び出される。
-        /// </summary>
-        /// <param name="changedPropertyNames">
-        /// 変更されたプロパティ名のコレクション。必ず要素数 1 以上となる。
-        /// </param>
-        /// <remarks>
-        /// <para>派生クラスのプロパティは考慮されない。</para>
-        /// <para>既定では何も行わない。</para>
-        /// </remarks>
-        protected virtual void OnPropertyChanged(
-            ReadOnlyCollection<string> changedPropertyNames)
-        {
-            // 何もしない
-        }
-
-        /// <summary>
         /// 操作対象プロセスの状態を調べる。
         /// </summary>
         /// <param name="process">
@@ -393,6 +244,22 @@ namespace RucheHome.Automation.Talkers
         /// 付随メッセージも <see cref="StateMessage"/> に利用される。
         /// </remarks>
         protected abstract Result<TalkerState> CheckState(Process process);
+
+        /// <summary>
+        /// <see cref="UpdatePropertiesByAction"/> メソッドによってプロパティが
+        /// 1 つ以上更新された時に呼び出される。
+        /// </summary>
+        /// <param name="changedPropertyNames">
+        /// 変更されたプロパティ名のコレクション。必ず要素数 1 以上となる。
+        /// </param>
+        /// <returns>追加で更新通知するプロパティ名の列挙。不要ならば null 。</returns>
+        /// <remarks>
+        /// 既定では何も行わず null を返す。
+        /// </remarks>
+        protected virtual IEnumerable<string> OnPropertiesChanged(
+            IReadOnlyCollection<string> changedPropertyNames)
+            =>
+            null;
 
         /// <summary>
         /// 有効キャラクターの一覧を取得する。
@@ -763,13 +630,89 @@ namespace RucheHome.Automation.Talkers
         /// 操作対象プロセス。見つからなかった場合は null 。
         /// </param>
         /// <returns>プロパティ値変更通知を行うデリゲート。通知不要ならば null 。</returns>
-        protected override sealed Action UpdateByTargetProcess(Process targetProcess)
+        /// <remarks>
+        /// 実装の sealed 化のためのオーバライド。
+        /// </remarks>
+        protected override sealed Action UpdateByTargetProcess(Process targetProcess) =>
+            base.UpdateByTargetProcess(targetProcess);
+
+        /// <summary>
+        /// 操作対象プロセスを基に、プロパティ値を変更するデリゲートを作成する。
+        /// </summary>
+        /// <param name="targetProcess">
+        /// 操作対象プロセス。見つからなかった場合は null 。
+        /// </param>
+        /// <returns>プロパティ値を変更するデリゲート。</returns>
+        /// <remarks>
+        /// <see cref="CheckState(Process)"/> を呼び出し、その戻り値によって
+        /// <see cref="TargetProcess"/>, <see cref="State"/>, <see cref="StateMessage"/>
+        /// を変更するデリゲートを作成する。
+        /// </remarks>
+        protected override sealed Action MakeUpdatePropertiesAction(Process targetProcess)
         {
             var process = (targetProcess?.HasExited == false) ? targetProcess : null;
+
+            // 状態確認
             var (state, stateMessage) =
                 (process != null) ? this.CheckState(process) : TalkerState.None;
 
-            return this.UpdateProperties(state, stateMessage, process);
+            // プロセス未起動扱いなら process を null とする
+            if (state == TalkerState.None)
+            {
+                process = null;
+            }
+
+            return
+                () =>
+                {
+                    this.targetProcess = process;
+                    this.State = state;
+                    this.StateMessage = stateMessage;
+                };
+        }
+
+        /// <summary>
+        /// プロパティ値を変更するデリゲートを呼び出し、
+        /// 呼び出しの前後で値の変化したプロパティ名のコレクションを返す。
+        /// </summary>
+        /// <param name="updateProperties">プロパティ値を変更するデリゲート。</param>
+        /// <returns>値の変化したプロパティ名のコレクション。</returns>
+        /// <remarks>
+        /// ベースクラスの監視対象に加えて
+        /// <see cref="State"/>, <see cref="StateMessage"/> の変更を監視する。
+        /// また、 <see cref="OnPropertiesChanged"/> を呼び出す。
+        /// </remarks>
+        protected override sealed IReadOnlyCollection<string> UpdatePropertiesByAction(
+            Action updateProperties)
+        {
+            var oldState = this.State;
+            var oldStateMessage = this.StateMessage;
+
+            // ベースクラス処理
+            var propNames =
+                base.UpdatePropertiesByAction(updateProperties)?.ToList() ??
+                new List<string>();
+
+            if (this.State != oldState)
+            {
+                propNames.Add(nameof(State));
+            }
+            if (this.StateMessage != oldStateMessage)
+            {
+                propNames.Add(nameof(StateMessage));
+            }
+
+            // 派生クラス処理
+            if (propNames.Count > 0)
+            {
+                var extraNames = this.OnPropertiesChanged(propNames);
+                if (extraNames != null)
+                {
+                    propNames.AddRange(extraNames);
+                }
+            }
+
+            return propNames;
         }
 
         /// <summary>
@@ -834,7 +777,7 @@ namespace RucheHome.Automation.Talkers
         }
 
         /// <summary>
-        /// <see cref="RunProcess"/> メソッドの実処理を行う。
+        /// <see cref="ProcessOperationBase.RunProcess"/> メソッドの実処理を行う。
         /// </summary>
         /// <param name="processFilePath">実行ファイルパス。</param>
         /// <param name="raisePropertyChanged">
@@ -864,7 +807,7 @@ namespace RucheHome.Automation.Talkers
         }
 
         /// <summary>
-        /// <see cref="RunProcess"/>
+        /// <see cref="ProcessOperationBase.RunProcessCore"/>
         /// メソッドの既定の実装によってプロセスを起動させた後の処理を行う。
         /// </summary>
         /// <param name="process">起動済みプロセス。製品情報の一致も確認済み。</param>
@@ -876,31 +819,31 @@ namespace RucheHome.Automation.Talkers
             Process process,
             out Action raisePropertyChanged)
         {
-            // Process インスタンスのリソースを破棄
-            // プロセス自体は起動し続ける
-            process.Dispose();
+            // result.Value には IsAlive の値が入る
+            var result = base.RunProcessImpl(process, out raisePropertyChanged);
 
-            // 状態更新
-            raisePropertyChanged = this.UpdateCore(null);
-
-            switch (this.State)
+            if (!result.Value)
             {
-            case TalkerState.None:
-                return (false, @"起動状態にできませんでした。");
+                switch (this.State)
+                {
+                case TalkerState.Startup:
+                    // 起動途中でも成功扱い
+                    return true;
 
-            case TalkerState.Cleanup:
-                // 多重起動に引っ掛かるとここに来る場合がある
-                // 通常は事前に弾くはず ⇒ 起動状態を確認できていない可能性が高い
-                return (false, @"管理者権限で起動済みの可能性があります。");
+                case TalkerState.Cleanup:
+                    // 多重起動に引っ掛かるとここに来る場合がある
+                    // 通常は事前に弾くはず ⇒ 起動状態を確認できていない可能性が高い
+                    return (false, @"管理者権限で起動済みの可能性があります。");
 
-            case TalkerState.Fail:
-                return MakeStateErrorResult(false);
+                case TalkerState.Fail:
+                    return MakeStateErrorResult(false);
 
-            default:
-                break;
+                default:
+                    break;
+                }
             }
 
-            return true;
+            return result;
         }
 
         /// <summary>
@@ -927,7 +870,7 @@ namespace RucheHome.Automation.Talkers
         }
 
         /// <summary>
-        /// <see cref="ExitProcess"/> メソッドの実処理を行う。
+        /// <see cref="ProcessOperationBase.ExitProcess"/> メソッドの実処理を行う。
         /// </summary>
         /// <param name="raisePropertyChanged">
         /// プロパティ値変更通知を行うデリゲートの設定先。通知不要ならば null が設定される。
@@ -1469,33 +1412,39 @@ namespace RucheHome.Automation.Talkers
 
                     // 音声ファイル保存中状態に変更
                     raisePropChanged =
-                        this.UpdateProperties(
-                            TalkerState.FileSaving,
-                            null,
-                            this.TargetProcess);
-
-                    try
+                        this.MakePropertiesChangedAction(
+                            this.UpdatePropertiesByAction(
+                                () =>
+                                {
+                                    this.State = TalkerState.FileSaving;
+                                    this.StateMessage = null;
+                                }));
+                    if (raisePropChanged != null)
                     {
-                        // PropertyChanged イベント処理中フラグを立てる
-                        this.IsPropertyChangedOnSaveFile = true;
+                        try
+                        {
+                            // PropertyChanged イベント処理中フラグを立てる
+                            this.IsPropertyChangedOnSaveFile = true;
 
-                        // プロパティ値変更通知
-                        // lock 内だが IsSaveFileRunning によりデッドロック回避する
-                        raisePropChanged?.Invoke();
-                    }
-                    catch (Exception ex)
-                    {
-                        ThreadTrace.WriteException(ex);
-                        return (
-                            null,
-                            ex.Message ?? (ex.GetType().Name + @" 例外が発生しました。"));
-                    }
-                    finally
-                    {
-                        raisePropChanged = null;
+                            // プロパティ値変更通知
+                            // lock 内だが IsSaveFileRunning によりデッドロック回避する
+                            raisePropChanged.Invoke();
+                        }
+                        catch (Exception ex)
+                        {
+                            ThreadTrace.WriteException(ex);
+                            return (
+                                null,
+                                ex.Message ??
+                                (ex.GetType().Name + @" 例外が発生しました。"));
+                        }
+                        finally
+                        {
+                            raisePropChanged = null;
 
-                        // PropertyChanged イベント処理中フラグを下ろす
-                        this.IsPropertyChangedOnSaveFile = false;
+                            // PropertyChanged イベント処理中フラグを下ろす
+                            this.IsPropertyChangedOnSaveFile = false;
+                        }
                     }
 
                     // 保存先ディレクトリ作成

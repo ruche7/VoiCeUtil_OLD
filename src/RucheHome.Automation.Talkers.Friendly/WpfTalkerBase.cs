@@ -2,6 +2,7 @@
 using System.Windows;
 using Codeer.Friendly;
 using Codeer.Friendly.Dynamic;
+using RucheHome.Automation.Friendly;
 using RucheHome.Automation.Friendly.Wpf;
 using RucheHome.Diagnostics;
 

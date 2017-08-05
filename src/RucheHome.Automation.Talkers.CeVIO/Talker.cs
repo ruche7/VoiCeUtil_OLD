@@ -8,6 +8,7 @@ using System.Threading;
 using Codeer.Friendly;
 using Codeer.Friendly.Dynamic;
 using Codeer.Friendly.Windows.Grasp;
+using RucheHome.Automation.Friendly;
 using RucheHome.Automation.Friendly.Wpf;
 using RucheHome.Automation.Talkers.CeVIO.Internal.Controls;
 using RucheHome.Automation.Talkers.Friendly;

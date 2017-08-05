@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
@@ -6,6 +7,7 @@ using System.Windows.Automation;
 using Codeer.Friendly;
 using Codeer.Friendly.Windows;
 using Codeer.Friendly.Windows.Grasp;
+using RucheHome.Automation.Friendly;
 using RucheHome.Automation.Friendly.Native;
 using RucheHome.Diagnostics;
 
@@ -23,22 +25,6 @@ namespace RucheHome.Automation.Talkers.Friendly
     public abstract class TalkerBase<TParameterId>
         : ProcessTalkerBase<TParameterId>, IDisposable
     {
-        /// <summary>
-        /// CLRバージョン種別列挙。
-        /// </summary>
-        protected enum ClrVersion
-        {
-            /// <summary>
-            /// v2.0.50727
-            /// </summary>
-            V2,
-
-            /// <summary>
-            /// v4.0.30319
-            /// </summary>
-            V4,
-        }
-
         /// <summary>
         /// コンストラクタ。
         /// </summary>
@@ -66,7 +52,7 @@ namespace RucheHome.Automation.Talkers.Friendly
         private bool disposed = false;
 
         /// <summary>
-        /// ウィンドウ種別列挙。
+        /// ウィンドウタイトル種別列挙。
         /// </summary>
         protected enum WindowTitleKind
         {
@@ -97,7 +83,7 @@ namespace RucheHome.Automation.Talkers.Friendly
         /// <param name="action">非同期アクション。</param>
         /// <param name="timeoutMilliseconds">
         /// タイムアウトミリ秒数。既定値は
-        /// <see cref="ProcessTalkerBase{TParameterId}.StandardTimeoutMilliseconds"/> 。
+        /// <see cref="ProcessOperationBase.StandardTimeoutMilliseconds"/> 。
         /// 負数ならば無制限。
         /// </param>
         /// <returns>完了したならば true 。タイムアウトしたならば false 。</returns>
@@ -201,19 +187,7 @@ namespace RucheHome.Automation.Talkers.Friendly
         /// <see cref="ProcessTalkerBase{TParameterId}.IsAlive"/> が
         /// true の時のみ有効な値を返す。
         /// </remarks>
-        protected WindowsAppFriend TargetApp
-        {
-            get => this.targetApp;
-            private set
-            {
-                if (value != this.targetApp)
-                {
-                    this.SetProperty(ref this.targetApp, value);
-                    this.OnTargetAppChanged();
-                }
-            }
-        }
-        private WindowsAppFriend targetApp = null;
+        protected WindowsAppFriend TargetApp { get; private set; }
 
         /// <summary>
         /// 操作対象プロセスからアプリインスタンスを生成する。
@@ -226,14 +200,7 @@ namespace RucheHome.Automation.Talkers.Friendly
             {
                 if (process?.HasExited == false)
                 {
-                    switch (this.ProcessClrVersion)
-                    {
-                    case ClrVersion.V2:
-                        return new WindowsAppFriend(process, @"v2.0.50727");
-
-                    case ClrVersion.V4:
-                        return new WindowsAppFriend(process, @"v4.0.30319");
-                    }
+                    return AppFactory.Create(process, this.ProcessClrVersion);
                 }
             }
             catch (Exception ex)
@@ -282,37 +249,6 @@ namespace RucheHome.Automation.Talkers.Friendly
         #region ProcessTalkerBase<TParameterId> のオーバライド
 
         /// <summary>
-        /// <see cref="TalkerBase{TParameterId}"/> のプロパティ値変更時に呼び出される。
-        /// </summary>
-        /// <param name="changedPropertyNames">
-        /// 変更されたプロパティ名のコレクション。必ず要素数 1 以上となる。
-        /// </param>
-        protected override void OnPropertyChanged(
-            ReadOnlyCollection<string> changedPropertyNames)
-        {
-            if (this.IsDisposed)
-            {
-                return;
-            }
-
-            // IsAlive, TargetProcess を処理
-            if (
-                changedPropertyNames.Contains(nameof(IsAlive)) ||
-                changedPropertyNames.Contains(nameof(TargetProcess)))
-            {
-                // IsAlive == true 時のみ TargetApp が有効となるようにする
-                var process = this.IsAlive ? this.TargetProcess : null;
-
-                // プロセスIDが異なるなら差し替え
-                if (process?.Id != this.TargetApp?.ProcessId)
-                {
-                    this.TargetApp?.Dispose();
-                    this.TargetApp = (process == null) ? null : this.CreateApp(process);
-                }
-            }
-        }
-
-        /// <summary>
         /// 操作対象プロセスの状態を調べる。
         /// </summary>
         /// <param name="process">
@@ -323,7 +259,11 @@ namespace RucheHome.Automation.Talkers.Friendly
         /// <returns>状態値。</returns>
         protected override sealed Result<TalkerState> CheckState(Process process)
         {
-            if (this.IsDisposed || process.HasExited)
+            if (this.IsDisposed)
+            {
+                return (TalkerState.Fail, @"オブジェクトを破棄済みです。");
+            }
+            if (process.HasExited)
             {
                 return TalkerState.None;
             }
@@ -432,6 +372,53 @@ namespace RucheHome.Automation.Talkers.Friendly
                     app?.Dispose();
                 }
             }
+        }
+
+        /// <summary>
+        /// <see cref="OnPropertiesChanged"/> から
+        /// <see cref="TargetApp"/> の名前を返すための列挙オブジェクト。
+        /// </summary>
+        private static readonly IEnumerable<string> TargetAppPropertyNameEnumerable =
+            new[] { nameof(TargetApp) };
+
+        /// <summary>
+        /// <see cref="ProcessTalkerBase{TParameterId}.UpdatePropertiesByAction"/>
+        /// メソッドによってプロパティが 1 つ以上更新された時に呼び出される。
+        /// </summary>
+        /// <param name="changedPropertyNames">
+        /// 変更されたプロパティ名のコレクション。必ず要素数 1 以上となる。
+        /// </param>
+        /// <returns>追加で更新通知するプロパティ名の列挙。不要ならば null 。</returns>
+        protected override IEnumerable<string> OnPropertiesChanged(
+            IReadOnlyCollection<string> changedPropertyNames)
+        {
+            if (this.IsDisposed)
+            {
+                return null;
+            }
+
+            // IsAlive, TargetProcess を処理
+            if (
+                changedPropertyNames.Contains(nameof(IsAlive)) ||
+                changedPropertyNames.Contains(nameof(TargetProcess)))
+            {
+                // IsAlive == true 時のみ TargetApp が有効となるようにする
+                var process = this.IsAlive ? this.TargetProcess : null;
+
+                // プロセスIDが異なるなら差し替え
+                if (process?.Id != this.TargetApp?.ProcessId)
+                {
+                    this.TargetApp?.Dispose();
+                    this.TargetApp = (process == null) ? null : this.CreateApp(process);
+
+                    // TargetApp 変更時処理
+                    this.OnTargetAppChanged();
+
+                    return TargetAppPropertyNameEnumerable;
+                }
+            }
+
+            return null;
         }
 
         /// <summary>
