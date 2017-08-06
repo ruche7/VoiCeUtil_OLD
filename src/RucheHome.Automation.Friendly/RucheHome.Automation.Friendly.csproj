@@ -56,6 +56,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AppFactory.cs" />
+    <Compile Include="AsyncActionWaiter.cs" />
     <Compile Include="ClrVersion.cs" />
     <Compile Include="Native\NativeFileDialog.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

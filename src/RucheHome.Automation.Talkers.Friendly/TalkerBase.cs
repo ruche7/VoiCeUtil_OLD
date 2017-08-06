@@ -90,25 +90,8 @@ namespace RucheHome.Automation.Talkers.Friendly
         protected static bool WaitAsyncAction(
             Action<Async> action,
             int timeoutMilliseconds = StandardTimeoutMilliseconds)
-        {
-            ArgumentValidation.IsNotNull(action, nameof(action));
-
-            var async = new Async();
-
-            action(async);
-
-            if (!WaitUntil(() => async.IsCompleted, timeoutMilliseconds))
-            {
-                return false;
-            }
-
-            if (async.ExecutingException != null)
-            {
-                throw async.ExecutingException;
-            }
-
-            return async.IsCompleted;
-        }
+            =>
+            AsyncActionWaiter.Wait(action, timeoutMilliseconds);
 
         /// <summary>
         /// ファイルダイアログにファイルパスを設定して決定ボタンをクリックする。

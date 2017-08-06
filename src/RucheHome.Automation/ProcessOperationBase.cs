@@ -53,7 +53,7 @@ namespace RucheHome.Automation
         /// デリゲートの戻り値が条件を満たさない間待機する。
         /// </summary>
         /// <typeparam name="T">戻り値の型。</typeparam>
-        /// <param name="getter">戻り値を取得するデリゲート。</param>
+        /// <param name="func">処理対象デリゲート。</param>
         /// <param name="predicator">戻り値の条件判定を行うデリゲート。</param>
         /// <param name="timeoutMilliseconds">
         /// タイムアウトミリ秒数。既定値は <see cref="StandardTimeoutMilliseconds"/> 。
@@ -64,41 +64,26 @@ namespace RucheHome.Automation
         /// タイムアウトしたならばタイムアウト直前の値。
         /// </returns>
         protected static T WaitUntil<T>(
-            Func<T> getter,
+            Func<T> func,
             Func<T, bool> predicator,
             int timeoutMilliseconds = StandardTimeoutMilliseconds)
-        {
-            ArgumentValidation.IsNotNull(getter, nameof(getter));
-            ArgumentValidation.IsNotNull(predicator, nameof(predicator));
-
-            var value = getter();
-
-            for (
-                var sw = Stopwatch.StartNew();
-                !predicator(value) &&
-                (timeoutMilliseconds < 0 || sw.ElapsedMilliseconds < timeoutMilliseconds);)
-            {
-                Thread.Yield();
-                value = getter();
-            }
-
-            return value;
-        }
+            =>
+            Waiter.Until(func, predicator, timeoutMilliseconds);
 
         /// <summary>
         /// デリゲートの戻り値が false の間待機する。
         /// </summary>
-        /// <param name="getter">戻り値を取得するデリゲート。</param>
+        /// <param name="func">処理対象デリゲート。</param>
         /// <param name="timeoutMilliseconds">
         /// タイムアウトミリ秒数。既定値は <see cref="StandardTimeoutMilliseconds"/> 。
         /// 負数ならば無制限。
         /// </param>
-        /// <returns>true を返したならば true 。タイムアウトしたならば false 。</returns>
+        /// <returns>待機完了したならば true 。タイムアウトしたならば false 。</returns>
         protected static bool WaitUntil(
-            Func<bool> getter,
+            Func<bool> func,
             int timeoutMilliseconds = StandardTimeoutMilliseconds)
             =>
-            WaitUntil(getter, f => f, timeoutMilliseconds);
+            Waiter.Until(func, timeoutMilliseconds);
 
         /// <summary>
         /// <see cref="TargetProcess"/> によって状態を更新する。

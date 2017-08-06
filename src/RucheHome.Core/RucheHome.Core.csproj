@@ -48,6 +48,7 @@
     <Compile Include="Diagnostics\ProcessDetector.cs" />
     <Compile Include="Diagnostics\ThreadDebug.cs" />
     <Compile Include="Diagnostics\ThreadTrace.cs" />
+    <Compile Include="Diagnostics\Waiter.cs" />
     <Compile Include="Formats\Ini\IniFormatException.cs" />
     <Compile Include="Formats\Ini\IniItem.cs" />
     <Compile Include="Formats\Ini\IniItemCollection.cs" />
