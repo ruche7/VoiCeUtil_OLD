@@ -92,21 +92,6 @@ namespace RucheHome.Automation.Ymm
         Result<bool> SetSpeechText(string text);
 
         /// <summary>
-        /// タイムラインウィンドウのテキストボックスにファイルをドロップする。
-        /// </summary>
-        /// <param name="filePath">ファイルパス。</param>
-        /// <returns>成功したならば true 。そうでなければ false 。</returns>
-        /// <remarks>
-        /// <para>
-        /// <see cref="SetSpeechText"/> で直接ファイルパスを書き込む場合と異なり、
-        /// ゆっくりMovieMaker本体のカスタムボイス機能が動作する。
-        /// そのためこのメソッドによって選択中のキャラクターが変化する可能性がある。
-        /// </para>
-        /// <para>タイムラインウィンドウが非表示の場合は必ず失敗する。</para>
-        /// </remarks>
-        Result<bool> DropFileToSpeechTextBox(string filePath);
-
-        /// <summary>
         /// タイムラインウィンドウの追加ボタンをクリックする。
         /// </summary>
         /// <returns>成功したならば true 。そうでなければ false 。</returns>

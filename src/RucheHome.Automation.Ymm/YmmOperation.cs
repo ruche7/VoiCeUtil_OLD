@@ -212,19 +212,19 @@ namespace RucheHome.Automation.Ymm
             switch (state)
             {
             case YmmState.None:
-                return @"起動していません。";
+                return @"本体が起動していません。";
 
             case YmmState.Startup:
-                return @"起動完了していません。";
+                return @"本体が起動完了していません。";
 
             case YmmState.Cleanup:
-                return @"終了処理中です。";
+                return @"本体が終了処理中です。";
 
             case YmmState.TimelineHidden:
-                return @"タイムラインウィンドウが非表示です。";
+                return @"本体のタイムラインウィンドウが非表示です。";
 
             case YmmState.Blocking:
-                return @"処理できない状態です。";
+                return @"本体が処理できない状態です。";
 
             case YmmState.Idle:
                 return null;
@@ -364,7 +364,7 @@ namespace RucheHome.Automation.Ymm
 
             try
             {
-                return root.Children[index];
+                return (root.Children[index], null);
             }
             catch (Exception ex)
             {
@@ -383,7 +383,7 @@ namespace RucheHome.Automation.Ymm
         /// </param>
         /// <returns>コンボボックス。見つからなければ null 。</returns>
         private Result<dynamic> GetTimelineCharacterComboBox(dynamic controlsRoot = null) =>
-            this.GetTimelineControl(0, controlsRoot, @"キャラクター選択欄");
+            this.GetTimelineControl(0, (DynamicAppVar)controlsRoot, @"キャラクター選択欄");
 
         /// <summary>
         /// タイムラインウィンドウのセリフテキストボックスを取得する。
@@ -393,7 +393,7 @@ namespace RucheHome.Automation.Ymm
         /// </param>
         /// <returns>テキストボックス。見つからなければ null 。</returns>
         private Result<dynamic> GetTimelineSpeechTextBox(dynamic controlsRoot = null) =>
-            this.GetTimelineControl(2, controlsRoot, @"セリフ入力欄");
+            this.GetTimelineControl(2, (DynamicAppVar)controlsRoot, @"セリフ入力欄");
 
         /// <summary>
         /// タイムラインウィンドウの追加ボタンを取得する。
@@ -403,7 +403,7 @@ namespace RucheHome.Automation.Ymm
         /// </param>
         /// <returns>ボタン。見つからなければ null 。</returns>
         private Result<dynamic> GetTimelineAddButton(dynamic controlsRoot = null) =>
-            this.GetTimelineControl(5, controlsRoot, @"セリフ追加ボタン");
+            this.GetTimelineControl(5, (DynamicAppVar)controlsRoot, @"セリフ追加ボタン");
 
         #region ProcessOperationBase のオーバライド
 
@@ -787,7 +787,8 @@ namespace RucheHome.Automation.Ymm
         {
             lock (this.LockObject)
             {
-                if (!this.CanOperate)
+                // CanOperate は TimelineHidden も含まれるため、直接 State で判断
+                if (this.State != YmmState.Idle)
                 {
                     return this.MakeStateErrorResult<ReadOnlyCollection<string>>();
                 }
@@ -831,7 +832,8 @@ namespace RucheHome.Automation.Ymm
         {
             lock (this.LockObject)
             {
-                if (!this.CanOperate)
+                // CanOperate は TimelineHidden も含まれるため、直接 State で判断
+                if (this.State != YmmState.Idle)
                 {
                     return this.MakeStateErrorResult<string>();
                 }
@@ -868,7 +870,8 @@ namespace RucheHome.Automation.Ymm
         {
             lock (this.LockObject)
             {
-                if (!this.CanOperate)
+                // CanOperate は TimelineHidden も含まれるため、直接 State で判断
+                if (this.State != YmmState.Idle)
                 {
                     return this.MakeStateErrorResult(false);
                 }
@@ -923,7 +926,8 @@ namespace RucheHome.Automation.Ymm
         {
             lock (this.LockObject)
             {
-                if (!this.CanOperate)
+                // CanOperate は TimelineHidden も含まれるため、直接 State で判断
+                if (this.State != YmmState.Idle)
                 {
                     return this.MakeStateErrorResult<string>();
                 }
@@ -960,7 +964,8 @@ namespace RucheHome.Automation.Ymm
         {
             lock (this.LockObject)
             {
-                if (!this.CanOperate)
+                // CanOperate は TimelineHidden も含まれるため、直接 State で判断
+                if (this.State != YmmState.Idle)
                 {
                     return this.MakeStateErrorResult(false);
                 }
@@ -1001,33 +1006,6 @@ namespace RucheHome.Automation.Ymm
         }
 
         /// <summary>
-        /// タイムラインウィンドウのテキストボックスにファイルをドロップする。
-        /// </summary>
-        /// <param name="filePath">ファイルパス。</param>
-        /// <returns>成功したならば true 。そうでなければ false 。</returns>
-        /// <remarks>
-        /// <para>
-        /// <see cref="SetSpeechText"/> で直接ファイルパスを書き込む場合と異なり、
-        /// ゆっくりMovieMaker本体のカスタムボイス機能が動作する。
-        /// そのためこのメソッドによって選択中のキャラクターが変化する可能性がある。
-        /// </para>
-        /// <para>タイムラインウィンドウが非表示の場合は必ず失敗する。</para>
-        /// </remarks>
-        public Result<bool> DropFileToSpeechTextBox(string filePath)
-        {
-            lock (this.LockObject)
-            {
-                if (!this.CanOperate)
-                {
-                    return this.MakeStateErrorResult(false);
-                }
-
-                // TODO: 実装
-                throw new NotImplementedException();
-            }
-        }
-
-        /// <summary>
         /// タイムラインウィンドウの追加ボタンをクリックする。
         /// </summary>
         /// <returns>成功したならば true 。そうでなければ false 。</returns>
@@ -1038,7 +1016,8 @@ namespace RucheHome.Automation.Ymm
         {
             lock (this.LockObject)
             {
-                if (!this.CanOperate)
+                // CanOperate は TimelineHidden も含まれるため、直接 State で判断
+                if (this.State != YmmState.Idle)
                 {
                     return this.MakeStateErrorResult(false);
                 }
@@ -1088,9 +1067,9 @@ namespace RucheHome.Automation.Ymm
             }
         }
 
-        #endregion
+#endregion
 
-        #region IDisposable の実装
+#region IDisposable の実装
 
         /// <summary>
         /// リソースを破棄する。
@@ -1118,6 +1097,6 @@ namespace RucheHome.Automation.Ymm
             this.TargetApp = null;
         }
 
-        #endregion
+#endregion
     }
 }
