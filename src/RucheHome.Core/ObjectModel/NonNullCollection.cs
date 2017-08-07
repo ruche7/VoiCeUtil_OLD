@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
 using RucheHome.Diagnostics;
 
 namespace RucheHome.ObjectModel
@@ -25,10 +24,7 @@ namespace RucheHome.ObjectModel
         /// <param name="list">ラップ対象のリスト。</param>
         public NonNullCollection(IList<T> list) : base(list)
         {
-            if (list.Any(v => v == null))
-            {
-                throw new ArgumentException(@"Some items are null.", nameof(list));
-            }
+            ArgumentValidation.AreNotNull(list, nameof(list), @"items");
         }
 
         /// <summary>

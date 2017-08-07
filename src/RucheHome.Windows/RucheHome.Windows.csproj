@@ -57,5 +57,11 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="WinApi\Win32Window.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\RucheHome.Core\RucheHome.Core.csproj">
+      <Project>{33ab6685-2e0e-49e2-86fe-15385ec365c6}</Project>
+      <Name>RucheHome.Core</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

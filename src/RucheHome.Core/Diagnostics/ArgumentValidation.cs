@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Linq;
 
 namespace RucheHome.Diagnostics
 {
@@ -145,6 +148,135 @@ namespace RucheHome.Diagnostics
                     (argName == null) ?
                         new ArgumentException(message) :
                         new ArgumentException(message, argName);
+            }
+        }
+
+        /// <summary>
+        /// 列挙引数値のいずれかの要素が null ならば ArgumentException 例外を送出する。
+        /// </summary>
+        /// <typeparam name="T">列挙要素型。</typeparam>
+        /// <param name="arg">引数値。</param>
+        /// <param name="argName">引数名。例外メッセージに利用される。</param>
+        /// <param name="elementsName">列挙要素群の名前。例外メッセージに利用される。</param>
+        /// <remarks>
+        /// 引数 arg 自体が null ならば ArgumentNullException 例外を送出する。
+        /// </remarks>
+        public static void AreNotNull<T>(
+            IEnumerable<T> arg,
+            string argName = null,
+            string elementsName = null)
+            =>
+            CheckEnumerable(
+                arg,
+                argName,
+                elementsName,
+                a => (a == null) ? @"are null." : null);
+
+        /// <summary>
+        /// 列挙引数値のいずれかの要素が null ならば ArgumentException 例外を送出する。
+        /// </summary>
+        /// <param name="arg">引数値。</param>
+        /// <param name="argName">引数名。例外メッセージに利用される。</param>
+        /// <param name="elementsName">列挙要素群の名前。例外メッセージに利用される。</param>
+        /// <remarks>
+        /// 引数 arg 自体が null ならば ArgumentNullException 例外を送出する。
+        /// </remarks>
+        public static void AreNotNull(
+            IEnumerable arg,
+            string argName = null,
+            string elementsName = null)
+            =>
+            AreNotNull((arg == null) ? null : arg.Cast<object>(), argName, elementsName);
+
+        /// <summary>
+        /// 文字列列挙引数値のいずれかの要素が null または空文字列ならば
+        /// ArgumentException 例外を送出する。
+        /// </summary>
+        /// <param name="arg">引数値。</param>
+        /// <param name="argName">引数名。例外メッセージに利用される。</param>
+        /// <param name="elementsName">列挙要素群の名前。例外メッセージに利用される。</param>
+        /// <remarks>
+        /// 引数 arg 自体が null ならば ArgumentNullException 例外を送出する。
+        /// </remarks>
+        public static void AreNotNullOrEmpty(
+            IEnumerable<string> arg,
+            string argName = null,
+            string elementsName = null)
+            =>
+            CheckEnumerable(
+                arg,
+                argName,
+                elementsName,
+                a => (a == null) ? @"are null." : null,
+                a => (a.Length == 0) ? @"are empty." : null);
+
+        /// <summary>
+        /// 文字列列挙引数値のいずれかの要素が null または空白文字のみで構成されるならば
+        /// ArgumentException 例外を送出する。
+        /// </summary>
+        /// <param name="arg">引数値。</param>
+        /// <param name="argName">引数名。例外メッセージに利用される。</param>
+        /// <param name="elementsName">列挙要素群の名前。例外メッセージに利用される。</param>
+        /// <remarks>
+        /// 引数 arg 自体が null ならば ArgumentNullException 例外を送出する。
+        /// </remarks>
+        public static void AreNotNullOrWhiteSpace(
+            IEnumerable<string> arg,
+            string argName = null,
+            string elementsName = null)
+            =>
+            CheckEnumerable(
+                arg,
+                argName,
+                elementsName,
+                a => (a == null) ? @"are null." : null,
+                a => string.IsNullOrWhiteSpace(a) ? @"are blank." : null);
+
+        /// <summary>
+        /// 列挙引数値の各要素を検証する。
+        /// </summary>
+        /// <typeparam name="T">列挙要素型。</typeparam>
+        /// <param name="arg">引数値。</param>
+        /// <param name="argName">引数名。例外メッセージに利用される。</param>
+        /// <param name="elementsName">
+        /// 列挙要素群の名前。例外メッセージに利用される。
+        /// null ならば argName が使われる。 argName も null ならば "values" が使われる。
+        /// </param>
+        /// <param name="validators">
+        /// 要素検証デリゲート配列。
+        /// 正常ならば null を返す。
+        /// 不正ならば "Some (列挙要素群の名前) " に続く例外メッセージ文字列を返す。
+        /// </param>
+        private static void CheckEnumerable<T>(
+            IEnumerable<T> arg,
+            string argName,
+            string elementsName,
+            params Func<T, string>[] validators)
+        {
+            Debug.Assert(validators != null);
+
+            IsNotNull(arg, argName);
+
+            foreach (var a in arg)
+            {
+                foreach (var validator in validators)
+                {
+                    Debug.Assert(validator != null);
+
+                    var message =validator(a);
+                    if (message != null)
+                    {
+                        message =
+                            @"Some " +
+                            (elementsName ?? argName ?? @"values") +
+                            @" " +
+                            message;
+                        throw
+                            (argName == null) ?
+                                new ArgumentException(message) :
+                                new ArgumentException(message, argName);
+                    }
+                }
             }
         }
     }

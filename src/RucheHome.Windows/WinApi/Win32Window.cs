@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
+using RucheHome.Diagnostics;
+using System.Linq;
 
 namespace RucheHome.Windows.WinApi
 {
@@ -369,6 +371,120 @@ namespace RucheHome.Windows.WinApi
         }
 
         /// <summary>
+        /// ファイル単体をドロップする。
+        /// </summary>
+        /// <param name="filePath">ファイルパス。</param>
+        /// <param name="x">ドロップ先のX位置。</param>
+        /// <param name="y">ドロップ先のY位置。</param>
+        /// <param name="nonClientArea">
+        /// true ならば x および y はスクリーン座標系となる。
+        /// false ならば x および y はクライアント座標系となる。
+        /// </param>
+        /// <param name="timeoutMilliseconds">
+        /// タイムアウトミリ秒数。負数ならばタイムアウトしない。
+        /// </param>
+        /// <returns>
+        /// ドロップ先で処理された場合は true 。
+        /// タイムアウトした場合は null 。
+        /// いずれでもない場合は false 。
+        /// </returns>
+        /// <remarks>
+        /// WPFアプリの場合、このメソッドではファイルドロップできない可能性が高い。
+        /// </remarks>
+        public bool? DropFile(
+            string filePath,
+            int x,
+            int y,
+            bool nonClientArea = false,
+            int timeoutMilliseconds = -1)
+            =>
+            this.DropFiles(
+                new[] { filePath ?? throw new ArgumentNullException(nameof(filePath)) },
+                x,
+                y,
+                nonClientArea,
+                timeoutMilliseconds);
+
+        /// <summary>
+        /// ファイル群をドロップする。
+        /// </summary>
+        /// <param name="filePathes">ファイルパス列挙。</param>
+        /// <param name="x">ドロップ先のX位置。</param>
+        /// <param name="y">ドロップ先のY位置。</param>
+        /// <param name="nonClientArea">
+        /// true ならば x および y はスクリーン座標系となる。
+        /// false ならば x および y はクライアント座標系となる。
+        /// </param>
+        /// <param name="timeoutMilliseconds">
+        /// タイムアウトミリ秒数。負数ならばタイムアウトしない。
+        /// </param>
+        /// <returns>
+        /// ドロップ先で処理された場合は true 。
+        /// タイムアウトした場合は null 。
+        /// いずれでもない場合は false 。
+        /// </returns>
+        /// <remarks>
+        /// WPFアプリの場合、このメソッドではファイルドロップできない可能性が高い。
+        /// </remarks>
+        public bool? DropFiles(
+            IEnumerable<string> filePathes,
+            int x,
+            int y,
+            bool nonClientArea = false,
+            int timeoutMilliseconds = -1)
+        {
+            ArgumentValidation.AreNotNullOrWhiteSpace(
+                filePathes,
+                nameof(filePathes),
+                @"file pathes");
+
+            var dropFilesSize = Marshal.SizeOf(typeof(DROPFILES));
+            var dropFiles =
+                new DROPFILES
+                {
+                    PointerToFiles = (uint)dropFilesSize,
+                    X = x,
+                    Y = y,
+                    NonClientArea = nonClientArea,
+                    Wide = true,
+                };
+            var files = Encoding.Unicode.GetBytes(string.Join("\0", filePathes) + "\0\0");
+
+            var dropHandle = IntPtr.Zero;
+            IntPtr? result = null;
+
+            try
+            {
+                dropHandle = Marshal.AllocHGlobal(dropFilesSize + files.Length);
+
+                // DROPFILES 構造体とファイル名バイト列をコピー
+                Marshal.StructureToPtr(dropFiles, dropHandle, false);
+                Marshal.Copy(
+                    files,
+                    0,
+                    new IntPtr(dropHandle.ToInt64() + dropFilesSize),
+                    files.Length);
+
+                result =
+                    this.SendMessage(
+                        WM_DROPFILES,
+                        dropHandle,
+                        IntPtr.Zero,
+                        timeoutMilliseconds);
+            }
+            finally
+            {
+                // タイムアウト時には破棄しない
+                if (dropHandle != IntPtr.Zero && result.HasValue)
+                {
+                    Marshal.FreeHGlobal(dropHandle);
+                }
+            }
+
+            return result.HasValue ? (result.Value == IntPtr.Zero) : (bool?)null;
+        }
+
+        /// <summary>
         /// ウィンドウメッセージを送信する。
         /// </summary>
         /// <param name="message">ウィンドウメッセージ。</param>
@@ -504,6 +620,7 @@ namespace RucheHome.Windows.WinApi
         private const uint WM_SETTEXT = 0x000C;
         private const uint WM_GETTEXT = 0x000D;
         private const uint WM_GETTEXTLENGTH = 0x000E;
+        private const uint WM_DROPFILES = 0x0233;
 
         private const uint GW_OWNER = 4;
         private const uint GA_PARENT = 1;
@@ -531,7 +648,19 @@ namespace RucheHome.Windows.WinApi
             public uint Flags;
             public uint Count;
             public uint Timeout;
-        };
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct DROPFILES
+        {
+            public uint PointerToFiles;
+            public int X;
+            public int Y;
+            [MarshalAs(UnmanagedType.Bool)]
+            public bool NonClientArea;
+            [MarshalAs(UnmanagedType.Bool)]
+            public bool Wide;
+        }
 
         [return: MarshalAs(UnmanagedType.Bool)]
         private delegate bool EnumWindowProc(IntPtr windowHandle, IntPtr lparam);
