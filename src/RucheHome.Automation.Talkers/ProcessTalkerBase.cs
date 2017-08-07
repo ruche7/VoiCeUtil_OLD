@@ -47,25 +47,25 @@ namespace RucheHome.Automation.Talkers
             switch (state)
             {
             case TalkerState.None:
-                return @"起動していません。";
+                return @"本体が起動していません。";
 
             case TalkerState.Fail:
                 return @"不正な状態です。";
 
             case TalkerState.Startup:
-                return @"起動完了していません。";
+                return @"本体が起動完了していません。";
 
             case TalkerState.Cleanup:
-                return @"終了処理中です。";
+                return @"本体が終了処理中です。";
 
             case TalkerState.Speaking:
                 return @"トーク中は処理できません。";
 
             case TalkerState.Blocking:
-                return @"処理できない状態です。";
+                return @"本体が処理できない状態です。";
 
             case TalkerState.FileSaving:
-                return @"音声保存中は処理できません。";
+                return @"本体の音声保存中は処理できません。";
 
             case TalkerState.Idle:
                 return null;
