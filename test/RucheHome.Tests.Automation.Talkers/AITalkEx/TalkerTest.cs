@@ -57,11 +57,14 @@ namespace RucheHome.Tests.Automation.Talkers.AITalkEx
                 talker.Update();
             }
 
-            // 起動中の Talker をテスト対象にする
-            TestTalker = AllTalkers.FirstOrDefault(t => t.IsAlive);
+            // 操作可能状態の Talker をテスト対象にする
+            TestTalker = AllTalkers.FirstOrDefault(t => t.CanOperate);
             if (TestTalker == null)
             {
-                Assert.Inconclusive(@"操作対象 AITalkEx アプリを1つ以上起動してください。");
+                Assert.Inconclusive(
+                    AllTalkers.Any(t => t.IsAlive) ?
+                        @"操作対象 AITalkEx アプリをアイドル状態にしてください。" :
+                        @"操作対象 AITalkEx アプリを1つ以上起動してください。");
             }
 
             // 実行ファイルパスを取得する

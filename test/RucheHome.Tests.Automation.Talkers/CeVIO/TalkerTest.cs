@@ -43,10 +43,13 @@ namespace RucheHome.Tests.Automation.Talkers.CeVIO
             // 一度 Update を走らせる
             TestTalker.Update();
 
-            // 起動中でなければ不可
-            if (!TestTalker.IsAlive)
+            // 操作可能状態でなければ不可
+            if (!TestTalker.CanOperate)
             {
-                Assert.Inconclusive(@"CeVIO Creative Studio S を起動してください。");
+                Assert.Inconclusive(
+                    TestTalker.IsAlive ?
+                        @"CeVIO Creative Studio S をアイドル状態にしてください。" :
+                        @"CeVIO Creative Studio S を起動してください。");
             }
 
             // 実行ファイルパスを取得する

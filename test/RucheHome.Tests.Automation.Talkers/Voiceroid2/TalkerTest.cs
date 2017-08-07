@@ -43,10 +43,13 @@ namespace RucheHome.Tests.Automation.Talkers.Voiceroid2
             // 一度 Update を走らせる
             TestTalker.Update();
 
-            // 起動中でなければ不可
-            if (!TestTalker.IsAlive)
+            // 操作可能状態でなければ不可
+            if (!TestTalker.CanOperate)
             {
-                Assert.Inconclusive(@"操作対象 VOICEROID2 アプリを起動してください。");
+                Assert.Inconclusive(
+                    TestTalker.IsAlive ?
+                        @"VOICEROID2をアイドル状態にしてください。" :
+                        @"VOICEROID2を起動してください。");
             }
 
             // 実行ファイルパスを取得する

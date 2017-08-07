@@ -29,6 +29,14 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Automation", "src
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Automation.Ymm", "src\RucheHome.Automation.Ymm\RucheHome.Automation.Ymm.csproj", "{9C00BBC7-3CB2-4827-AA20-797C7E7948FA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RucheHome.Tests.Automation.Ymm", "test\RucheHome.Tests.Automation.Ymm\RucheHome.Tests.Automation.Ymm.csproj", "{1AECFDC2-17E7-4A5B-8D48-BAE381F794E8}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "data", "data", "{A0125E6F-FE64-4664-BC40-66BEACCFF231}"
+	ProjectSection(SolutionItems) = preProject
+		test\data\test.txt = test\data\test.txt
+		test\data\test.wav = test\data\test.wav
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
@@ -79,6 +87,10 @@ Global
 		{9C00BBC7-3CB2-4827-AA20-797C7E7948FA}.Debug|x86.Build.0 = Debug|x86
 		{9C00BBC7-3CB2-4827-AA20-797C7E7948FA}.Release|x86.ActiveCfg = Release|x86
 		{9C00BBC7-3CB2-4827-AA20-797C7E7948FA}.Release|x86.Build.0 = Release|x86
+		{1AECFDC2-17E7-4A5B-8D48-BAE381F794E8}.Debug|x86.ActiveCfg = Debug|x86
+		{1AECFDC2-17E7-4A5B-8D48-BAE381F794E8}.Debug|x86.Build.0 = Debug|x86
+		{1AECFDC2-17E7-4A5B-8D48-BAE381F794E8}.Release|x86.ActiveCfg = Release|x86
+		{1AECFDC2-17E7-4A5B-8D48-BAE381F794E8}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -95,5 +107,7 @@ Global
 		{1D283799-8D58-4377-BD05-383F0A2F7A73} = {87905CE9-795C-44B6-86AA-1DA5A1D2F3B9}
 		{3240FED0-0230-475A-B212-2F3B3096C3AF} = {87905CE9-795C-44B6-86AA-1DA5A1D2F3B9}
 		{9C00BBC7-3CB2-4827-AA20-797C7E7948FA} = {87905CE9-795C-44B6-86AA-1DA5A1D2F3B9}
+		{1AECFDC2-17E7-4A5B-8D48-BAE381F794E8} = {2EBE5B3F-BD10-4056-B386-B251471D02E8}
+		{A0125E6F-FE64-4664-BC40-66BEACCFF231} = {2EBE5B3F-BD10-4056-B386-B251471D02E8}
 	EndGlobalSection
 EndGlobal
