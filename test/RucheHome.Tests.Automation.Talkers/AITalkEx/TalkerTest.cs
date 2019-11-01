@@ -119,7 +119,7 @@ namespace RucheHome.Tests.Automation.Talkers.AITalkEx
                     Console.WriteLine(r.Message);
 
                     // ダイアログが出ている可能性があるので閉じる
-                    CloseAllModalsIfProcessTalker(talker);
+                    CloseAllModalsIfProcessOperation(talker);
                 }
                 else
                 {

@@ -357,11 +357,11 @@ namespace RucheHome.Automation.Talkers.CeVIO
                     (mainWindow.App == this.TargetApp) ? this.TargetAppVisualTree : null;
                 vtree = vtree ?? new WpfVisualTree(mainWindow.App);
 
-                (DynamicAppVar c, var rootMessage) =
+                (var c, var rootMessage) =
                     this.Root.Get(out bool compacted, (DynamicAppVar)mainWin, vtree);
                 if (c != null)
                 {
-                    (c, _) = this.ControlPanel.GetAny(out var kind, c, vtree);
+                    (c, _) = this.ControlPanel.GetAny(out var kind, (DynamicAppVar)c, vtree);
                     if (c != null)
                     {
                         // コントロールパネルがトーク用以外ならアイドル状態扱い
@@ -370,10 +370,10 @@ namespace RucheHome.Automation.Talkers.CeVIO
                             return TalkerState.Idle;
                         }
 
-                        (c, _) = this.OperationPanel.Get(c);
+                        (c, _) = this.OperationPanel.Get((DynamicAppVar)c);
                         if (c != null)
                         {
-                            var (button, _) = this.PlayStopToggle.Get(c);
+                            var (button, _) = this.PlayStopToggle.Get((DynamicAppVar)c);
                             if (button != null)
                             {
                                 // 試聴/停止トグルボタンがONなら読み上げ中

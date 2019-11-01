@@ -35,6 +35,16 @@ namespace RucheHome.Tests.Automation.Talkers
 
         [TestMethod]
         [TestCategory(nameof(IProcessTalker))]
+        public void Test_IProcessTalker_MainWindowHandle()
+        {
+            var talker = this.GetTalker();
+
+            var mainWindowHandle = talker.MainWindowHandle;
+            Assert.AreNotEqual(mainWindowHandle, IntPtr.Zero);
+        }
+
+        [TestMethod]
+        [TestCategory(nameof(IProcessTalker))]
         public void Test_IProcessTalker_Update()
         {
             var talker = this.GetTalker();
@@ -75,7 +85,7 @@ namespace RucheHome.Tests.Automation.Talkers
                     Console.WriteLine(r.Message);
 
                     // 先頭ボタンをクリックして終わる
-                    ClickAllModalsFirstButtonIfProcessTalker(talker);
+                    ClickAllModalsFirstButtonIfProcessOperation(talker);
                     return;
                 }
             }

@@ -8,6 +8,7 @@ using Codeer.Friendly.Windows;
 using Codeer.Friendly.Windows.Grasp;
 using Codeer.Friendly.Windows.NativeStandardControls;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using RucheHome.Automation;
 using RucheHome.Automation.Talkers;
 
 namespace RucheHome.Tests.Automation.Talkers
@@ -347,7 +348,7 @@ namespace RucheHome.Tests.Automation.Talkers
                     Assert.IsFalse(r.Value, r.Message);
 
                     // ダイアログが出ている可能性があるので閉じる
-                    CloseAllModalsIfProcessTalker(talker);
+                    CloseAllModalsIfProcessOperation(talker);
                     return;
                 }
 
@@ -374,7 +375,7 @@ namespace RucheHome.Tests.Automation.Talkers
                     Console.WriteLine(r.Message);
 
                     // ダイアログが出ている可能性があるので閉じる
-                    CloseAllModalsIfProcessTalker(talker);
+                    CloseAllModalsIfProcessOperation(talker);
                 }
             }
         }
@@ -407,19 +408,19 @@ namespace RucheHome.Tests.Automation.Talkers
         }
 
         /// <summary>
-        /// もし <see cref="IProcessTalker"/> 実装クラスならば、
+        /// もし <see cref="IProcessOperation"/> 実装クラスならば、
         /// すべてのモーダルウィンドウに WM_CLOSE メッセージを送信する。
         /// </summary>
-        protected static void CloseAllModalsIfProcessTalker(ITalker talker)
+        protected static void CloseAllModalsIfProcessOperation(ITalker talker)
         {
             try
             {
-                var processTalker = talker as IProcessTalker;
-                if (processTalker == null)
+                var processOpe = talker as IProcessOperation;
+                if (processOpe == null)
                 {
                     return;
                 }
-                var mainWinHandle = processTalker.MainWindowHandle;
+                var mainWinHandle = processOpe.MainWindowHandle;
                 if (mainWinHandle == IntPtr.Zero)
                 {
                     return;
@@ -445,19 +446,19 @@ namespace RucheHome.Tests.Automation.Talkers
         }
 
         /// <summary>
-        /// もし <see cref="IProcessTalker"/> 実装クラスならば、
+        /// もし <see cref="IProcessOperation"/> 実装クラスならば、
         /// すべてのネイティブモーダルウィンドウの先頭ボタンをクリックする。
         /// </summary>
-        protected static void ClickAllModalsFirstButtonIfProcessTalker(ITalker talker)
+        protected static void ClickAllModalsFirstButtonIfProcessOperation(ITalker talker)
         {
             try
             {
-                var processTalker = talker as IProcessTalker;
-                if (processTalker == null)
+                var processOpe = talker as IProcessOperation;
+                if (processOpe == null)
                 {
                     return;
                 }
-                var mainWinHandle = processTalker.MainWindowHandle;
+                var mainWinHandle = processOpe.MainWindowHandle;
                 if (mainWinHandle == IntPtr.Zero)
                 {
                     return;
